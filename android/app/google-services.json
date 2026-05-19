@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "592998402745",
+    "project_id": "trusty-kzh1sb",
+    "storage_bucket": "trusty-kzh1sb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:592998402745:android:d6368b740c5ef5b803a968",
+        "android_client_info": {
+          "package_name": "com.mycompany.trusty"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCvGUKFYhDiZJGlNhOSH5pKaEbVSfEzTb4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
