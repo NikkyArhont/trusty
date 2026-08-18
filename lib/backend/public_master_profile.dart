@@ -33,6 +33,14 @@ Future<UserRecord?> _fetchPublicMasterProfile(
   DocumentReference ownerRef,
 ) async {
   try {
+    final publicSnapshot = await FirebaseFirestore.instance
+        .collection('publicMasterProfiles')
+        .doc(ownerRef.id)
+        .get();
+    if (publicSnapshot.exists) {
+      return _profileFromPublicData(publicSnapshot.data() ?? {}, ownerRef);
+    }
+
     final token = await FirebaseAuth.instance.currentUser?.getIdToken();
     if (token == null || token.isEmpty) return null;
 
@@ -48,17 +56,24 @@ Future<UserRecord?> _fetchPublicMasterProfile(
     if (response.statusCode != 200) return null;
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
-    return UserRecord.getDocumentFromData({
-      'masterData': {
-        'title': data['title'] as String? ?? '',
-        'mainPhoto': data['photo'] as String? ?? '',
-        'descrip': data['description'] as String? ?? '',
-        'initCat': data['categoryKey'] as String? ?? '',
-      },
-      'contactPhoneHash': data['contactPhoneHash'] as String? ?? '',
-    }, ownerRef);
+    return _profileFromPublicData(data, ownerRef);
   } catch (error) {
     debugPrint('Failed to load public master profile: $error');
     return null;
   }
+}
+
+UserRecord _profileFromPublicData(
+  Map<String, dynamic> data,
+  DocumentReference ownerRef,
+) {
+  return UserRecord.getDocumentFromData({
+    'masterData': {
+      'title': data['title'] as String? ?? '',
+      'mainPhoto': data['photo'] as String? ?? '',
+      'descrip': data['description'] as String? ?? '',
+      'initCat': data['categoryKey'] as String? ?? '',
+    },
+    'contactPhoneHash': data['contactPhoneHash'] as String? ?? '',
+  }, ownerRef);
 }

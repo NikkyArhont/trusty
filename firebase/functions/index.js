@@ -34,6 +34,10 @@ const {
   planSharePrompts,
 } = require("./share_prompt");
 const {dispatchChatMessagePush} = require("./chat_message_push");
+const {
+  buildPublicMasterProfile,
+  isMasterProfile,
+} = require("./public_master_profile");
 admin.initializeApp();
 
 const telegramPhoneAuthHandlers = createTelegramPhoneAuthHandlers({admin});
@@ -135,6 +139,39 @@ exports.onFirstCompletedRecordForSharePrompt = onDocumentWritten(
       admin,
       userReference: after.master,
       reason: "first_completed_record",
+    });
+  },
+);
+
+exports.onUserWrittenSyncPublicMasterProfile = onDocumentWritten(
+  {
+    document: "user/{userId}",
+    region: "europe-west1",
+    timeoutSeconds: 30,
+    retry: true,
+  },
+  async (event) => {
+    const publicReference = admin.firestore()
+      .collection("publicMasterProfiles")
+      .doc(event.params.userId);
+    if (!event.data || !event.data.after.exists) {
+      await publicReference.delete().catch((error) => {
+        if (error.code !== 5) throw error;
+      });
+      return;
+    }
+
+    const user = event.data.after.data() || {};
+    if (!isMasterProfile(user)) {
+      await publicReference.delete().catch((error) => {
+        if (error.code !== 5) throw error;
+      });
+      return;
+    }
+
+    await publicReference.set({
+      ...buildPublicMasterProfile(user),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   },
 );
@@ -405,28 +442,17 @@ exports.getPublicMasterProfile = functions.https.onRequest(
         return;
       }
 
-      const user = masterSnapshot.data() || {};
-      const masterData = user.masterData || {};
-      const phoneDigits = String(user.phone_number || "").replace(/\D/g, "");
-      let normalizedPhone = phoneDigits;
-      if (/^8\d{10}$/.test(phoneDigits)) {
-        normalizedPhone = `7${phoneDigits.substring(1)}`;
-      } else if (/^\d{10}$/.test(phoneDigits)) {
-        normalizedPhone = `7${phoneDigits}`;
-      }
-      const contactPhoneHash = normalizedPhone
-        ? require("crypto")
-          .createHash("sha256")
-          .update(normalizedPhone)
-          .digest("hex")
-        : "";
-      response.json({
-        title: String(masterData.title || user.display_name || "").trim(),
-        description: String(masterData.descrip || "").trim(),
-        photo: String(masterData.mainPhoto || user.photo_url || "").trim(),
-        categoryKey: String(masterData.initCat || "").trim(),
-        contactPhoneHash,
-      });
+      const publicProfile = buildPublicMasterProfile(
+        masterSnapshot.data() || {},
+      );
+      await admin.firestore()
+        .collection("publicMasterProfiles")
+        .doc(masterId)
+        .set({
+          ...publicProfile,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      response.json(publicProfile);
     } catch (error) {
       console.error("getPublicMasterProfile failed", error);
       response.status(500).json({error: "Public master profile failed"});
