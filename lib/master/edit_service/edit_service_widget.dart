@@ -2856,6 +2856,30 @@ class _EditServiceWidgetState extends State<EditServiceWidget> {
                                                   : (_model.adres == null)))
                                           ? null
                                           : () async {
+                                              var isFirstService = false;
+                                              final ownerReference =
+                                                  currentUserReference;
+                                              if (ownerReference != null) {
+                                                try {
+                                                  final existingServices =
+                                                      await queryServiceRecordOnce(
+                                                        queryBuilder:
+                                                            (
+                                                              serviceRecord,
+                                                            ) => serviceRecord
+                                                                .where(
+                                                                  'owner',
+                                                                  isEqualTo:
+                                                                      ownerReference,
+                                                                ),
+                                                        limit: 1,
+                                                      );
+                                                  isFirstService =
+                                                      existingServices.isEmpty;
+                                                } catch (_) {
+                                                  isFirstService = false;
+                                                }
+                                              }
                                               if (_model
                                                   .uploadPhoto
                                                   .isNotEmpty) {
@@ -3039,6 +3063,8 @@ class _EditServiceWidgetState extends State<EditServiceWidget> {
                                                         ),
                                                     child: SaveServChangeWidget(
                                                       create: true,
+                                                      showFirstServiceInvite:
+                                                          isFirstService,
                                                     ),
                                                   );
                                                 },

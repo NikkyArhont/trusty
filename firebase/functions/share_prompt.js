@@ -97,6 +97,9 @@ async function markSharePromptEligible({admin, userReference, reason}) {
     const snapshot = await transaction.get(userReference);
     if (!snapshot.exists) return false;
     const user = snapshot.data() || {};
+    if (reason === "first_service" && user.firstServiceInviteShownAt) {
+      return false;
+    }
     if (user.sharePromptEligibleAt) return false;
     transaction.set(userReference, {
       sharePromptEligibleAt: admin.firestore.FieldValue.serverTimestamp(),

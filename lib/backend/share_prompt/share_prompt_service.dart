@@ -126,6 +126,58 @@ Future<void> showProjectShareDialog(BuildContext context) async {
   }
 }
 
+Future<void> showFirstServiceInviteDialog() async {
+  final userRef = currentUserReference;
+  final userId = currentUserUid;
+  if (userRef == null || userId.isEmpty || _sharePromptDialogVisible) return;
+
+  _sharePromptDialogVisible = true;
+  try {
+    final shouldShow = await FirebaseFirestore.instance.runTransaction<bool>((
+      transaction,
+    ) async {
+      final snapshot = await transaction.get(userRef);
+      if (!snapshot.exists) return false;
+      final data = snapshot.data() as Map<String, dynamic>? ?? const {};
+      if (data['firstServiceInviteShownAt'] != null) return false;
+      transaction.set(userRef, {
+        'firstServiceInviteShownAt': FieldValue.serverTimestamp(),
+        'sharePromptShownAt': FieldValue.serverTimestamp(),
+        'sharePromptReason': 'first_service_invite',
+      }, SetOptions(merge: true));
+      return true;
+    });
+    if (!shouldShow) return;
+
+    _sharePromptHandledUsers.add(userId);
+    BuildContext? context;
+    for (var attempt = 0; attempt < 10; attempt++) {
+      context = appNavigatorKey.currentContext;
+      if (context != null && context.mounted) break;
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    if (context == null || !context.mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => _SharePromptDialog(
+        userRef: userRef,
+        title: 'Пригласите своих клиентов',
+        body:
+            'Расскажите постоянным клиентам, что теперь к вам можно записаться через Сарафан. После оказанной услуги они смогут оставить рекомендацию — и новые клиенты сразу увидят доверие к вам от реальных людей.',
+        shareText:
+            'Теперь ко мне можно записаться через Сарафан. После визита вы сможете оставить рекомендацию — это поможет другим людям найти проверенного мастера.\n\n$sharePromptLandingUrl',
+        icon: Icons.group_add_rounded,
+      ),
+    );
+  } catch (error) {
+    if (kDebugMode) print('First service invite error: $error');
+  } finally {
+    _sharePromptDialogVisible = false;
+  }
+}
+
 void resetSharePromptState() {
   _sharePromptCheckInProgress = false;
   _sharePromptDialogVisible = false;
@@ -133,9 +185,21 @@ void resetSharePromptState() {
 }
 
 class _SharePromptDialog extends StatefulWidget {
-  const _SharePromptDialog({required this.userRef});
+  const _SharePromptDialog({
+    required this.userRef,
+    this.title = 'Помогите Сарафану расти',
+    this.body =
+        'Спасибо, что пользуетесь Сарафаном! Мы очень стараемся, чтобы приложение было удобным и полезным. Поделитесь им с друзьями и в социальных сетях — так клиенты смогут находить проверенных мастеров, а мастера — расширять свой сарафан связей.',
+    this.shareText =
+        'Попробуйте Сарафан — здесь находят проверенных мастеров по рекомендациям знакомых.\n\n$sharePromptLandingUrl',
+    this.icon = Icons.volunteer_activism_rounded,
+  });
 
   final DocumentReference userRef;
+  final String title;
+  final String body;
+  final String shareText;
+  final IconData icon;
 
   @override
   State<_SharePromptDialog> createState() => _SharePromptDialogState();
@@ -153,7 +217,7 @@ class _SharePromptDialogState extends State<_SharePromptDialog> {
           ? null
           : renderBox.localToGlobal(Offset.zero) & renderBox.size;
       final result = await Share.share(
-        'Попробуйте Сарафан — здесь находят проверенных мастеров по рекомендациям знакомых.\n\n$sharePromptLandingUrl',
+        widget.shareText,
         subject: 'Сарафан — проверенные мастера рядом',
         sharePositionOrigin: origin,
       );
@@ -205,15 +269,11 @@ class _SharePromptDialogState extends State<_SharePromptDialog> {
                     color: theme.primary.withValues(alpha: 0.12),
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    Icons.volunteer_activism_rounded,
-                    color: theme.primary,
-                    size: 36,
-                  ),
+                  child: Icon(widget.icon, color: theme.primary, size: 36),
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Помогите Сарафану расти',
+                  widget.title,
                   textAlign: TextAlign.center,
                   style: theme.headlineSmall.copyWith(
                     color: theme.primaryText,
@@ -222,7 +282,7 @@ class _SharePromptDialogState extends State<_SharePromptDialog> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Спасибо, что пользуетесь Сарафаном! Мы очень стараемся, чтобы приложение было удобным и полезным. Поделитесь им с друзьями и в социальных сетях — так клиенты смогут находить проверенных мастеров, а мастера — расширять свой сарафан связей.',
+                  widget.body,
                   textAlign: TextAlign.center,
                   style: theme.bodyMedium.copyWith(
                     color: theme.secondaryText,

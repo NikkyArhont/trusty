@@ -1,6 +1,7 @@
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
+import '/backend/share_prompt/share_prompt_service.dart';
 import 'dart:ui';
 import '/index.dart';
 import 'package:flutter/material.dart';
@@ -11,9 +12,14 @@ import 'save_serv_change_model.dart';
 export 'save_serv_change_model.dart';
 
 class SaveServChangeWidget extends StatefulWidget {
-  const SaveServChangeWidget({super.key, required this.create});
+  const SaveServChangeWidget({
+    super.key,
+    required this.create,
+    this.showFirstServiceInvite = false,
+  });
 
   final bool? create;
+  final bool showFirstServiceInvite;
 
   @override
   State<SaveServChangeWidget> createState() => _SaveServChangeWidgetState();
@@ -113,6 +119,12 @@ class _SaveServChangeWidgetState extends State<SaveServChangeWidget> {
                   Navigator.pop(context);
 
                   context.goNamed(SpecialistDashboardWidget.routeName);
+                  if (widget.showFirstServiceInvite) {
+                    Future<void>.delayed(
+                      const Duration(milliseconds: 500),
+                      showFirstServiceInviteDialog,
+                    );
+                  }
                 },
                 text: FFLocalizations.of(
                   context,
