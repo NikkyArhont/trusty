@@ -137,7 +137,7 @@ class _ServiceCardWidgetState extends State<ServiceCardWidget> {
                                       size: 16.0,
                                     ),
                                     Text(
-                                      'Trust ${widget!.score}',
+                                      'Доверие ${widget!.score}',
                                       style: TextStyle(
                                         color: FlutterFlowTheme.of(context)
                                             .primaryText,
@@ -172,7 +172,7 @@ class _ServiceCardWidgetState extends State<ServiceCardWidget> {
                           Text(
                             valueOrDefault<String>(
                               widget!.title,
-                              'Minimalist Interior Design',
+                              'Минималистичный дизайн интерьера',
                             ),
                             style: FlutterFlowTheme.of(context)
                                 .titleLarge
@@ -197,7 +197,7 @@ class _ServiceCardWidgetState extends State<ServiceCardWidget> {
                           Text(
                             valueOrDefault<String>(
                               widget!.desc,
-                              'Residential & Commercial',
+                              'Жилые и коммерческие помещения',
                             ),
                             style: FlutterFlowTheme.of(context)
                                 .bodyMedium
@@ -227,7 +227,7 @@ class _ServiceCardWidgetState extends State<ServiceCardWidget> {
                               Text(
                                 valueOrDefault<String>(
                                   widget!.details,
-                                  '90 min • \$120',
+                                  '90 мин • 12 000 ₽',
                                 ),
                                 style: FlutterFlowTheme.of(context)
                                     .labelLarge
@@ -260,7 +260,7 @@ class _ServiceCardWidgetState extends State<ServiceCardWidget> {
                               Text(
                                 valueOrDefault<String>(
                                   widget!.more,
-                                  '+2 more services',
+                                  '+ ещё 2 услуги',
                                 ),
                                 style: FlutterFlowTheme.of(context)
                                     .labelLarge
@@ -308,7 +308,7 @@ class _ServiceCardWidgetState extends State<ServiceCardWidget> {
                           Text(
                             valueOrDefault<String>(
                               widget!.specialist_name,
-                              'Sarah Jenkins',
+                              'Сара Дженкинс',
                             ),
                             style: FlutterFlowTheme.of(context)
                                 .bodyMedium
@@ -407,7 +407,7 @@ class _ServiceCardWidgetState extends State<ServiceCardWidget> {
                               Expanded(
                                 flex: 1,
                                 child: Text(
-                                  '${widget!.contact} and 47 others recommend this',
+                                  '${widget!.contact} и ещё 47 человек рекомендуют',
                                   maxLines: 1,
                                   style: FlutterFlowTheme.of(context)
                                       .bodySmall
@@ -453,7 +453,7 @@ class _ServiceCardWidgetState extends State<ServiceCardWidget> {
                                     size: 14.0,
                                   ),
                                   Text(
-                                    'Recommended by ${widget!.total_recs?.toString()} people',
+                                    'Рекомендуют ${widget!.total_recs?.toString()} человек',
                                     style: TextStyle(
                                       color:
                                           FlutterFlowTheme.of(context).primary,

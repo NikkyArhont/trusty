@@ -8,6 +8,7 @@ import 'dart:ui';
 import '/flutter_flow/custom_functions.dart' as functions;
 import '/index.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -30,6 +31,28 @@ class _InitpageWidgetState extends State<InitpageWidget> {
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
+  bool _masterProfileCompleted(MasterDataStruct? masterData) {
+    if (masterData == null) {
+      return false;
+    }
+    return masterData.title.trim().isNotEmpty &&
+        masterData.descrip.trim().isNotEmpty &&
+        masterData.initCat.trim().isNotEmpty &&
+        masterData.mainPhoto.trim().isNotEmpty &&
+        masterData.hasMainAdres() &&
+        masterData.mainAdres.title.trim().isNotEmpty;
+  }
+
+  void _goNamedAndRemoveSplash(
+    String routeName, {
+    Map<String, String> queryParameters = const {},
+  }) {
+    context.goNamed(routeName, queryParameters: queryParameters);
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => FlutterNativeSplash.remove(),
+    );
+  }
+
   @override
   void initState() {
     super.initState();
@@ -37,7 +60,7 @@ class _InitpageWidgetState extends State<InitpageWidget> {
 
     // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
-      if ((FFAppState().listRUCities.isNotEmpty) != false) {
+      if (FFAppState().listRUCities.isEmpty) {
         FFAppState().listRUCities = functions
             .createCityList(FFAppState().listCityVocab)!
             .toList()
@@ -45,16 +68,50 @@ class _InitpageWidgetState extends State<InitpageWidget> {
         safeSetState(() {});
       }
       if (loggedIn) {
-        FFAppState().specialistMode =
-            valueOrDefault<bool>(currentUserDocument?.masterMode, false);
-        safeSetState(() {});
+        if (currentUserDocument == null) {
+          await authenticatedUserStream
+              .firstWhere((user) => user != null)
+              .timeout(
+                const Duration(milliseconds: 2500),
+                onTimeout: () => null,
+              );
+        }
+        if (!mounted) {
+          return;
+        }
+        if (currentUserDocument != null) {
+          FFAppState().specialistMode = valueOrDefault<bool>(
+            currentUserDocument?.masterMode,
+            FFAppState().specialistMode,
+          );
+          safeSetState(() {});
+        }
+        final userDocument = currentUserDocument;
+        if (userDocument != null &&
+            !userDocument.clientProfileCompleted &&
+            userDocument.displayName.trim().isEmpty) {
+          _goNamedAndRemoveSplash(ClientProfileSetupWidget.routeName);
+          return;
+        }
         if (FFAppState().specialistMode) {
-          context.goNamed(SpecialistDashboardWidget.routeName);
+          if (_masterProfileCompleted(currentUserDocument?.masterData)) {
+            _goNamedAndRemoveSplash(SpecialistDashboardWidget.routeName);
+          } else if (currentUserDocument?.masterData.onboardingCompleted ??
+              false) {
+            _goNamedAndRemoveSplash(
+              EditProfileMasterWidget.routeName,
+              queryParameters: {
+                'setupMode': serializeParam(true, ParamType.bool),
+              }.withoutNulls,
+            );
+          } else {
+            _goNamedAndRemoveSplash(MasterOnboardingWidget.routeName);
+          }
         } else {
-          context.goNamed(MainWidget.routeName);
+          _goNamedAndRemoveSplash(MainWidget.routeName);
         }
       } else {
-        context.goNamed(LoginWidget.routeName);
+        _goNamedAndRemoveSplash(LoginWidget.routeName);
       }
     });
 
@@ -75,27 +132,7 @@ class _InitpageWidgetState extends State<InitpageWidget> {
     return Scaffold(
       key: scaffoldKey,
       backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-      body: SafeArea(
-        top: true,
-        child: Align(
-          alignment: AlignmentDirectional(0.0, 0.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(8.0),
-                child: Image.asset(
-                  'assets/images/ChatGPT_Image_20_._2026_.,_13_28_15_(1)_(2).png',
-                  width: 200.0,
-                  height: 200.0,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+      body: const SizedBox.expand(),
     );
   }
 }

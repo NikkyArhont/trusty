@@ -99,7 +99,7 @@ class _ServiceCard4WidgetState extends State<ServiceCard4Widget> {
                     imageUrl:
                         'https://dimg.dreamflow.cloud/v1/image/${valueOrDefault<String>(
                       widget!.img_desc,
-                      'professional massage therapy session',
+                      'профессиональный сеанс массажа',
                     )}',
                     height: 200.0,
                     fit: BoxFit.cover,
@@ -137,7 +137,7 @@ class _ServiceCard4WidgetState extends State<ServiceCard4Widget> {
                                       size: 14.0,
                                     ),
                                     Text(
-                                      'Trust ${widget!.trust}',
+                                      'Доверие ${widget!.trust}',
                                       style: FlutterFlowTheme.of(context)
                                           .labelSmall
                                           .override(
@@ -182,7 +182,7 @@ class _ServiceCard4WidgetState extends State<ServiceCard4Widget> {
                       Text(
                         valueOrDefault<String>(
                           widget!.title,
-                          'Deep Tissue Massage',
+                          'Глубокий массаж',
                         ),
                         style: FlutterFlowTheme.of(context).titleLarge.override(
                               font: GoogleFonts.inter(
@@ -204,7 +204,7 @@ class _ServiceCard4WidgetState extends State<ServiceCard4Widget> {
                       Text(
                         valueOrDefault<String>(
                           widget!.desc,
-                          'Therapeutic bodywork for stress relief',
+                          'Лечебный массаж для снятия напряжения',
                         ),
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
                               font: GoogleFonts.inter(
@@ -242,7 +242,7 @@ class _ServiceCard4WidgetState extends State<ServiceCard4Widget> {
                               Text(
                                 valueOrDefault<String>(
                                   widget!.duration,
-                                  '60 min',
+                                  '60 мин',
                                 ),
                                 style: FlutterFlowTheme.of(context)
                                     .bodySmall
@@ -280,7 +280,7 @@ class _ServiceCard4WidgetState extends State<ServiceCard4Widget> {
                               Text(
                                 valueOrDefault<String>(
                                   widget!.price,
-                                  '\$85',
+                                  '8 500 ₽',
                                 ),
                                 style: FlutterFlowTheme.of(context)
                                     .bodySmall
@@ -338,7 +338,7 @@ class _ServiceCard4WidgetState extends State<ServiceCard4Widget> {
                                 Text(
                                   valueOrDefault<String>(
                                     widget!.specialist_name,
-                                    'Elena R.',
+                                    'Елена Р.',
                                   ),
                                   style: FlutterFlowTheme.of(context)
                                       .labelLarge
@@ -362,7 +362,7 @@ class _ServiceCard4WidgetState extends State<ServiceCard4Widget> {
                                       ),
                                 ),
                                 Text(
-                                  'Recommended by ${widget!.recommenders?.toString()} people',
+                                  'Рекомендуют ${widget!.recommenders?.toString()} человек',
                                   style: FlutterFlowTheme.of(context)
                                       .bodySmall
                                       .override(
@@ -410,7 +410,7 @@ class _ServiceCard4WidgetState extends State<ServiceCard4Widget> {
                               Expanded(
                                 flex: 1,
                                 child: Text(
-                                  '${widget!.friend} recommends this',
+                                  '${widget!.friend} рекомендует',
                                   maxLines: 1,
                                   style: FlutterFlowTheme.of(context)
                                       .labelMedium

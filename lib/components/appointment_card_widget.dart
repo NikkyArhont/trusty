@@ -115,7 +115,7 @@ class _AppointmentCardWidgetState extends State<AppointmentCardWidget> {
                         Text(
                           valueOrDefault<String>(
                             widget!.client_name,
-                            'Jane Doe',
+                            'Анна Иванова',
                           ),
                           style: FlutterFlowTheme.of(context)
                               .titleMedium
@@ -141,7 +141,7 @@ class _AppointmentCardWidgetState extends State<AppointmentCardWidget> {
                         Text(
                           valueOrDefault<String>(
                             widget!.service_name,
-                            'Deep Tissue Massage',
+                            'Глубокий массаж',
                           ),
                           style: FlutterFlowTheme.of(context)
                               .bodyMedium
@@ -181,7 +181,7 @@ class _AppointmentCardWidgetState extends State<AppointmentCardWidget> {
                       child: Text(
                         valueOrDefault<String>(
                           widget!.status_label,
-                          'Interested',
+                          'Заинтересован',
                         ),
                         style: FlutterFlowTheme.of(context).labelSmall.override(
                               font: GoogleFonts.jetBrainsMono(
@@ -256,7 +256,7 @@ class _AppointmentCardWidgetState extends State<AppointmentCardWidget> {
                       },
                       text: valueOrDefault<String>(
                         widget!.secondary_label,
-                        'Decline',
+                        'Отклонить',
                       ),
                       options: FFButtonOptions(
                         height: 44.0,
@@ -286,7 +286,7 @@ class _AppointmentCardWidgetState extends State<AppointmentCardWidget> {
                       },
                       text: valueOrDefault<String>(
                         widget!.primary_label,
-                        'Assign date',
+                        'Назначить дату',
                       ),
                       options: FFButtonOptions(
                         height: 44.0,

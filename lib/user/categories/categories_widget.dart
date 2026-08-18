@@ -67,67 +67,72 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Column(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'ie0h3he9' /* Categories */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .headlineMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
+                          Expanded(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  FFLocalizations.of(
+                                    context,
+                                  ).getText('ie0h3he9' /* Categories */),
+                                  style: FlutterFlowTheme.of(context)
+                                      .headlineMedium
+                                      .override(
+                                        font: GoogleFonts.inter(
+                                          fontWeight: FontWeight.w800,
+                                          fontStyle: FlutterFlowTheme.of(
+                                            context,
+                                          ).headlineMedium.fontStyle,
+                                        ),
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryText,
+                                        fontSize: 26.0,
+                                        letterSpacing: 0.0,
                                         fontWeight: FontWeight.w800,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .headlineMedium
-                                            .fontStyle,
+                                        fontStyle: FlutterFlowTheme.of(
+                                          context,
+                                        ).headlineMedium.fontStyle,
+                                        lineHeight: 1.25,
                                       ),
-                                      color: FlutterFlowTheme.of(context)
-                                          .primaryText,
-                                      fontSize: 26.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.w800,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .headlineMedium
-                                          .fontStyle,
-                                      lineHeight: 1.25,
-                                    ),
-                              ),
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'u9f422n4' /* Find trusted experts by catego... */,
                                 ),
-                                style: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .override(
-                                      font: GoogleFonts.inter(
+                                Text(
+                                  FFLocalizations.of(context).getText(
+                                    'u9f422n4' /* Find trusted experts by catego... */,
+                                  ),
+                                  style: FlutterFlowTheme.of(context).bodyMedium
+                                      .override(
+                                        font: GoogleFonts.inter(
+                                          fontWeight: FontWeight.normal,
+                                          fontStyle: FlutterFlowTheme.of(
+                                            context,
+                                          ).bodyMedium.fontStyle,
+                                        ),
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).secondaryText,
+                                        fontSize: 14.0,
+                                        letterSpacing: 0.0,
                                         fontWeight: FontWeight.normal,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
+                                        fontStyle: FlutterFlowTheme.of(
+                                          context,
+                                        ).bodyMedium.fontStyle,
+                                        lineHeight: 1.5,
                                       ),
-                                      color: FlutterFlowTheme.of(context)
-                                          .secondaryText,
-                                      fontSize: 14.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyMedium
-                                          .fontStyle,
-                                      lineHeight: 1.5,
-                                    ),
-                              ),
-                            ].divide(SizedBox(height: 4.0)),
+                                ),
+                              ].divide(SizedBox(height: 4.0)),
+                            ),
                           ),
+                          const SizedBox(width: 12.0),
                           Container(
                             width: 44.0,
                             height: 44.0,
                             decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context)
-                                  .secondaryBackground,
+                              color: FlutterFlowTheme.of(
+                                context,
+                              ).secondaryBackground,
                               borderRadius: BorderRadius.circular(9999.0),
                               border: Border.all(
                                 color: FlutterFlowTheme.of(context).divider,
@@ -156,8 +161,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                           ClipRRect(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: FlutterFlowTheme.of(context)
-                                    .secondaryBackground,
+                                color: FlutterFlowTheme.of(
+                                  context,
+                                ).secondaryBackground,
                                 border: Border.all(
                                   color: FlutterFlowTheme.of(context).divider,
                                   width: 1.0,
@@ -174,16 +180,19 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                       width: 48.0,
                                       height: 48.0,
                                       decoration: BoxDecoration(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                        borderRadius:
-                                            BorderRadius.circular(12.0),
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryBackground,
+                                        borderRadius: BorderRadius.circular(
+                                          12.0,
+                                        ),
                                       ),
                                       alignment: AlignmentDirectional(0.0, 0.0),
                                       child: Icon(
                                         Icons.face_retouching_natural_rounded,
-                                        color: FlutterFlowTheme.of(context)
-                                            .primary,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primary,
                                         size: 24.0,
                                       ),
                                     ),
@@ -195,9 +204,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          FFLocalizations.of(context).getText(
-                                            '1qkaxwga' /* Beauty */,
-                                          ),
+                                          FFLocalizations.of(
+                                            context,
+                                          ).getText('1qkaxwga' /* Beauty */),
                                           style: FlutterFlowTheme.of(context)
                                               .titleMedium
                                               .override(
@@ -205,20 +214,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.bold,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .titleMedium
-                                                          .fontStyle,
+                                                        context,
+                                                      ).titleMedium.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .primaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).primaryText,
                                                 fontSize: 16.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.bold,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .titleMedium
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).titleMedium.fontStyle,
                                                 lineHeight: 1.4,
                                               ),
                                         ),
@@ -233,20 +240,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.w600,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .labelSmall
-                                                          .fontStyle,
+                                                        context,
+                                                      ).labelSmall.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .secondaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).secondaryText,
                                                 fontSize: 10.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.w600,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .labelSmall
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).labelSmall.fontStyle,
                                                 lineHeight: 1.2,
                                               ),
                                         ),
@@ -260,8 +265,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                           ClipRRect(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: FlutterFlowTheme.of(context)
-                                    .secondaryBackground,
+                                color: FlutterFlowTheme.of(
+                                  context,
+                                ).secondaryBackground,
                                 border: Border.all(
                                   color: FlutterFlowTheme.of(context).divider,
                                   width: 1.0,
@@ -278,16 +284,19 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                       width: 48.0,
                                       height: 48.0,
                                       decoration: BoxDecoration(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                        borderRadius:
-                                            BorderRadius.circular(12.0),
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryBackground,
+                                        borderRadius: BorderRadius.circular(
+                                          12.0,
+                                        ),
                                       ),
                                       alignment: AlignmentDirectional(0.0, 0.0),
                                       child: Icon(
                                         Icons.medical_services_rounded,
-                                        color: FlutterFlowTheme.of(context)
-                                            .primary,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primary,
                                         size: 24.0,
                                       ),
                                     ),
@@ -299,9 +308,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          FFLocalizations.of(context).getText(
-                                            'o923sczk' /* Health */,
-                                          ),
+                                          FFLocalizations.of(
+                                            context,
+                                          ).getText('o923sczk' /* Health */),
                                           style: FlutterFlowTheme.of(context)
                                               .titleMedium
                                               .override(
@@ -309,20 +318,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.bold,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .titleMedium
-                                                          .fontStyle,
+                                                        context,
+                                                      ).titleMedium.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .primaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).primaryText,
                                                 fontSize: 16.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.bold,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .titleMedium
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).titleMedium.fontStyle,
                                                 lineHeight: 1.4,
                                               ),
                                         ),
@@ -337,20 +344,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.w600,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .labelSmall
-                                                          .fontStyle,
+                                                        context,
+                                                      ).labelSmall.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .secondaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).secondaryText,
                                                 fontSize: 10.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.w600,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .labelSmall
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).labelSmall.fontStyle,
                                                 lineHeight: 1.2,
                                               ),
                                         ),
@@ -364,8 +369,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                           ClipRRect(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: FlutterFlowTheme.of(context)
-                                    .secondaryBackground,
+                                color: FlutterFlowTheme.of(
+                                  context,
+                                ).secondaryBackground,
                                 border: Border.all(
                                   color: FlutterFlowTheme.of(context).divider,
                                   width: 1.0,
@@ -382,16 +388,19 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                       width: 48.0,
                                       height: 48.0,
                                       decoration: BoxDecoration(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                        borderRadius:
-                                            BorderRadius.circular(12.0),
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryBackground,
+                                        borderRadius: BorderRadius.circular(
+                                          12.0,
+                                        ),
                                       ),
                                       alignment: AlignmentDirectional(0.0, 0.0),
                                       child: Icon(
                                         Icons.home_repair_service_rounded,
-                                        color: FlutterFlowTheme.of(context)
-                                            .primary,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primary,
                                         size: 24.0,
                                       ),
                                     ),
@@ -403,9 +412,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          FFLocalizations.of(context).getText(
-                                            '9gau2dqi' /* Home */,
-                                          ),
+                                          FFLocalizations.of(
+                                            context,
+                                          ).getText('9gau2dqi' /* Home */),
                                           style: FlutterFlowTheme.of(context)
                                               .titleMedium
                                               .override(
@@ -413,20 +422,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.bold,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .titleMedium
-                                                          .fontStyle,
+                                                        context,
+                                                      ).titleMedium.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .primaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).primaryText,
                                                 fontSize: 16.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.bold,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .titleMedium
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).titleMedium.fontStyle,
                                                 lineHeight: 1.4,
                                               ),
                                         ),
@@ -441,20 +448,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.w600,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .labelSmall
-                                                          .fontStyle,
+                                                        context,
+                                                      ).labelSmall.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .secondaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).secondaryText,
                                                 fontSize: 10.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.w600,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .labelSmall
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).labelSmall.fontStyle,
                                                 lineHeight: 1.2,
                                               ),
                                         ),
@@ -468,8 +473,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                           ClipRRect(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: FlutterFlowTheme.of(context)
-                                    .secondaryBackground,
+                                color: FlutterFlowTheme.of(
+                                  context,
+                                ).secondaryBackground,
                                 border: Border.all(
                                   color: FlutterFlowTheme.of(context).divider,
                                   width: 1.0,
@@ -486,16 +492,19 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                       width: 48.0,
                                       height: 48.0,
                                       decoration: BoxDecoration(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                        borderRadius:
-                                            BorderRadius.circular(12.0),
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryBackground,
+                                        borderRadius: BorderRadius.circular(
+                                          12.0,
+                                        ),
                                       ),
                                       alignment: AlignmentDirectional(0.0, 0.0),
                                       child: Icon(
                                         Icons.pets_rounded,
-                                        color: FlutterFlowTheme.of(context)
-                                            .primary,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primary,
                                         size: 24.0,
                                       ),
                                     ),
@@ -507,9 +516,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          FFLocalizations.of(context).getText(
-                                            'tz26akih' /* Pets */,
-                                          ),
+                                          FFLocalizations.of(
+                                            context,
+                                          ).getText('tz26akih' /* Pets */),
                                           style: FlutterFlowTheme.of(context)
                                               .titleMedium
                                               .override(
@@ -517,20 +526,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.bold,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .titleMedium
-                                                          .fontStyle,
+                                                        context,
+                                                      ).titleMedium.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .primaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).primaryText,
                                                 fontSize: 16.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.bold,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .titleMedium
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).titleMedium.fontStyle,
                                                 lineHeight: 1.4,
                                               ),
                                         ),
@@ -545,20 +552,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.w600,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .labelSmall
-                                                          .fontStyle,
+                                                        context,
+                                                      ).labelSmall.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .secondaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).secondaryText,
                                                 fontSize: 10.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.w600,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .labelSmall
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).labelSmall.fontStyle,
                                                 lineHeight: 1.2,
                                               ),
                                         ),
@@ -572,8 +577,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                           ClipRRect(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: FlutterFlowTheme.of(context)
-                                    .secondaryBackground,
+                                color: FlutterFlowTheme.of(
+                                  context,
+                                ).secondaryBackground,
                                 border: Border.all(
                                   color: FlutterFlowTheme.of(context).divider,
                                   width: 1.0,
@@ -590,16 +596,19 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                       width: 48.0,
                                       height: 48.0,
                                       decoration: BoxDecoration(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                        borderRadius:
-                                            BorderRadius.circular(12.0),
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryBackground,
+                                        borderRadius: BorderRadius.circular(
+                                          12.0,
+                                        ),
                                       ),
                                       alignment: AlignmentDirectional(0.0, 0.0),
                                       child: Icon(
                                         Icons.school_rounded,
-                                        color: FlutterFlowTheme.of(context)
-                                            .primary,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primary,
                                         size: 24.0,
                                       ),
                                     ),
@@ -611,9 +620,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          FFLocalizations.of(context).getText(
-                                            'q3mk1s45' /* Education */,
-                                          ),
+                                          FFLocalizations.of(
+                                            context,
+                                          ).getText('q3mk1s45' /* Education */),
                                           style: FlutterFlowTheme.of(context)
                                               .titleMedium
                                               .override(
@@ -621,20 +630,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.bold,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .titleMedium
-                                                          .fontStyle,
+                                                        context,
+                                                      ).titleMedium.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .primaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).primaryText,
                                                 fontSize: 16.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.bold,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .titleMedium
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).titleMedium.fontStyle,
                                                 lineHeight: 1.4,
                                               ),
                                         ),
@@ -649,20 +656,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.w600,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .labelSmall
-                                                          .fontStyle,
+                                                        context,
+                                                      ).labelSmall.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .secondaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).secondaryText,
                                                 fontSize: 10.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.w600,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .labelSmall
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).labelSmall.fontStyle,
                                                 lineHeight: 1.2,
                                               ),
                                         ),
@@ -676,8 +681,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                           ClipRRect(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: FlutterFlowTheme.of(context)
-                                    .secondaryBackground,
+                                color: FlutterFlowTheme.of(
+                                  context,
+                                ).secondaryBackground,
                                 border: Border.all(
                                   color: FlutterFlowTheme.of(context).divider,
                                   width: 1.0,
@@ -694,16 +700,19 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                       width: 48.0,
                                       height: 48.0,
                                       decoration: BoxDecoration(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                        borderRadius:
-                                            BorderRadius.circular(12.0),
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryBackground,
+                                        borderRadius: BorderRadius.circular(
+                                          12.0,
+                                        ),
                                       ),
                                       alignment: AlignmentDirectional(0.0, 0.0),
                                       child: Icon(
                                         Icons.handyman_rounded,
-                                        color: FlutterFlowTheme.of(context)
-                                            .primary,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primary,
                                         size: 24.0,
                                       ),
                                     ),
@@ -715,9 +724,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          FFLocalizations.of(context).getText(
-                                            '7t05k6d9' /* Repair */,
-                                          ),
+                                          FFLocalizations.of(
+                                            context,
+                                          ).getText('7t05k6d9' /* Repair */),
                                           style: FlutterFlowTheme.of(context)
                                               .titleMedium
                                               .override(
@@ -725,20 +734,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.bold,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .titleMedium
-                                                          .fontStyle,
+                                                        context,
+                                                      ).titleMedium.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .primaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).primaryText,
                                                 fontSize: 16.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.bold,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .titleMedium
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).titleMedium.fontStyle,
                                                 lineHeight: 1.4,
                                               ),
                                         ),
@@ -753,20 +760,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.w600,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .labelSmall
-                                                          .fontStyle,
+                                                        context,
+                                                      ).labelSmall.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .secondaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).secondaryText,
                                                 fontSize: 10.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.w600,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .labelSmall
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).labelSmall.fontStyle,
                                                 lineHeight: 1.2,
                                               ),
                                         ),
@@ -780,8 +785,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                           ClipRRect(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: FlutterFlowTheme.of(context)
-                                    .secondaryBackground,
+                                color: FlutterFlowTheme.of(
+                                  context,
+                                ).secondaryBackground,
                                 border: Border.all(
                                   color: FlutterFlowTheme.of(context).divider,
                                   width: 1.0,
@@ -798,16 +804,19 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                       width: 48.0,
                                       height: 48.0,
                                       decoration: BoxDecoration(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                        borderRadius:
-                                            BorderRadius.circular(12.0),
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryBackground,
+                                        borderRadius: BorderRadius.circular(
+                                          12.0,
+                                        ),
                                       ),
                                       alignment: AlignmentDirectional(0.0, 0.0),
                                       child: Icon(
                                         Icons.event_available_rounded,
-                                        color: FlutterFlowTheme.of(context)
-                                            .primary,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primary,
                                         size: 24.0,
                                       ),
                                     ),
@@ -819,9 +828,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          FFLocalizations.of(context).getText(
-                                            'gddtgxvn' /* Events */,
-                                          ),
+                                          FFLocalizations.of(
+                                            context,
+                                          ).getText('gddtgxvn' /* Events */),
                                           style: FlutterFlowTheme.of(context)
                                               .titleMedium
                                               .override(
@@ -829,20 +838,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.bold,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .titleMedium
-                                                          .fontStyle,
+                                                        context,
+                                                      ).titleMedium.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .primaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).primaryText,
                                                 fontSize: 16.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.bold,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .titleMedium
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).titleMedium.fontStyle,
                                                 lineHeight: 1.4,
                                               ),
                                         ),
@@ -857,20 +864,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.w600,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .labelSmall
-                                                          .fontStyle,
+                                                        context,
+                                                      ).labelSmall.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .secondaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).secondaryText,
                                                 fontSize: 10.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.w600,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .labelSmall
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).labelSmall.fontStyle,
                                                 lineHeight: 1.2,
                                               ),
                                         ),
@@ -884,8 +889,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                           ClipRRect(
                             child: Container(
                               decoration: BoxDecoration(
-                                color: FlutterFlowTheme.of(context)
-                                    .secondaryBackground,
+                                color: FlutterFlowTheme.of(
+                                  context,
+                                ).secondaryBackground,
                                 border: Border.all(
                                   color: FlutterFlowTheme.of(context).divider,
                                   width: 1.0,
@@ -902,16 +908,19 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                       width: 48.0,
                                       height: 48.0,
                                       decoration: BoxDecoration(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryBackground,
-                                        borderRadius:
-                                            BorderRadius.circular(12.0),
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryBackground,
+                                        borderRadius: BorderRadius.circular(
+                                          12.0,
+                                        ),
                                       ),
                                       alignment: AlignmentDirectional(0.0, 0.0),
                                       child: Icon(
                                         Icons.gavel_rounded,
-                                        color: FlutterFlowTheme.of(context)
-                                            .primary,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primary,
                                         size: 24.0,
                                       ),
                                     ),
@@ -923,9 +932,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          FFLocalizations.of(context).getText(
-                                            '0b0ramcu' /* Legal */,
-                                          ),
+                                          FFLocalizations.of(
+                                            context,
+                                          ).getText('0b0ramcu' /* Legal */),
                                           style: FlutterFlowTheme.of(context)
                                               .titleMedium
                                               .override(
@@ -933,20 +942,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.bold,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .titleMedium
-                                                          .fontStyle,
+                                                        context,
+                                                      ).titleMedium.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .primaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).primaryText,
                                                 fontSize: 16.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.bold,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .titleMedium
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).titleMedium.fontStyle,
                                                 lineHeight: 1.4,
                                               ),
                                         ),
@@ -961,20 +968,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.w600,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .labelSmall
-                                                          .fontStyle,
+                                                        context,
+                                                      ).labelSmall.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .secondaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).secondaryText,
                                                 fontSize: 10.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.w600,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .labelSmall
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).labelSmall.fontStyle,
                                                 lineHeight: 1.2,
                                               ),
                                         ),
@@ -993,33 +998,34 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            FFLocalizations.of(context).getText(
-                              'sbqibbcs' /* Most Trusted Today */,
-                            ),
-                            style: FlutterFlowTheme.of(context)
-                                .titleLarge
+                            FFLocalizations.of(
+                              context,
+                            ).getText('sbqibbcs' /* Most Trusted Today */),
+                            style: FlutterFlowTheme.of(context).titleLarge
                                 .override(
                                   font: GoogleFonts.inter(
                                     fontWeight: FontWeight.bold,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .titleLarge
-                                        .fontStyle,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).titleLarge.fontStyle,
                                   ),
-                                  color:
-                                      FlutterFlowTheme.of(context).primaryText,
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).primaryText,
                                   fontSize: 20.0,
                                   letterSpacing: 0.0,
                                   fontWeight: FontWeight.bold,
-                                  fontStyle: FlutterFlowTheme.of(context)
-                                      .titleLarge
-                                      .fontStyle,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).titleLarge.fontStyle,
                                   lineHeight: 1.3,
                                 ),
                           ),
                           Container(
                             decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context)
-                                  .secondaryBackground,
+                              color: FlutterFlowTheme.of(
+                                context,
+                              ).secondaryBackground,
                               border: Border.all(
                                 color: FlutterFlowTheme.of(context).divider,
                                 width: 1.0,
@@ -1038,14 +1044,17 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                       width: 80.0,
                                       height: 80.0,
                                       decoration: BoxDecoration(
-                                        borderRadius:
-                                            BorderRadius.circular(12.0),
+                                        borderRadius: BorderRadius.circular(
+                                          12.0,
+                                        ),
                                       ),
                                       child: CachedNetworkImage(
-                                        fadeInDuration:
-                                            Duration(milliseconds: 0),
-                                        fadeOutDuration:
-                                            Duration(milliseconds: 0),
+                                        fadeInDuration: Duration(
+                                          milliseconds: 0,
+                                        ),
+                                        fadeOutDuration: Duration(
+                                          milliseconds: 0,
+                                        ),
                                         imageUrl:
                                             'https://dimg.dreamflow.cloud/v1/image/modern dental clinic interior',
                                         fit: BoxFit.cover,
@@ -1069,34 +1078,35 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                               CrossAxisAlignment.center,
                                           children: [
                                             Text(
-                                              FFLocalizations.of(context)
-                                                  .getText(
+                                              FFLocalizations.of(
+                                                context,
+                                              ).getText(
                                                 'ssph1y19' /* Dental Care */,
                                               ),
-                                              style: FlutterFlowTheme.of(
-                                                      context)
-                                                  .titleMedium
-                                                  .override(
+                                              style:
+                                                  FlutterFlowTheme.of(
+                                                    context,
+                                                  ).titleMedium.override(
                                                     font: GoogleFonts.inter(
                                                       fontWeight:
                                                           FontWeight.bold,
                                                       fontStyle:
                                                           FlutterFlowTheme.of(
-                                                                  context)
+                                                                context,
+                                                              )
                                                               .titleMedium
                                                               .fontStyle,
                                                     ),
                                                     color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .primaryText,
+                                                      context,
+                                                    ).primaryText,
                                                     fontSize: 16.0,
                                                     letterSpacing: 0.0,
                                                     fontWeight: FontWeight.bold,
                                                     fontStyle:
                                                         FlutterFlowTheme.of(
-                                                                context)
-                                                            .titleMedium
-                                                            .fontStyle,
+                                                          context,
+                                                        ).titleMedium.fontStyle,
                                                     lineHeight: 1.4,
                                                   ),
                                             ),
@@ -1107,18 +1117,23 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                     BorderRadius.circular(8.0),
                                               ),
                                               child: Padding(
-                                                padding: EdgeInsetsDirectional
-                                                    .fromSTEB(
-                                                        8.0, 4.0, 8.0, 4.0),
+                                                padding:
+                                                    EdgeInsetsDirectional.fromSTEB(
+                                                      8.0,
+                                                      4.0,
+                                                      8.0,
+                                                      4.0,
+                                                    ),
                                                 child: Text(
-                                                  FFLocalizations.of(context)
-                                                      .getText(
+                                                  FFLocalizations.of(
+                                                    context,
+                                                  ).getText(
                                                     'e8xvei1h' /* 98% */,
                                                   ),
                                                   style: TextStyle(
                                                     color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .success,
+                                                      context,
+                                                    ).success,
                                                     fontWeight: FontWeight.bold,
                                                     fontSize: 12.0,
                                                   ),
@@ -1138,20 +1153,18 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                   fontWeight: FontWeight.normal,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .bodySmall
-                                                          .fontStyle,
+                                                        context,
+                                                      ).bodySmall.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .secondaryText,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).secondaryText,
                                                 fontSize: 12.0,
                                                 letterSpacing: 0.0,
                                                 fontWeight: FontWeight.normal,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .bodySmall
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).bodySmall.fontStyle,
                                                 lineHeight: 1.4,
                                               ),
                                         ),
@@ -1167,7 +1180,9 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                               height: 20.0,
                                               child: Stack(
                                                 alignment: AlignmentDirectional(
-                                                    -1.0, 0.0),
+                                                  -1.0,
+                                                  0.0,
+                                                ),
                                                 children: [
                                                   Container(
                                                     width: 20.0,
@@ -1182,19 +1197,25 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                     ),
                                                     alignment:
                                                         AlignmentDirectional(
-                                                            0.0, 0.0),
+                                                          0.0,
+                                                          0.0,
+                                                        ),
                                                   ),
                                                   Padding(
                                                     padding:
-                                                        EdgeInsetsDirectional
-                                                            .fromSTEB(12.0, 0.0,
-                                                                0.0, 0.0),
+                                                        EdgeInsetsDirectional.fromSTEB(
+                                                          12.0,
+                                                          0.0,
+                                                          0.0,
+                                                          0.0,
+                                                        ),
                                                     child: Container(
                                                       width: 20.0,
                                                       height: 20.0,
                                                       decoration: BoxDecoration(
-                                                        color:
-                                                            Color(0xFFEC4899),
+                                                        color: Color(
+                                                          0xFFEC4899,
+                                                        ),
                                                         shape: BoxShape.circle,
                                                         border: Border.all(
                                                           color: Colors.white,
@@ -1203,20 +1224,26 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                       ),
                                                       alignment:
                                                           AlignmentDirectional(
-                                                              0.0, 0.0),
+                                                            0.0,
+                                                            0.0,
+                                                          ),
                                                     ),
                                                   ),
                                                   Padding(
                                                     padding:
-                                                        EdgeInsetsDirectional
-                                                            .fromSTEB(24.0, 0.0,
-                                                                0.0, 0.0),
+                                                        EdgeInsetsDirectional.fromSTEB(
+                                                          24.0,
+                                                          0.0,
+                                                          0.0,
+                                                          0.0,
+                                                        ),
                                                     child: Container(
                                                       width: 20.0,
                                                       height: 20.0,
                                                       decoration: BoxDecoration(
-                                                        color:
-                                                            Color(0xFFF59E0B),
+                                                        color: Color(
+                                                          0xFFF59E0B,
+                                                        ),
                                                         shape: BoxShape.circle,
                                                         border: Border.all(
                                                           color: Colors.white,
@@ -1225,42 +1252,44 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                                                       ),
                                                       alignment:
                                                           AlignmentDirectional(
-                                                              0.0, 0.0),
+                                                            0.0,
+                                                            0.0,
+                                                          ),
                                                     ),
                                                   ),
                                                 ],
                                               ),
                                             ),
                                             Text(
-                                              FFLocalizations.of(context)
-                                                  .getText(
+                                              FFLocalizations.of(
+                                                context,
+                                              ).getText(
                                                 '48fkkbah' /* +9 others */,
                                               ),
-                                              style: FlutterFlowTheme.of(
-                                                      context)
-                                                  .labelSmall
-                                                  .override(
-                                                    font: GoogleFonts
-                                                        .jetBrainsMono(
+                                              style:
+                                                  FlutterFlowTheme.of(
+                                                    context,
+                                                  ).labelSmall.override(
+                                                    font: GoogleFonts.jetBrainsMono(
                                                       fontWeight:
                                                           FontWeight.w600,
                                                       fontStyle:
                                                           FlutterFlowTheme.of(
-                                                                  context)
+                                                                context,
+                                                              )
                                                               .labelSmall
                                                               .fontStyle,
                                                     ),
                                                     color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .hint,
+                                                      context,
+                                                    ).hint,
                                                     fontSize: 10.0,
                                                     letterSpacing: 0.0,
                                                     fontWeight: FontWeight.w600,
                                                     fontStyle:
                                                         FlutterFlowTheme.of(
-                                                                context)
-                                                            .labelSmall
-                                                            .fontStyle,
+                                                          context,
+                                                        ).labelSmall.fontStyle,
                                                     lineHeight: 1.2,
                                                   ),
                                             ),
@@ -1275,9 +1304,7 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                           ),
                         ].divide(SizedBox(height: 16.0)),
                       ),
-                      Container(
-                        height: 32.0,
-                      ),
+                      Container(height: 32.0),
                     ].divide(SizedBox(height: 24.0)),
                   ),
                 ),
@@ -1288,9 +1315,7 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
               child: wrapWithModel(
                 model: _model.menuModel,
                 updateCallback: () => safeSetState(() {}),
-                child: MenuWidget(
-                  currentPage: Menu.favorite,
-                ),
+                child: MenuWidget(currentPage: Menu.favorite),
               ),
             ),
           ],

@@ -1,16 +1,15 @@
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import '/flutter_flow/flutter_flow_widgets.dart';
-import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'togle_mode_model.dart';
 export 'togle_mode_model.dart';
 
 class TogleModeWidget extends StatefulWidget {
-  const TogleModeWidget({super.key});
+  const TogleModeWidget({super.key, this.onModeSelected});
+
+  final ValueChanged<bool>? onModeSelected;
 
   @override
   State<TogleModeWidget> createState() => _TogleModeWidgetState();
@@ -29,117 +28,135 @@ class _TogleModeWidgetState extends State<TogleModeWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => TogleModeModel());
-
-    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
   @override
   void dispose() {
     _model.maybeDispose();
-
     super.dispose();
+  }
+
+  Widget _buildModeRow(
+    BuildContext context, {
+    required bool specialistMode,
+    required IconData icon,
+    required String title,
+    required String description,
+  }) {
+    final selected = FFAppState().specialistMode == specialistMode;
+
+    return InkWell(
+      onTap: selected
+          ? null
+          : () => widget.onModeSelected?.call(specialistMode),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 44.0,
+              height: 44.0,
+              decoration: BoxDecoration(
+                color: FlutterFlowTheme.of(
+                  context,
+                ).primary.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(9999.0),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                icon,
+                color: FlutterFlowTheme.of(context).primary,
+                size: 23.0,
+              ),
+            ),
+            const SizedBox(width: 14.0),
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: FlutterFlowTheme.of(context).titleSmall.override(
+                      font: GoogleFonts.interTight(fontWeight: FontWeight.w600),
+                      color: FlutterFlowTheme.of(context).primaryText,
+                      fontWeight: FontWeight.w600,
+                      letterSpacing: 0.0,
+                    ),
+                  ),
+                  const SizedBox(height: 2.0),
+                  Text(
+                    description,
+                    style: FlutterFlowTheme.of(context).bodySmall.override(
+                      font: GoogleFonts.jetBrainsMono(
+                        fontWeight: FontWeight.normal,
+                      ),
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                      fontSize: 12.0,
+                      fontWeight: FontWeight.normal,
+                      letterSpacing: 0.0,
+                      lineHeight: 1.4,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12.0),
+            SizedBox(
+              width: 24.0,
+              child: selected
+                  ? Icon(
+                      Icons.check_rounded,
+                      color: FlutterFlowTheme.of(context).primary,
+                      size: 26.0,
+                    )
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
 
-    return Container(
-      decoration: BoxDecoration(
-        color: FFAppState().specialistMode
-            ? FlutterFlowTheme.of(context).primary
-            : FlutterFlowTheme.of(context).primaryBackground,
-        borderRadius: BorderRadius.circular(12.0),
-        border: Border.all(
-          color: Color(0xFFDBEAFE),
-          width: 1.0,
+    return Material(
+      color: FlutterFlowTheme.of(context).secondaryBackground,
+      borderRadius: BorderRadius.circular(14.0),
+      clipBehavior: Clip.antiAlias,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(14.0),
+          border: Border.all(color: FlutterFlowTheme.of(context).divider),
         ),
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(24.0),
-        child: Row(
-          mainAxisSize: MainAxisSize.max,
-          mainAxisAlignment: MainAxisAlignment.start,
-          crossAxisAlignment: CrossAxisAlignment.center,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Container(
-              width: 48.0,
-              height: 48.0,
-              decoration: BoxDecoration(
-                color: FFAppState().specialistMode
-                    ? FlutterFlowTheme.of(context).primaryBackground
-                    : FlutterFlowTheme.of(context).primary,
-                borderRadius: BorderRadius.circular(9999.0),
-              ),
-              alignment: AlignmentDirectional(0.0, 0.0),
-              child: Stack(
-                children: [
-                  if (FFAppState().specialistMode)
-                    Icon(
-                      Icons.business_center_rounded,
-                      color: FlutterFlowTheme.of(context).primary,
-                      size: 24.0,
-                    ),
-                  if (!FFAppState().specialistMode)
-                    Icon(
-                      Icons.person,
-                      color: FlutterFlowTheme.of(context).primaryBackground,
-                      size: 24.0,
-                    ),
-                ],
-              ),
+            _buildModeRow(
+              context,
+              specialistMode: false,
+              icon: Icons.person,
+              title: 'Клиент',
+              description:
+                  'Находите нужные услуги по рекомендациям Ваших знакомых',
             ),
-            Expanded(
-              flex: 1,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    FFAppState().specialistMode ? 'Специалист' : 'Клиент',
-                    style: FlutterFlowTheme.of(context).titleSmall.override(
-                          font: GoogleFonts.interTight(
-                            fontWeight: FontWeight.w600,
-                            fontStyle: FlutterFlowTheme.of(context)
-                                .titleSmall
-                                .fontStyle,
-                          ),
-                          color: FFAppState().specialistMode
-                              ? FlutterFlowTheme.of(context).primaryBackground
-                              : FlutterFlowTheme.of(context).primary,
-                          letterSpacing: 0.0,
-                          fontWeight: FontWeight.w600,
-                          fontStyle:
-                              FlutterFlowTheme.of(context).titleSmall.fontStyle,
-                        ),
-                  ),
-                  Text(
-                    FFAppState().specialistMode
-                        ? 'Создавайте свои услуги и привлекайте больше клиентов'
-                        : 'Находите нужные услгуи по рекомендациям Ваших знакомых',
-                    style: FlutterFlowTheme.of(context).bodySmall.override(
-                          font: GoogleFonts.jetBrainsMono(
-                            fontWeight: FontWeight.normal,
-                            fontStyle: FlutterFlowTheme.of(context)
-                                .bodySmall
-                                .fontStyle,
-                          ),
-                          color: FFAppState().specialistMode
-                              ? FlutterFlowTheme.of(context).hint
-                              : FlutterFlowTheme.of(context).secondaryText,
-                          fontSize: 12.0,
-                          letterSpacing: 0.0,
-                          fontWeight: FontWeight.normal,
-                          fontStyle:
-                              FlutterFlowTheme.of(context).bodySmall.fontStyle,
-                          lineHeight: 1.4,
-                        ),
-                  ),
-                ].divide(SizedBox(height: 2.0)),
-              ),
+            Divider(
+              height: 1.0,
+              thickness: 1.0,
+              color: FlutterFlowTheme.of(context).divider,
             ),
-          ].divide(SizedBox(width: 16.0)),
+            _buildModeRow(
+              context,
+              specialistMode: true,
+              icon: Icons.business_center_rounded,
+              title: 'Специалист',
+              description:
+                  'Создавайте свои услуги и привлекайте больше клиентов',
+            ),
+          ],
         ),
       ),
     );

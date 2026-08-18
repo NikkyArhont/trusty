@@ -22,8 +22,11 @@ String get currentUserEmail =>
 
 String get currentUserUid => currentUser?.uid ?? '';
 
-String get currentUserDisplayName =>
-    currentUserDocument?.displayName ?? currentUser?.displayName ?? '';
+String get currentUserDisplayName {
+  final name =
+      currentUserDocument?.displayName ?? currentUser?.displayName ?? '';
+  return name.trim().isNotEmpty ? name.trim() : currentPhoneNumber;
+}
 
 String get currentUserPhoto =>
     currentUserDocument?.photoUrl ?? currentUser?.photoUrl ?? '';
@@ -53,24 +56,26 @@ final authenticatedUserStream = FirebaseAuth.instance
     .switchMap(
       (uid) => uid.isEmpty
           ? Stream.value(null)
-          : UserRecord.getDocument(UserRecord.collection.doc(uid))
-              .handleError((_) {}),
+          : UserRecord.getDocument(
+              UserRecord.collection.doc(uid),
+            ).handleError((_) {}),
     )
     .map((user) {
-  currentUserDocument = user;
+      currentUserDocument = user;
 
-  return currentUserDocument;
-}).asBroadcastStream();
+      return currentUserDocument;
+    })
+    .asBroadcastStream();
 
 class AuthUserStreamWidget extends StatelessWidget {
   const AuthUserStreamWidget({Key? key, required this.builder})
-      : super(key: key);
+    : super(key: key);
 
   final WidgetBuilder builder;
 
   @override
   Widget build(BuildContext context) => StreamBuilder(
-        stream: authenticatedUserStream,
-        builder: (context, _) => builder(context),
-      );
+    stream: authenticatedUserStream,
+    builder: (context, _) => builder(context),
+  );
 }

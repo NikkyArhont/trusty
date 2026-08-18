@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:page_transition/page_transition.dart';
@@ -81,187 +82,231 @@ class AppStateNotifier extends ChangeNotifier {
 }
 
 GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
-      initialLocation: '/',
-      debugLogDiagnostics: true,
-      refreshListenable: appStateNotifier,
-      navigatorKey: appNavigatorKey,
-      errorBuilder: (context, state) =>
-          appStateNotifier.loggedIn ? MainWidget() : LoginWidget(),
-      routes: [
-        FFRoute(
-          name: '_initialize',
-          path: '/',
-          builder: (context, _) =>
-              appStateNotifier.loggedIn ? MainWidget() : LoginWidget(),
+  initialLocation: '/',
+  debugLogDiagnostics: true,
+  refreshListenable: appStateNotifier,
+  navigatorKey: appNavigatorKey,
+  errorBuilder: (context, state) =>
+      appStateNotifier.loggedIn ? MainWidget() : LoginWidget(),
+  routes: [
+    FFRoute(
+      name: '_initialize',
+      path: '/',
+      builder: (context, _) => FFAppState().firstTime
+          ? AppOnboardingWidget()
+          : appStateNotifier.loggedIn
+          ? InitpageWidget()
+          : LoginWidget(),
+    ),
+    FFRoute(
+      name: AppOnboardingWidget.routeName,
+      path: AppOnboardingWidget.routePath,
+      builder: (context, params) => AppOnboardingWidget(
+        returnToProfile:
+            params.getParam('returnToProfile', ParamType.bool) ?? false,
+      ),
+    ),
+    FFRoute(
+      name: ClientProfileSetupWidget.routeName,
+      path: ClientProfileSetupWidget.routePath,
+      builder: (context, params) => ClientProfileSetupWidget(),
+    ),
+    FFRoute(
+      name: LoginWidget.routeName,
+      path: LoginWidget.routePath,
+      builder: (context, params) => LoginWidget(),
+    ),
+    FFRoute(
+      name: MainWidget.routeName,
+      path: MainWidget.routePath,
+      builder: (context, params) => MainWidget(),
+    ),
+    FFRoute(
+      name: SearchWidget.routeName,
+      path: SearchWidget.routePath,
+      builder: (context, params) => SearchWidget(),
+    ),
+    FFRoute(
+      name: CategoriesWidget.routeName,
+      path: CategoriesWidget.routePath,
+      builder: (context, params) => CategoriesWidget(),
+    ),
+    FFRoute(
+      name: FavoritesWidget.routeName,
+      path: FavoritesWidget.routePath,
+      builder: (context, params) => FavoritesWidget(),
+    ),
+    FFRoute(
+      name: CabinetWidget.routeName,
+      path: CabinetWidget.routePath,
+      builder: (context, params) => CabinetWidget(),
+    ),
+    FFRoute(
+      name: ChatsWidget.routeName,
+      path: ChatsWidget.routePath,
+      builder: (context, params) => ChatsWidget(),
+    ),
+    FFRoute(
+      name: ChatWidget.routeName,
+      path: ChatWidget.routePath,
+      builder: (context, params) =>
+          ChatWidget(chatId: params.getParam('chatId', ParamType.String)),
+    ),
+    FFRoute(
+      name: VisitHistoryWidget.routeName,
+      path: VisitHistoryWidget.routePath,
+      builder: (context, params) => VisitHistoryWidget(
+        chatId: params.getParam('chatId', ParamType.String),
+      ),
+    ),
+    FFRoute(
+      name: ServiceDetailWidget.routeName,
+      path: ServiceDetailWidget.routePath,
+      asyncParams: {
+        'serviceDoc': getDoc(['service'], ServiceRecord.fromSnapshot),
+      },
+      builder: (context, params) => ServiceDetailWidget(
+        serviceDoc: params.getParam('serviceDoc', ParamType.Document),
+      ),
+    ),
+    FFRoute(
+      name: UserProfileWidget.routeName,
+      path: UserProfileWidget.routePath,
+      builder: (context, params) => UserProfileWidget(),
+    ),
+    FFRoute(
+      name: SpecialistDashboardWidget.routeName,
+      path: SpecialistDashboardWidget.routePath,
+      builder: (context, params) => SpecialistDashboardWidget(),
+    ),
+    FFRoute(
+      name: RecordPageClientWidget.routeName,
+      path: RecordPageClientWidget.routePath,
+      asyncParams: {
+        'serviceDoc': getDoc(['service'], ServiceRecord.fromSnapshot),
+        'recordDoc': getDoc(['records'], RecordsRecord.fromSnapshot),
+      },
+      builder: (context, params) => RecordPageClientWidget(
+        serviceDoc: params.getParam('serviceDoc', ParamType.Document),
+        recordDoc: params.getParam('recordDoc', ParamType.Document),
+      ),
+    ),
+    FFRoute(
+      name: EditServiceWidget.routeName,
+      path: EditServiceWidget.routePath,
+      asyncParams: {
+        'servDoc': getDoc(['service'], ServiceRecord.fromSnapshot),
+      },
+      builder: (context, params) => EditServiceWidget(
+        servDoc: params.getParam('servDoc', ParamType.Document),
+      ),
+    ),
+    FFRoute(
+      name: SmsWidget.routeName,
+      path: SmsWidget.routePath,
+      builder: (context, params) => SmsWidget(
+        phone: params.getParam('phone', ParamType.String),
+        verificationId: params.getParam('verificationId', ParamType.String),
+      ),
+    ),
+    FFRoute(
+      name: RecordsWidget.routeName,
+      path: RecordsWidget.routePath,
+      builder: (context, params) => RecordsWidget(),
+    ),
+    FFRoute(
+      name: MasterChatsWidget.routeName,
+      path: MasterChatsWidget.routePath,
+      builder: (context, params) => MasterChatsWidget(),
+    ),
+    FFRoute(
+      name: MasterOnboardingWidget.routeName,
+      path: MasterOnboardingWidget.routePath,
+      builder: (context, params) => MasterOnboardingWidget(
+        returnToProfile:
+            params.getParam('returnToProfile', ParamType.bool) ?? false,
+      ),
+    ),
+    FFRoute(
+      name: ChooseLocationCityWidget.routeName,
+      path: ChooseLocationCityWidget.routePath,
+      builder: (context, params) => ChooseLocationCityWidget(
+        edit: params.getParam('edit', ParamType.bool),
+        addressMode: params.getParam('addressMode', ParamType.bool) ?? false,
+        initialPlace: params.getParam<PlaceStruct>(
+          'initialPlace',
+          ParamType.DataStruct,
+          structBuilder: PlaceStruct.fromSerializableMap,
         ),
-        FFRoute(
-          name: LoginWidget.routeName,
-          path: LoginWidget.routePath,
-          builder: (context, params) => LoginWidget(),
+      ),
+    ),
+    FFRoute(
+      name: EditProfileWidget.routeName,
+      path: EditProfileWidget.routePath,
+      builder: (context, params) => EditProfileWidget(),
+    ),
+    FFRoute(
+      name: InitpageWidget.routeName,
+      path: InitpageWidget.routePath,
+      builder: (context, params) => InitpageWidget(),
+    ),
+    FFRoute(
+      name: SearchResultWidget.routeName,
+      path: SearchResultWidget.routePath,
+      asyncParams: {
+        'listResult': getDocList(['service'], ServiceRecord.fromSnapshot),
+      },
+      builder: (context, params) => SearchResultWidget(
+        listResult: params.getParam<ServiceRecord>(
+          'listResult',
+          ParamType.Document,
+          isList: true,
         ),
-        FFRoute(
-          name: MainWidget.routeName,
-          path: MainWidget.routePath,
-          builder: (context, params) => MainWidget(),
+      ),
+    ),
+    FFRoute(
+      name: EditProfileMasterWidget.routeName,
+      path: EditProfileMasterWidget.routePath,
+      builder: (context, params) => EditProfileMasterWidget(
+        setupMode: params.getParam('setupMode', ParamType.bool) ?? false,
+      ),
+    ),
+    FFRoute(
+      name: MasterPageWidget.routeName,
+      path: MasterPageWidget.routePath,
+      asyncParams: {
+        'masterDoc': getDoc(['user'], UserRecord.fromSnapshot),
+      },
+      builder: (context, params) => MasterPageWidget(
+        masterDoc: params.getParam('masterDoc', ParamType.Document),
+        sourceCategoryKey: params.getParam(
+          'sourceCategoryKey',
+          ParamType.String,
         ),
-        FFRoute(
-          name: SearchWidget.routeName,
-          path: SearchWidget.routePath,
-          builder: (context, params) => SearchWidget(),
-        ),
-        FFRoute(
-          name: CategoriesWidget.routeName,
-          path: CategoriesWidget.routePath,
-          builder: (context, params) => CategoriesWidget(),
-        ),
-        FFRoute(
-          name: FavoritesWidget.routeName,
-          path: FavoritesWidget.routePath,
-          builder: (context, params) => FavoritesWidget(),
-        ),
-        FFRoute(
-          name: ServiceDetailWidget.routeName,
-          path: ServiceDetailWidget.routePath,
-          asyncParams: {
-            'serviceDoc': getDoc(['service'], ServiceRecord.fromSnapshot),
-          },
-          builder: (context, params) => ServiceDetailWidget(
-            serviceDoc: params.getParam(
-              'serviceDoc',
-              ParamType.Document,
-            ),
-          ),
-        ),
-        FFRoute(
-          name: UserProfileWidget.routeName,
-          path: UserProfileWidget.routePath,
-          builder: (context, params) => UserProfileWidget(),
-        ),
-        FFRoute(
-          name: SpecialistDashboardWidget.routeName,
-          path: SpecialistDashboardWidget.routePath,
-          builder: (context, params) => SpecialistDashboardWidget(),
-        ),
-        FFRoute(
-          name: RecordPageClientWidget.routeName,
-          path: RecordPageClientWidget.routePath,
-          asyncParams: {
-            'serviceDoc': getDoc(['service'], ServiceRecord.fromSnapshot),
-          },
-          builder: (context, params) => RecordPageClientWidget(
-            serviceDoc: params.getParam(
-              'serviceDoc',
-              ParamType.Document,
-            ),
-          ),
-        ),
-        FFRoute(
-          name: EditServiceWidget.routeName,
-          path: EditServiceWidget.routePath,
-          asyncParams: {
-            'servDoc': getDoc(['service'], ServiceRecord.fromSnapshot),
-          },
-          builder: (context, params) => EditServiceWidget(
-            servDoc: params.getParam(
-              'servDoc',
-              ParamType.Document,
-            ),
-          ),
-        ),
-        FFRoute(
-          name: SmsWidget.routeName,
-          path: SmsWidget.routePath,
-          builder: (context, params) => SmsWidget(
-            phone: params.getParam(
-              'phone',
-              ParamType.String,
-            ),
-          ),
-        ),
-        FFRoute(
-          name: RecordsWidget.routeName,
-          path: RecordsWidget.routePath,
-          builder: (context, params) => RecordsWidget(),
-        ),
-        FFRoute(
-          name: MyServicesWidget.routeName,
-          path: MyServicesWidget.routePath,
-          builder: (context, params) => MyServicesWidget(),
-        ),
-        FFRoute(
-          name: ChooseLocationCityWidget.routeName,
-          path: ChooseLocationCityWidget.routePath,
-          builder: (context, params) => ChooseLocationCityWidget(
-            edit: params.getParam(
-              'edit',
-              ParamType.bool,
-            ),
-          ),
-        ),
-        FFRoute(
-          name: EditProfileWidget.routeName,
-          path: EditProfileWidget.routePath,
-          builder: (context, params) => EditProfileWidget(),
-        ),
-        FFRoute(
-          name: InitpageWidget.routeName,
-          path: InitpageWidget.routePath,
-          builder: (context, params) => InitpageWidget(),
-        ),
-        FFRoute(
-          name: SearchResultWidget.routeName,
-          path: SearchResultWidget.routePath,
-          asyncParams: {
-            'listResult': getDocList(['service'], ServiceRecord.fromSnapshot),
-          },
-          builder: (context, params) => SearchResultWidget(
-            listResult: params.getParam<ServiceRecord>(
-              'listResult',
-              ParamType.Document,
-              isList: true,
-            ),
-          ),
-        ),
-        FFRoute(
-          name: EditProfileMasterWidget.routeName,
-          path: EditProfileMasterWidget.routePath,
-          builder: (context, params) => EditProfileMasterWidget(),
-        ),
-        FFRoute(
-          name: MasterPageWidget.routeName,
-          path: MasterPageWidget.routePath,
-          asyncParams: {
-            'masterDoc': getDoc(['user'], UserRecord.fromSnapshot),
-          },
-          builder: (context, params) => MasterPageWidget(
-            masterDoc: params.getParam(
-              'masterDoc',
-              ParamType.Document,
-            ),
-          ),
-        ),
-        FFRoute(
-          name: RecordPageMasterWidget.routeName,
-          path: RecordPageMasterWidget.routePath,
-          asyncParams: {
-            'recordDoc': getDoc(['records'], RecordsRecord.fromSnapshot),
-          },
-          builder: (context, params) => RecordPageMasterWidget(
-            recordDoc: params.getParam(
-              'recordDoc',
-              ParamType.Document,
-            ),
-          ),
-        )
-      ].map((r) => r.toRoute(appStateNotifier)).toList(),
-    );
+      ),
+    ),
+    FFRoute(
+      name: RecordPageMasterWidget.routeName,
+      path: RecordPageMasterWidget.routePath,
+      asyncParams: {
+        'recordDoc': getDoc(['records'], RecordsRecord.fromSnapshot),
+      },
+      builder: (context, params) => RecordPageMasterWidget(
+        recordDoc: params.getParam('recordDoc', ParamType.Document),
+      ),
+    ),
+    FFRoute(
+      name: MasterNotificationsWidget.routeName,
+      path: MasterNotificationsWidget.routePath,
+      builder: (context, params) => MasterNotificationsWidget(),
+    ),
+  ].map((r) => r.toRoute(appStateNotifier)).toList(),
+);
 
 extension NavParamExtensions on Map<String, String?> {
   Map<String, String> get withoutNulls => Map.fromEntries(
-        entries
-            .where((e) => e.value != null)
-            .map((e) => MapEntry(e.key, e.value!)),
-      );
+    entries.where((e) => e.value != null).map((e) => MapEntry(e.key, e.value!)),
+  );
 }
 
 extension NavigationExtensions on BuildContext {
@@ -272,15 +317,14 @@ extension NavigationExtensions on BuildContext {
     Map<String, String> queryParameters = const <String, String>{},
     Object? extra,
     bool ignoreRedirect = false,
-  }) =>
-      !mounted || GoRouter.of(this).shouldRedirect(ignoreRedirect)
-          ? null
-          : goNamed(
-              name,
-              pathParameters: pathParameters,
-              queryParameters: queryParameters,
-              extra: extra,
-            );
+  }) => !mounted || GoRouter.of(this).shouldRedirect(ignoreRedirect)
+      ? null
+      : goNamed(
+          name,
+          pathParameters: pathParameters,
+          queryParameters: queryParameters,
+          extra: extra,
+        );
 
   void pushNamedAuth(
     String name,
@@ -289,15 +333,14 @@ extension NavigationExtensions on BuildContext {
     Map<String, String> queryParameters = const <String, String>{},
     Object? extra,
     bool ignoreRedirect = false,
-  }) =>
-      !mounted || GoRouter.of(this).shouldRedirect(ignoreRedirect)
-          ? null
-          : pushNamed(
-              name,
-              pathParameters: pathParameters,
-              queryParameters: queryParameters,
-              extra: extra,
-            );
+  }) => !mounted || GoRouter.of(this).shouldRedirect(ignoreRedirect)
+      ? null
+      : pushNamed(
+          name,
+          pathParameters: pathParameters,
+          queryParameters: queryParameters,
+          extra: extra,
+        );
 
   void safePop() {
     // If there is only one route on the stack, navigate to the initial
@@ -314,8 +357,8 @@ extension GoRouterExtensions on GoRouter {
   AppStateNotifier get appState => AppStateNotifier.instance;
   void prepareAuthEvent([bool ignoreRedirect = false]) =>
       appState.hasRedirect() && !ignoreRedirect
-          ? null
-          : appState.updateNotifyOnAuthChange(false);
+      ? null
+      : appState.updateNotifyOnAuthChange(false);
   bool shouldRedirect(bool ignoreRedirect) =>
       !ignoreRedirect && appState.hasRedirect();
   void clearRedirectLocation() => appState.clearRedirectLocation();
@@ -353,18 +396,17 @@ class FFParameters {
       asyncParams.containsKey(param.key) && param.value is String;
   bool get hasFutures => state.allParams.entries.any(isAsyncParam);
   Future<bool> completeFutures() => Future.wait(
-        state.allParams.entries.where(isAsyncParam).map(
-          (param) async {
-            final doc = await asyncParams[param.key]!(param.value)
-                .onError((_, __) => null);
-            if (doc != null) {
-              futureParamValues[param.key] = doc;
-              return true;
-            }
-            return false;
-          },
-        ),
-      ).onError((_, __) => [false]).then((v) => v.every((e) => e));
+    state.allParams.entries.where(isAsyncParam).map((param) async {
+      final doc = await asyncParams[param.key]!(
+        param.value,
+      ).onError((_, __) => null);
+      if (doc != null) {
+        futureParamValues[param.key] = doc;
+        return true;
+      }
+      return false;
+    }),
+  ).onError((_, __) => [false]).then((v) => v.every((e) => e));
 
   dynamic getParam<T>(
     String paramName,
@@ -413,67 +455,151 @@ class FFRoute {
   final List<GoRoute> routes;
 
   GoRoute toRoute(AppStateNotifier appStateNotifier) => GoRoute(
-        name: name,
-        path: path,
-        redirect: (context, state) {
-          if (appStateNotifier.shouldRedirect) {
-            final redirectLocation = appStateNotifier.getRedirectLocation();
-            appStateNotifier.clearRedirectLocation();
-            return redirectLocation;
-          }
+    name: name,
+    path: path,
+    redirect: (context, state) {
+      if (appStateNotifier.shouldRedirect) {
+        final redirectLocation = appStateNotifier.getRedirectLocation();
+        appStateNotifier.clearRedirectLocation();
+        return redirectLocation;
+      }
 
-          if (requireAuth && !appStateNotifier.loggedIn) {
-            appStateNotifier.setRedirectLocationIfUnset(state.uri.toString());
-            return '/login';
-          }
-          return null;
-        },
-        pageBuilder: (context, state) {
-          fixStatusBarOniOS16AndBelow(context);
-          final ffParams = FFParameters(state, asyncParams);
-          final page = ffParams.hasFutures
-              ? FutureBuilder(
-                  future: ffParams.completeFutures(),
-                  builder: (context, _) => builder(context, ffParams),
-                )
-              : builder(context, ffParams);
-          final child = appStateNotifier.loading
-              ? Container(
-                  color: FlutterFlowTheme.of(context).primaryText,
-                  child: Image.asset(
-                    'assets/images/ChatGPT_Image_20_._2026_.,_13_28_15_(1).png',
-                    fit: BoxFit.contain,
-                  ),
-                )
-              : page;
+      if (requireAuth && !appStateNotifier.loggedIn) {
+        appStateNotifier.setRedirectLocationIfUnset(state.uri.toString());
+        return '/login';
+      }
+      return null;
+    },
+    pageBuilder: (context, state) {
+      fixStatusBarOniOS16AndBelow(context);
+      final ffParams = FFParameters(state, asyncParams);
+      final page = ffParams.hasFutures
+          ? FutureBuilder(
+              future: ffParams.completeFutures(),
+              builder: (context, _) => builder(context, ffParams),
+            )
+          : builder(context, ffParams);
+      final isLoading = appStateNotifier.loading;
+      final child = isLoading
+          ? ColoredBox(color: FlutterFlowTheme.of(context).primaryBackground)
+          : _RootTabSwipeRegion(routeName: name, child: page);
 
-          final transitionInfo = state.transitionInfo;
-          return transitionInfo.hasTransition
-              ? CustomTransitionPage(
-                  key: state.pageKey,
-                  name: state.name,
-                  child: child,
-                  transitionDuration: transitionInfo.duration,
-                  transitionsBuilder:
-                      (context, animation, secondaryAnimation, child) =>
-                          PageTransition(
-                    type: transitionInfo.transitionType,
-                    duration: transitionInfo.duration,
-                    reverseDuration: transitionInfo.duration,
-                    alignment: transitionInfo.alignment,
-                    child: child,
-                  ).buildTransitions(
-                    context,
-                    animation,
-                    secondaryAnimation,
-                    child,
-                  ),
-                )
-              : MaterialPage(
-                  key: state.pageKey, name: state.name, child: child);
-        },
-        routes: routes,
-      );
+      if (!isLoading && page is! InitpageWidget) {
+        WidgetsBinding.instance.addPostFrameCallback(
+          (_) => FlutterNativeSplash.remove(),
+        );
+      }
+
+      final transitionInfo = state.transitionInfo;
+      return transitionInfo.hasTransition
+          ? CustomTransitionPage(
+              key: state.pageKey,
+              name: state.name,
+              child: child,
+              transitionDuration: transitionInfo.duration,
+              transitionsBuilder:
+                  (context, animation, secondaryAnimation, child) =>
+                      PageTransition(
+                        type: transitionInfo.transitionType,
+                        duration: transitionInfo.duration,
+                        reverseDuration: transitionInfo.duration,
+                        alignment: transitionInfo.alignment,
+                        child: child,
+                      ).buildTransitions(
+                        context,
+                        animation,
+                        secondaryAnimation,
+                        child,
+                      ),
+            )
+          : MaterialPage(key: state.pageKey, name: state.name, child: child);
+    },
+    routes: routes,
+  );
+}
+
+class _RootTabSwipeRegion extends StatefulWidget {
+  const _RootTabSwipeRegion({required this.routeName, required this.child});
+
+  final String routeName;
+  final Widget child;
+
+  @override
+  State<_RootTabSwipeRegion> createState() => _RootTabSwipeRegionState();
+}
+
+class _RootTabSwipeRegionState extends State<_RootTabSwipeRegion> {
+  static const double _distanceThreshold = 56.0;
+  static const double _velocityThreshold = 450.0;
+
+  double _dragDistance = 0.0;
+  bool _isNavigating = false;
+
+  List<String> get _routeOrder => FFAppState().specialistMode
+      ? [
+          SpecialistDashboardWidget.routeName,
+          RecordsWidget.routeName,
+          MasterChatsWidget.routeName,
+          UserProfileWidget.routeName,
+        ]
+      : [
+          MainWidget.routeName,
+          CabinetWidget.routeName,
+          ChatsWidget.routeName,
+          UserProfileWidget.routeName,
+        ];
+
+  void _handleDragStart(DragStartDetails details) {
+    _dragDistance = 0.0;
+  }
+
+  void _handleDragUpdate(DragUpdateDetails details) {
+    _dragDistance += details.primaryDelta ?? 0.0;
+  }
+
+  void _handleDragEnd(DragEndDetails details) {
+    if (_isNavigating) return;
+
+    final velocity = details.primaryVelocity ?? 0.0;
+    final hasEnoughDistance = _dragDistance.abs() >= _distanceThreshold;
+    final hasEnoughVelocity = velocity.abs() >= _velocityThreshold;
+    if (!hasEnoughDistance && !hasEnoughVelocity) return;
+
+    final routes = _routeOrder;
+    final currentIndex = routes.indexOf(widget.routeName);
+    if (currentIndex == -1) return;
+
+    final direction = hasEnoughDistance ? _dragDistance : velocity;
+    final targetIndex = direction < 0 ? currentIndex + 1 : currentIndex - 1;
+    if (targetIndex < 0 || targetIndex >= routes.length) return;
+
+    _isNavigating = true;
+    context.goNamed(
+      routes[targetIndex],
+      extra: <String, dynamic>{
+        kTransitionInfoKey: TransitionInfo(
+          hasTransition: true,
+          transitionType: direction < 0
+              ? PageTransitionType.rightToLeft
+              : PageTransitionType.leftToRight,
+          duration: const Duration(milliseconds: 220),
+        ),
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_routeOrder.contains(widget.routeName)) return widget.child;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onHorizontalDragStart: _handleDragStart,
+      onHorizontalDragUpdate: _handleDragUpdate,
+      onHorizontalDragEnd: _handleDragEnd,
+      child: widget.child,
+    );
+  }
 }
 
 class TransitionInfo {
@@ -506,10 +632,8 @@ class RootPageContext {
         location != rootPageContext?.errorRoute;
   }
 
-  static Widget wrap(Widget child, {String? errorRoute}) => Provider.value(
-        value: RootPageContext(true, errorRoute),
-        child: child,
-      );
+  static Widget wrap(Widget child, {String? errorRoute}) =>
+      Provider.value(value: RootPageContext(true, errorRoute), child: child);
 }
 
 extension GoRouterLocationExtension on GoRouter {

@@ -12,6 +12,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 
 class DelServModel extends FlutterFlowModel<DelServWidget> {
+  bool isDeleting = false;
+
   @override
   void initState(BuildContext context) {}
 

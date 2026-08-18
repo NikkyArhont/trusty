@@ -1,4 +1,3 @@
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:flutter/material.dart';
 import 'package:auto_size_text/auto_size_text.dart';
 
@@ -80,7 +79,6 @@ class _FFButtonWidgetState extends State<FFButtonWidget> {
 
   FocusNode get _focusNode => widget.focusNode ?? _internalFocusNode;
 
-  int get maxLines => widget.options.maxLines ?? 1;
   String? get text =>
       widget.options.textStyle?.fontSize == 0 ? null : widget.text;
 
@@ -98,6 +96,8 @@ class _FFButtonWidgetState extends State<FFButtonWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final textScale = MediaQuery.textScalerOf(context).scale(1.0);
+    final maxLines = widget.options.maxLines ?? (textScale > 1.3 ? 2 : 1);
     Widget textWidget = loading
         ? SizedBox(
             width: widget.options.width == null
@@ -117,8 +117,9 @@ class _FFButtonWidgetState extends State<FFButtonWidget> {
           )
         : AutoSizeText(
             text ?? '',
-            style:
-                text == null ? null : widget.options.textStyle?.withoutColor(),
+            style: text == null
+                ? null
+                : widget.options.textStyle?.withoutColor(),
             textAlign: widget.options.textAlign,
             maxLines: maxLines,
             overflow: TextOverflow.ellipsis,
@@ -126,20 +127,20 @@ class _FFButtonWidgetState extends State<FFButtonWidget> {
 
     final onPressed = widget.onPressed != null
         ? (widget.showLoadingIndicator
-            ? () async {
-                if (loading) {
-                  return;
-                }
-                setState(() => loading = true);
-                try {
-                  await widget.onPressed!();
-                } finally {
-                  if (mounted) {
-                    setState(() => loading = false);
+              ? () async {
+                  if (loading) {
+                    return;
+                  }
+                  setState(() => loading = true);
+                  try {
+                    await widget.onPressed!();
+                  } finally {
+                    if (mounted) {
+                      setState(() => loading = false);
+                    }
                   }
                 }
-              }
-            : () => widget.onPressed!())
+              : () => widget.onPressed!())
         : null;
 
     ButtonStyle style = ButtonStyle(
@@ -210,8 +211,9 @@ class _FFButtonWidgetState extends State<FFButtonWidget> {
     );
 
     if ((widget.icon != null || widget.iconData != null) && !loading) {
-      Widget icon = widget.icon ??
-          FaIcon(
+      Widget icon =
+          widget.icon ??
+          Icon(
             widget.iconData!,
             size: widget.options.iconSize,
             color: widget.options.iconColor,
@@ -240,31 +242,35 @@ class _FFButtonWidgetState extends State<FFButtonWidget> {
           ),
         );
       }
-      return SizedBox(
-        height: widget.options.height,
-        width: widget.options.width,
-        child: ElevatedButton.icon(
-          icon: Padding(
-            padding: widget.options.iconPadding ?? EdgeInsets.zero,
-            child: icon,
+      return ConstrainedBox(
+        constraints: BoxConstraints(minHeight: widget.options.height ?? 0.0),
+        child: SizedBox(
+          width: widget.options.width,
+          child: ElevatedButton.icon(
+            icon: Padding(
+              padding: widget.options.iconPadding ?? EdgeInsets.zero,
+              child: icon,
+            ),
+            label: textWidget,
+            onPressed: onPressed,
+            style: style,
+            iconAlignment: widget.options.iconAlignment ?? IconAlignment.start,
+            focusNode: _focusNode,
           ),
-          label: textWidget,
-          onPressed: onPressed,
-          style: style,
-          iconAlignment: widget.options.iconAlignment ?? IconAlignment.start,
-          focusNode: _focusNode,
         ),
       );
     }
 
-    return SizedBox(
-      height: widget.options.height,
-      width: widget.options.width,
-      child: ElevatedButton(
-        onPressed: onPressed,
-        style: style,
-        focusNode: _focusNode,
-        child: textWidget,
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: widget.options.height ?? 0.0),
+      child: SizedBox(
+        width: widget.options.width,
+        child: ElevatedButton(
+          onPressed: onPressed,
+          style: style,
+          focusNode: _focusNode,
+          child: textWidget,
+        ),
       ),
     );
   }
@@ -272,47 +278,45 @@ class _FFButtonWidgetState extends State<FFButtonWidget> {
 
 extension _WithoutColorExtension on TextStyle {
   TextStyle withoutColor() => TextStyle(
-        inherit: inherit,
-        color: null,
-        backgroundColor: backgroundColor,
-        fontSize: fontSize,
-        fontWeight: fontWeight,
-        fontStyle: fontStyle,
-        letterSpacing: letterSpacing,
-        wordSpacing: wordSpacing,
-        textBaseline: textBaseline,
-        height: height,
-        leadingDistribution: leadingDistribution,
-        locale: locale,
-        foreground: foreground,
-        background: background,
-        shadows: shadows,
-        fontFeatures: fontFeatures,
-        decoration: decoration,
-        decorationColor: decorationColor,
-        decorationStyle: decorationStyle,
-        decorationThickness: decorationThickness,
-        debugLabel: debugLabel,
-        fontFamily: fontFamily,
-        fontFamilyFallback: fontFamilyFallback,
-        // The _package field is private so unfortunately we can't set it here,
-        // but it's almost always unset anyway.
-        // package: _package,
-        overflow: overflow,
-      );
+    inherit: inherit,
+    color: null,
+    backgroundColor: backgroundColor,
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+    fontStyle: fontStyle,
+    letterSpacing: letterSpacing,
+    wordSpacing: wordSpacing,
+    textBaseline: textBaseline,
+    height: height,
+    leadingDistribution: leadingDistribution,
+    locale: locale,
+    foreground: foreground,
+    background: background,
+    shadows: shadows,
+    fontFeatures: fontFeatures,
+    decoration: decoration,
+    decorationColor: decorationColor,
+    decorationStyle: decorationStyle,
+    decorationThickness: decorationThickness,
+    debugLabel: debugLabel,
+    fontFamily: fontFamily,
+    fontFamilyFallback: fontFamilyFallback,
+    // The _package field is private so unfortunately we can't set it here,
+    // but it's almost always unset anyway.
+    // package: _package,
+    overflow: overflow,
+  );
 }
 
 // Slightly hacky method of getting the layout width of the provided text.
 double? _getTextWidth(String? text, TextStyle? style, int maxLines) =>
     text != null
-        ? (TextPainter(
-            text: TextSpan(text: text, style: style),
-            textDirection: TextDirection.ltr,
-            maxLines: maxLines,
-          )..layout())
-            .size
-            .width
-        : null;
+    ? (TextPainter(
+        text: TextSpan(text: text, style: style),
+        textDirection: TextDirection.ltr,
+        maxLines: maxLines,
+      )..layout()).size.width
+    : null;
 
 class FFFocusIndicator extends StatefulWidget {
   final Widget Function(FocusNode focusNode)? builder;
@@ -335,9 +339,9 @@ class FFFocusIndicator extends StatefulWidget {
     this.onLongPress,
     this.onDoubleTap,
   }) : assert(
-          builder != null || child != null,
-          'Either builder or child must be provided',
-        );
+         builder != null || child != null,
+         'Either builder or child must be provided',
+       );
 
   @override
   State<FFFocusIndicator> createState() => _FFFocusIndicatorState();
@@ -392,7 +396,8 @@ class _FFFocusIndicatorState extends State<FFFocusIndicator> {
 
   @override
   Widget build(BuildContext context) {
-    final bool hasInteractions = widget.onTap != null ||
+    final bool hasInteractions =
+        widget.onTap != null ||
         widget.onLongPress != null ||
         widget.onDoubleTap != null;
 

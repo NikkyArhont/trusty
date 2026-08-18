@@ -1,0 +1,42 @@
+{
+  "parameters": {
+    "update_check_enabled": {
+      "defaultValue": {"value": "true"},
+      "description": "Глобальный выключатель проверки обновлений"
+    },
+    "android_latest_build": {
+      "defaultValue": {"value": "19"},
+      "description": "Последняя доступная сборка Android"
+    },
+    "android_minimum_build": {
+      "defaultValue": {"value": "19"},
+      "description": "Минимальная поддерживаемая сборка Android"
+    },
+    "android_store_url": {
+      "defaultValue": {"value": "https://play.google.com/store/apps/details?id=com.mycompany.trusty"}
+    },
+    "ios_latest_build": {
+      "defaultValue": {"value": "19"},
+      "description": "Последняя доступная сборка iOS"
+    },
+    "ios_minimum_build": {
+      "defaultValue": {"value": "19"},
+      "description": "Минимальная поддерживаемая сборка iOS"
+    },
+    "ios_store_url": {
+      "defaultValue": {"value": "https://apps.apple.com/app/id6785482036"}
+    },
+    "optional_update_title": {
+      "defaultValue": {"value": "Доступна новая версия"}
+    },
+    "optional_update_message": {
+      "defaultValue": {"value": "Обновите приложение, чтобы получить новые возможности и улучшения."}
+    },
+    "required_update_title": {
+      "defaultValue": {"value": "Необходимо обновление"}
+    },
+    "required_update_message": {
+      "defaultValue": {"value": "Эта версия больше не поддерживается. Обновите приложение, чтобы продолжить."}
+    }
+  }
+}

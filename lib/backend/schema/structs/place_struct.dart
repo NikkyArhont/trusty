@@ -17,12 +17,12 @@ class PlaceStruct extends FFFirebaseStruct {
     String? cityId,
     LatLng? location,
     FirestoreUtilData firestoreUtilData = const FirestoreUtilData(),
-  })  : _title = title,
-        _description = description,
-        _id = id,
-        _cityId = cityId,
-        _location = location,
-        super(firestoreUtilData);
+  }) : _title = title,
+       _description = description,
+       _id = id,
+       _cityId = cityId,
+       _location = location,
+       super(firestoreUtilData);
 
   // "title" field.
   String? _title;
@@ -60,75 +60,44 @@ class PlaceStruct extends FFFirebaseStruct {
   bool hasLocation() => _location != null;
 
   static PlaceStruct fromMap(Map<String, dynamic> data) => PlaceStruct(
-        title: data['title'] as String?,
-        description: data['description'] as String?,
-        id: data['id'] as String?,
-        cityId: data['cityId'] as String?,
-        location: data['location'] as LatLng?,
-      );
+    title: data['title'] as String?,
+    description: data['description'] as String?,
+    id: data['id'] as String?,
+    cityId: data['cityId'] as String?,
+    location: data['location'] as LatLng?,
+  );
 
   static PlaceStruct? maybeFromMap(dynamic data) =>
       data is Map ? PlaceStruct.fromMap(data.cast<String, dynamic>()) : null;
 
   Map<String, dynamic> toMap() => {
-        'title': _title,
-        'description': _description,
-        'id': _id,
-        'cityId': _cityId,
-        'location': _location,
-      }.withoutNulls;
+    'title': _title,
+    'description': _description,
+    'id': _id,
+    'cityId': _cityId,
+    'location': _location,
+  }.withoutNulls;
 
   @override
   Map<String, dynamic> toSerializableMap() => {
-        'title': serializeParam(
-          _title,
-          ParamType.String,
-        ),
-        'description': serializeParam(
-          _description,
-          ParamType.String,
-        ),
-        'id': serializeParam(
-          _id,
-          ParamType.String,
-        ),
-        'cityId': serializeParam(
-          _cityId,
-          ParamType.String,
-        ),
-        'location': serializeParam(
-          _location,
-          ParamType.LatLng,
-        ),
-      }.withoutNulls;
+    'title': serializeParam(_title, ParamType.String),
+    'description': serializeParam(_description, ParamType.String),
+    'id': serializeParam(_id, ParamType.String),
+    'cityId': serializeParam(_cityId, ParamType.String),
+    'location': serializeParam(_location, ParamType.LatLng),
+  }.withoutNulls;
 
   static PlaceStruct fromSerializableMap(Map<String, dynamic> data) =>
       PlaceStruct(
-        title: deserializeParam(
-          data['title'],
-          ParamType.String,
-          false,
-        ),
+        title: deserializeParam(data['title'], ParamType.String, false),
         description: deserializeParam(
           data['description'],
           ParamType.String,
           false,
         ),
-        id: deserializeParam(
-          data['id'],
-          ParamType.String,
-          false,
-        ),
-        cityId: deserializeParam(
-          data['cityId'],
-          ParamType.String,
-          false,
-        ),
-        location: deserializeParam(
-          data['location'],
-          ParamType.LatLng,
-          false,
-        ),
+        id: deserializeParam(data['id'], ParamType.String, false),
+        cityId: deserializeParam(data['cityId'], ParamType.String, false),
+        location: deserializeParam(data['location'], ParamType.LatLng, false),
       );
 
   @override
@@ -159,31 +128,29 @@ PlaceStruct createPlaceStruct({
   bool clearUnsetFields = true,
   bool create = false,
   bool delete = false,
-}) =>
-    PlaceStruct(
-      title: title,
-      description: description,
-      id: id,
-      cityId: cityId,
-      location: location,
-      firestoreUtilData: FirestoreUtilData(
-        clearUnsetFields: clearUnsetFields,
-        create: create,
-        delete: delete,
-        fieldValues: fieldValues,
-      ),
-    );
+}) => PlaceStruct(
+  title: title == null ? null : normalizeUserText(title),
+  description: description == null ? null : normalizeUserText(description),
+  id: id,
+  cityId: cityId,
+  location: location,
+  firestoreUtilData: FirestoreUtilData(
+    clearUnsetFields: clearUnsetFields,
+    create: create,
+    delete: delete,
+    fieldValues: fieldValues,
+  ),
+);
 
 PlaceStruct? updatePlaceStruct(
   PlaceStruct? place, {
   bool clearUnsetFields = true,
   bool create = false,
-}) =>
-    place
-      ?..firestoreUtilData = FirestoreUtilData(
-        clearUnsetFields: clearUnsetFields,
-        create: create,
-      );
+}) => place
+  ?..firestoreUtilData = FirestoreUtilData(
+    clearUnsetFields: clearUnsetFields,
+    create: create,
+  );
 
 void addPlaceStructData(
   Map<String, dynamic> firestoreData,
@@ -208,8 +175,9 @@ void addPlaceStructData(
   final nestedData = placeData.map((k, v) => MapEntry('$fieldName.$k', v));
 
   final mergeFields = place.firestoreUtilData.create || clearFields;
-  firestoreData
-      .addAll(mergeFields ? mergeNestedFields(nestedData) : nestedData);
+  firestoreData.addAll(
+    mergeFields ? mergeNestedFields(nestedData) : nestedData,
+  );
 }
 
 Map<String, dynamic> getPlaceFirestoreData(
@@ -222,13 +190,13 @@ Map<String, dynamic> getPlaceFirestoreData(
   final firestoreData = mapToFirestore(place.toMap());
 
   // Add any Firestore field values
-  mapToFirestore(place.firestoreUtilData.fieldValues)
-      .forEach((k, v) => firestoreData[k] = v);
+  mapToFirestore(
+    place.firestoreUtilData.fieldValues,
+  ).forEach((k, v) => firestoreData[k] = v);
 
   return forFieldValue ? mergeNestedFields(firestoreData) : firestoreData;
 }
 
 List<Map<String, dynamic>> getPlaceListFirestoreData(
   List<PlaceStruct>? places,
-) =>
-    places?.map((e) => getPlaceFirestoreData(e, true)).toList() ?? [];
+) => places?.map((e) => getPlaceFirestoreData(e, true)).toList() ?? [];

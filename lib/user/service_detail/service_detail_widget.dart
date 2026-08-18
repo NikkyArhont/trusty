@@ -1,5 +1,6 @@
 import '/auth/firebase_auth/auth_util.dart';
 import '/backend/backend.dart';
+import '/backend/public_master_profile.dart';
 import '/backend/schema/enums/enums.dart';
 import '/components/contact_recommendation_widget.dart';
 import '/flutter_flow/flutter_flow_expanded_image_view.dart';
@@ -8,24 +9,27 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/global_comp/nav_back/nav_back_widget.dart';
+import '/global_comp/contacts_sync_prompt/contacts_sync_prompt_widget.dart';
+import '/global_comp/master_contact_badge/master_contact_badge_widget.dart';
+import '/global_comp/recommendation_metrics/recommendation_metrics_widget.dart';
+import 'dart:async';
 import 'dart:ui';
+import '/index.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart'
     as smooth_page_indicator;
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
+import '/init/sync_contacts.dart';
+import '/user/recommend_dialog/recommend_dialog_widget.dart';
 import 'service_detail_model.dart';
 export 'service_detail_model.dart';
 
 class ServiceDetailWidget extends StatefulWidget {
-  const ServiceDetailWidget({
-    super.key,
-    this.serviceDoc,
-  });
+  const ServiceDetailWidget({super.key, this.serviceDoc});
 
   final ServiceRecord? serviceDoc;
 
@@ -38,15 +42,154 @@ class ServiceDetailWidget extends StatefulWidget {
 
 class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
   late ServiceDetailModel _model;
+  ServiceRecord? _currentServiceDoc;
+  UserRecord? _publicMasterProfile;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _hasCompletedService = false;
+  bool _isOpeningMasterPage = false;
+
+  Set<String> _recommendationPhones(ServiceRecord? service) {
+    if (service == null) return <String>{};
+    return <String>{
+      ...service.recommenderPhones.map(normalizePhone),
+      ...service.recommendations.map(
+        (recommendation) => normalizePhone(recommendation.phone),
+      ),
+    }..removeWhere((phone) => phone.isEmpty);
+  }
+
+  Future<void> _checkCompletedService() async {
+    final clientRef = currentUserReference;
+    final serviceRef = widget.serviceDoc?.reference;
+    if (clientRef == null || serviceRef == null) return;
+
+    try {
+      final query = await FirebaseFirestore.instance
+          .collection('records')
+          .where('client', isEqualTo: clientRef)
+          .get();
+      final hasCompletedService = query.docs.any((recordSnapshot) {
+        final recordData = recordSnapshot.data();
+        return recordData['service'] == serviceRef &&
+            recordData['status'] == RecordStatus.complite.serialize();
+      });
+
+      if (mounted) {
+        setState(() {
+          _hasCompletedService = hasCompletedService;
+        });
+      }
+    } catch (e) {
+      print('Error checking completed service: $e');
+    }
+  }
+
+  String _getPeopleNoun(int count) {
+    final mod10 = count % 10;
+    final mod100 = count % 100;
+    if (mod10 == 1 && mod100 != 11) {
+      return 'человек';
+    } else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
+      return 'человека';
+    } else {
+      return 'человек';
+    }
+  }
+
+  String _getContactsNoun(int count) {
+    final mod10 = count % 10;
+    final mod100 = count % 100;
+    if (mod10 == 1 && mod100 != 11) {
+      return 'контакт';
+    } else if (mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20)) {
+      return 'контакта';
+    } else {
+      return 'контактов';
+    }
+  }
+
+  Future<void> _openOrCreateChat() async {
+    final currentUserRef = currentUserReference;
+    final masterRef = widget.serviceDoc?.owner;
+    if (currentUserRef == null || masterRef == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Не удалось открыть чат')));
+      return;
+    }
+    if (currentUserRef == masterRef) {
+      context.pushNamed(
+        EditServiceWidget.routeName,
+        queryParameters: {
+          'servDoc': serializeParam(widget.serviceDoc, ParamType.Document),
+        }.withoutNulls,
+        extra: <String, dynamic>{'servDoc': widget.serviceDoc},
+      );
+      return;
+    }
+
+    try {
+      final chatRef = FirebaseFirestore.instance
+          .collection('chats')
+          .doc('client_${currentUserRef.id}_master_${masterRef.id}');
+      final now = getCurrentTimestamp;
+      await chatRef.set({
+        'client': currentUserRef,
+        'master': masterRef,
+        'participants': [currentUserRef, masterRef],
+        'participantIds': [currentUserRef.id, masterRef.id],
+        'clientName': currentUserDisplayName,
+        'clientPhoto': currentUserPhoto,
+        'clientPhone': currentPhoneNumber,
+        'masterName': widget.serviceDoc?.masterTitle ?? '',
+        'masterPhoto': widget.serviceDoc?.masterPhoto ?? '',
+        'created_time': now,
+        'updated_time': now,
+        'context': 'service',
+        'service': widget.serviceDoc?.reference,
+      }, SetOptions(merge: true));
+
+      if (!mounted) {
+        return;
+      }
+      context.pushNamed(
+        ChatWidget.routeName,
+        queryParameters: {
+          'chatId': serializeParam(chatRef.id, ParamType.String),
+        }.withoutNulls,
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка открытия чата: $error')));
+    }
+  }
 
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => ServiceDetailModel());
+    _currentServiceDoc = widget.serviceDoc;
 
-    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await syncContacts();
+      if (mounted) safeSetState(() {});
+    });
+    _checkCompletedService();
+    final ownerRef = widget.serviceDoc?.owner;
+    if (ownerRef != null) {
+      unawaited(
+        loadPublicMasterProfile(ownerRef).then((profile) {
+          if (mounted && profile != null) {
+            safeSetState(() => _publicMasterProfile = profile);
+          }
+        }),
+      );
+    }
   }
 
   @override
@@ -60,13 +203,191 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
 
+    final recommendationPhones = _recommendationPhones(_currentServiceDoc);
+    final recommenderNames = recommendationPhones
+        .map((phone) => globalContactsMap[phone]?.trim())
+        .whereType<String>()
+        .where((name) => name.isNotEmpty)
+        .toSet()
+        .toList();
+    final contactRecommendationsCount = recommendationPhones
+        .where(globalContactsMap.containsKey)
+        .length;
+
+    final isOwnService =
+        _currentServiceDoc?.owner != null &&
+        _currentServiceDoc?.owner == currentUserReference;
+
+    final rawUserPhone = currentPhoneNumber.isNotEmpty
+        ? currentPhoneNumber
+        : (currentUserDocument?.phoneNumber ?? '');
+    final normalizedUserPhone = normalizePhone(rawUserPhone);
+    final hasAlreadyRecommended =
+        normalizedUserPhone.isNotEmpty &&
+        (_currentServiceDoc?.recommenderPhones.contains(normalizedUserPhone) ??
+            false);
+    final masterContactName = contactNameForPhoneHash(
+      _publicMasterProfile?.contactPhoneHash ?? '',
+    );
+
     return Scaffold(
       key: scaffoldKey,
       backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          decoration: BoxDecoration(
+            color: FlutterFlowTheme.of(context).primaryBackground,
+            border: Border.all(
+              color: FlutterFlowTheme.of(context).divider,
+              width: 1.0,
+            ),
+          ),
+          padding: EdgeInsetsDirectional.fromSTEB(24.0, 16.0, 24.0, 16.0),
+          child: Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    FFLocalizations.of(
+                      context,
+                    ).getText('r2v4ytku' /* Response time */),
+                    style: FlutterFlowTheme.of(context).labelSmall.override(
+                      font: GoogleFonts.jetBrainsMono(
+                        fontWeight: FlutterFlowTheme.of(
+                          context,
+                        ).labelSmall.fontWeight,
+                        fontStyle: FlutterFlowTheme.of(
+                          context,
+                        ).labelSmall.fontStyle,
+                      ),
+                      color: FlutterFlowTheme.of(context).secondaryText,
+                      letterSpacing: 0.0,
+                      fontWeight: FlutterFlowTheme.of(
+                        context,
+                      ).labelSmall.fontWeight,
+                      fontStyle: FlutterFlowTheme.of(
+                        context,
+                      ).labelSmall.fontStyle,
+                    ),
+                  ),
+                  Text(
+                    FFLocalizations.of(
+                      context,
+                    ).getText('lawnsui4' /* ~15 mins */),
+                    style: FlutterFlowTheme.of(context).labelMedium.override(
+                      font: GoogleFonts.jetBrainsMono(
+                        fontWeight: FlutterFlowTheme.of(
+                          context,
+                        ).labelMedium.fontWeight,
+                        fontStyle: FlutterFlowTheme.of(
+                          context,
+                        ).labelMedium.fontStyle,
+                      ),
+                      color: FlutterFlowTheme.of(context).success,
+                      letterSpacing: 0.0,
+                      fontWeight: FlutterFlowTheme.of(
+                        context,
+                      ).labelMedium.fontWeight,
+                      fontStyle: FlutterFlowTheme.of(
+                        context,
+                      ).labelMedium.fontStyle,
+                    ),
+                  ),
+                ],
+              ),
+              Expanded(
+                child: InkWell(
+                  splashColor: Colors.transparent,
+                  focusColor: Colors.transparent,
+                  hoverColor: Colors.transparent,
+                  highlightColor: Colors.transparent,
+                  onTap: () async {
+                    if (isOwnService) {
+                      context.pushNamed(
+                        EditServiceWidget.routeName,
+                        queryParameters: {
+                          'servDoc': serializeParam(
+                            widget.serviceDoc,
+                            ParamType.Document,
+                          ),
+                        }.withoutNulls,
+                        extra: <String, dynamic>{'servDoc': widget.serviceDoc},
+                      );
+                      return;
+                    }
+                    await _openOrCreateChat();
+                  },
+                  child: Container(
+                    height: 52.0,
+                    decoration: BoxDecoration(
+                      color: FlutterFlowTheme.of(context).primary,
+                      borderRadius: BorderRadius.circular(26.0),
+                    ),
+                    alignment: AlignmentDirectional(0.0, 0.0),
+                    padding: EdgeInsetsDirectional.fromSTEB(
+                      14.0,
+                      0.0,
+                      14.0,
+                      0.0,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(
+                          isOwnService
+                              ? Icons.edit_rounded
+                              : Icons.chat_bubble_outline_rounded,
+                          color: FlutterFlowTheme.of(context).primaryBackground,
+                          size: 18.0,
+                        ),
+                        Flexible(
+                          child: Text(
+                            isOwnService ? 'Редактировать' : 'Написать',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: FlutterFlowTheme.of(context).labelMedium
+                                .override(
+                                  font: GoogleFonts.jetBrainsMono(
+                                    fontWeight: FontWeight.w600,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).labelMedium.fontStyle,
+                                  ),
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).primaryBackground,
+                                  fontSize: 14.0,
+                                  letterSpacing: 0.0,
+                                  fontWeight: FontWeight.w600,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).labelMedium.fontStyle,
+                                ),
+                          ),
+                        ),
+                      ].divide(SizedBox(width: 8.0)),
+                    ),
+                  ),
+                ),
+              ),
+            ].divide(SizedBox(width: 16.0)),
+          ),
+        ),
+      ),
       body: SafeArea(
         top: true,
         child: SingleChildScrollView(
           primary: false,
+          padding: EdgeInsets.only(bottom: 24.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             mainAxisAlignment: MainAxisAlignment.start,
@@ -91,8 +412,11 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                 PageView.builder(
                                   controller: _model.pageViewController ??=
                                       PageController(
-                                          initialPage: max(0,
-                                              min(0, loadImages.length - 1))),
+                                        initialPage: max(
+                                          0,
+                                          min(0, loadImages.length - 1),
+                                        ),
+                                      ),
                                   scrollDirection: Axis.horizontal,
                                   itemCount: loadImages.length,
                                   itemBuilder: (context, loadImagesIndex) {
@@ -110,10 +434,12 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                             type: PageTransitionType.fade,
                                             child: FlutterFlowExpandedImageView(
                                               image: CachedNetworkImage(
-                                                fadeInDuration:
-                                                    Duration(milliseconds: 0),
-                                                fadeOutDuration:
-                                                    Duration(milliseconds: 0),
+                                                fadeInDuration: Duration(
+                                                  milliseconds: 0,
+                                                ),
+                                                fadeOutDuration: Duration(
+                                                  milliseconds: 0,
+                                                ),
                                                 imageUrl: loadImagesItem,
                                                 fit: BoxFit.contain,
                                               ),
@@ -128,10 +454,12 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                         tag: loadImagesItem,
                                         transitionOnUserGestures: true,
                                         child: CachedNetworkImage(
-                                          fadeInDuration:
-                                              Duration(milliseconds: 0),
-                                          fadeOutDuration:
-                                              Duration(milliseconds: 0),
+                                          fadeInDuration: Duration(
+                                            milliseconds: 0,
+                                          ),
+                                          fadeOutDuration: Duration(
+                                            milliseconds: 0,
+                                          ),
                                           imageUrl: loadImagesItem,
                                           height: 400.0,
                                           fit: BoxFit.cover,
@@ -144,39 +472,53 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                   alignment: AlignmentDirectional(0.0, 1.0),
                                   child: Padding(
                                     padding: EdgeInsetsDirectional.fromSTEB(
-                                        0.0, 0.0, 0.0, 16.0),
-                                    child: smooth_page_indicator
-                                        .SmoothPageIndicator(
-                                      controller: _model.pageViewController ??=
-                                          PageController(
-                                              initialPage: max(
-                                                  0,
-                                                  min(0,
-                                                      loadImages.length - 1))),
-                                      count: loadImages.length,
-                                      axisDirection: Axis.horizontal,
-                                      onDotClicked: (i) async {
-                                        await _model.pageViewController!
-                                            .animateToPage(
-                                          i,
-                                          duration: Duration(milliseconds: 500),
-                                          curve: Curves.ease,
-                                        );
-                                        safeSetState(() {});
-                                      },
-                                      effect: smooth_page_indicator.SlideEffect(
-                                        spacing: 8.0,
-                                        radius: 8.0,
-                                        dotWidth: 8.0,
-                                        dotHeight: 8.0,
-                                        dotColor: FlutterFlowTheme.of(context)
-                                            .secondary,
-                                        activeDotColor:
-                                            FlutterFlowTheme.of(context)
-                                                .primary,
-                                        paintStyle: PaintingStyle.fill,
-                                      ),
+                                      0.0,
+                                      0.0,
+                                      0.0,
+                                      16.0,
                                     ),
+                                    child:
+                                        smooth_page_indicator.SmoothPageIndicator(
+                                          controller:
+                                              _model.pageViewController ??=
+                                                  PageController(
+                                                    initialPage: max(
+                                                      0,
+                                                      min(
+                                                        0,
+                                                        loadImages.length - 1,
+                                                      ),
+                                                    ),
+                                                  ),
+                                          count: loadImages.length,
+                                          axisDirection: Axis.horizontal,
+                                          onDotClicked: (i) async {
+                                            await _model.pageViewController!
+                                                .animateToPage(
+                                                  i,
+                                                  duration: Duration(
+                                                    milliseconds: 500,
+                                                  ),
+                                                  curve: Curves.ease,
+                                                );
+                                            safeSetState(() {});
+                                          },
+                                          effect:
+                                              smooth_page_indicator.SlideEffect(
+                                                spacing: 8.0,
+                                                radius: 8.0,
+                                                dotWidth: 8.0,
+                                                dotHeight: 8.0,
+                                                dotColor: FlutterFlowTheme.of(
+                                                  context,
+                                                ).secondary,
+                                                activeDotColor:
+                                                    FlutterFlowTheme.of(
+                                                      context,
+                                                    ).primary,
+                                                paintStyle: PaintingStyle.fill,
+                                              ),
+                                        ),
                                   ),
                                 ),
                               ],
@@ -204,19 +546,22 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                 builder: (context) => FlutterFlowIconButton(
                                   borderRadius: 12.0,
                                   buttonSize: 40.0,
-                                  fillColor:
-                                      FlutterFlowTheme.of(context).tertiary,
+                                  fillColor: FlutterFlowTheme.of(
+                                    context,
+                                  ).tertiary,
                                   icon: Icon(
                                     Icons.favorite,
-                                    color: (currentUserDocument
-                                                    ?.favoriteServices
+                                    color:
+                                        (currentUserDocument?.favoriteServices
                                                     ?.toList() ??
                                                 [])
                                             .contains(
-                                                widget!.serviceDoc?.reference)
+                                              widget!.serviceDoc?.reference,
+                                            )
                                         ? FlutterFlowTheme.of(context).error
-                                        : FlutterFlowTheme.of(context)
-                                            .secondaryText,
+                                        : FlutterFlowTheme.of(
+                                            context,
+                                          ).secondaryText,
                                     size: 24.0,
                                   ),
                                   showLoadingIndicator: true,
@@ -225,27 +570,24 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                                 ?.toList() ??
                                             [])
                                         .contains(
-                                            widget!.serviceDoc?.reference)) {
+                                          widget!.serviceDoc?.reference,
+                                        )) {
                                       await currentUserReference!.update({
-                                        ...mapToFirestore(
-                                          {
-                                            'favoriteServices':
-                                                FieldValue.arrayRemove([
-                                              widget!.serviceDoc?.reference
-                                            ]),
-                                          },
-                                        ),
+                                        ...mapToFirestore({
+                                          'favoriteServices':
+                                              FieldValue.arrayRemove([
+                                                widget!.serviceDoc?.reference,
+                                              ]),
+                                        }),
                                       });
                                     } else {
                                       await currentUserReference!.update({
-                                        ...mapToFirestore(
-                                          {
-                                            'favoriteServices':
-                                                FieldValue.arrayUnion([
-                                              widget!.serviceDoc?.reference
-                                            ]),
-                                          },
-                                        ),
+                                        ...mapToFirestore({
+                                          'favoriteServices':
+                                              FieldValue.arrayUnion([
+                                                widget!.serviceDoc?.reference,
+                                              ]),
+                                        }),
                                       });
                                     }
 
@@ -263,12 +605,64 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
               ),
               Container(
                 child: Padding(
-                  padding: EdgeInsets.all(24.0),
+                  padding: EdgeInsets.fromLTRB(20.0, 16.0, 20.0, 16.0),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
+                      if (isOwnService)
+                        Container(
+                          padding: const EdgeInsets.all(14.0),
+                          decoration: BoxDecoration(
+                            color: FlutterFlowTheme.of(
+                              context,
+                            ).primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12.0),
+                            border: Border.all(
+                              color: FlutterFlowTheme.of(
+                                context,
+                              ).primary.withValues(alpha: 0.24),
+                            ),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.visibility_outlined,
+                                color: FlutterFlowTheme.of(context).primary,
+                                size: 21.0,
+                              ),
+                              const SizedBox(width: 10.0),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Так вашу услугу видят другие пользователи',
+                                      style: FlutterFlowTheme.of(context)
+                                          .titleSmall
+                                          .override(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 3.0),
+                                    Text(
+                                      'Ниже показан обычный вид страницы услуги. Для изменений используйте кнопку «Редактировать».',
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodySmall
+                                          .override(
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).secondaryText,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       Column(
                         mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.start,
@@ -277,51 +671,52 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                           Text(
                             valueOrDefault<String>(
                               widget!.serviceDoc?.title,
-                              'noTitle',
+                              'Без названия',
                             ),
-                            style: FlutterFlowTheme.of(context)
-                                .headlineMedium
+                            style: FlutterFlowTheme.of(context).headlineMedium
                                 .override(
                                   font: GoogleFonts.inter(
                                     fontWeight: FontWeight.w800,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .headlineMedium
-                                        .fontStyle,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).headlineMedium.fontStyle,
                                   ),
-                                  color:
-                                      FlutterFlowTheme.of(context).primaryText,
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).primaryText,
                                   fontSize: 26.0,
                                   letterSpacing: 0.0,
                                   fontWeight: FontWeight.w800,
-                                  fontStyle: FlutterFlowTheme.of(context)
-                                      .headlineMedium
-                                      .fontStyle,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).headlineMedium.fontStyle,
                                   lineHeight: 1.25,
                                 ),
                           ),
                           Text(
                             valueOrDefault<String>(
                               widget!.serviceDoc?.description,
-                              'noDescrip',
+                              'Без описания',
                             ),
-                            style:
-                                FlutterFlowTheme.of(context).bodyLarge.override(
-                                      font: GoogleFonts.inter(
-                                        fontWeight: FontWeight.normal,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyLarge
-                                            .fontStyle,
-                                      ),
-                                      color: FlutterFlowTheme.of(context)
-                                          .secondaryText,
-                                      fontSize: 16.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodyLarge
-                                          .fontStyle,
-                                      lineHeight: 1.5,
-                                    ),
+                            style: FlutterFlowTheme.of(context).bodyLarge
+                                .override(
+                                  font: GoogleFonts.inter(
+                                    fontWeight: FontWeight.normal,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).bodyLarge.fontStyle,
+                                  ),
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).secondaryText,
+                                  fontSize: 16.0,
+                                  letterSpacing: 0.0,
+                                  fontWeight: FontWeight.normal,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).bodyLarge.fontStyle,
+                                  lineHeight: 1.5,
+                                ),
                           ),
                           Row(
                             mainAxisSize: MainAxisSize.max,
@@ -335,8 +730,9 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                 children: [
                                   Icon(
                                     Icons.payment_rounded,
-                                    color: FlutterFlowTheme.of(context)
-                                        .primaryText,
+                                    color: FlutterFlowTheme.of(
+                                      context,
+                                    ).primaryText,
                                     size: 18.0,
                                   ),
                                   Text(
@@ -355,61 +751,60 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                         .override(
                                           font: GoogleFonts.jetBrainsMono(
                                             fontWeight: FontWeight.w600,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .labelSmall
-                                                    .fontStyle,
+                                            fontStyle: FlutterFlowTheme.of(
+                                              context,
+                                            ).labelSmall.fontStyle,
                                           ),
-                                          color: FlutterFlowTheme.of(context)
-                                              .primaryText,
+                                          color: FlutterFlowTheme.of(
+                                            context,
+                                          ).primaryText,
                                           fontSize: 14.0,
                                           letterSpacing: 0.0,
                                           fontWeight: FontWeight.w600,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .labelSmall
-                                                  .fontStyle,
+                                          fontStyle: FlutterFlowTheme.of(
+                                            context,
+                                          ).labelSmall.fontStyle,
                                           lineHeight: 1.2,
                                         ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ].divide(SizedBox(width: 4.0)),
                               ),
-                              if (widget!.serviceDoc?.time != null)
+                              if ((widget.serviceDoc?.time ?? 0) > 0)
                                 Row(
                                   mainAxisSize: MainAxisSize.max,
                                   mainAxisAlignment: MainAxisAlignment.start,
                                   crossAxisAlignment: CrossAxisAlignment.center,
                                   children: [
-                                    if (widget!.serviceDoc?.time != null)
+                                    if ((widget.serviceDoc?.time ?? 0) > 0)
                                       Icon(
                                         Icons.access_time,
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryText,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryText,
                                         size: 18.0,
                                       ),
                                     Text(
-                                      '${widget!.serviceDoc?.time?.toString()} м.',
+                                      widget.serviceDoc!.formattedDuration,
                                       maxLines: 1,
                                       style: FlutterFlowTheme.of(context)
                                           .labelSmall
                                           .override(
                                             font: GoogleFonts.jetBrainsMono(
                                               fontWeight: FontWeight.w600,
-                                              fontStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .labelSmall
-                                                      .fontStyle,
+                                              fontStyle: FlutterFlowTheme.of(
+                                                context,
+                                              ).labelSmall.fontStyle,
                                             ),
-                                            color: FlutterFlowTheme.of(context)
-                                                .primaryText,
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).primaryText,
                                             fontSize: 14.0,
                                             letterSpacing: 0.0,
                                             fontWeight: FontWeight.w600,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .labelSmall
-                                                    .fontStyle,
+                                            fontStyle: FlutterFlowTheme.of(
+                                              context,
+                                            ).labelSmall.fontStyle,
                                             lineHeight: 1.2,
                                           ),
                                       overflow: TextOverflow.ellipsis,
@@ -420,193 +815,332 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                           ),
                           Text(
                             valueOrDefault<String>(
-                              FFAppState()
-                                  .presetCategory
-                                  .where((e) =>
-                                      widget!.serviceDoc?.categoryKey == e.key)
+                              FFAppState().presetCategory
+                                  .where(
+                                    (e) =>
+                                        widget!.serviceDoc?.categoryKey ==
+                                        e.key,
+                                  )
                                   .toList()
                                   .firstOrNull
                                   ?.titleRU,
-                              'noCat',
+                              'Без категории',
                             ),
-                            style:
-                                FlutterFlowTheme.of(context).bodySmall.override(
-                                      font: GoogleFonts.jetBrainsMono(
-                                        fontWeight: FontWeight.normal,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodySmall
-                                            .fontStyle,
-                                      ),
-                                      color: FlutterFlowTheme.of(context)
-                                          .secondaryText,
-                                      fontSize: 12.0,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodySmall
-                                          .fontStyle,
-                                      lineHeight: 1.4,
-                                    ),
+                            style: FlutterFlowTheme.of(context).bodySmall
+                                .override(
+                                  font: GoogleFonts.jetBrainsMono(
+                                    fontWeight: FontWeight.normal,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).bodySmall.fontStyle,
+                                  ),
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).secondaryText,
+                                  fontSize: 12.0,
+                                  letterSpacing: 0.0,
+                                  fontWeight: FontWeight.normal,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).bodySmall.fontStyle,
+                                  lineHeight: 1.4,
+                                ),
                           ),
                           Text(
                             valueOrDefault<String>(
                               widget!.serviceDoc?.place?.title,
-                              'noAdress',
+                              'Адрес не указан',
                             ),
-                            style: FlutterFlowTheme.of(context)
-                                .bodySmall
+                            style: FlutterFlowTheme.of(context).bodySmall
                                 .override(
                                   font: GoogleFonts.jetBrainsMono(
                                     fontWeight: FontWeight.normal,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .bodySmall
-                                        .fontStyle,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).bodySmall.fontStyle,
                                   ),
-                                  color:
-                                      FlutterFlowTheme.of(context).primaryText,
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).primaryText,
                                   fontSize: 12.0,
                                   letterSpacing: 0.0,
                                   fontWeight: FontWeight.normal,
-                                  fontStyle: FlutterFlowTheme.of(context)
-                                      .bodySmall
-                                      .fontStyle,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).bodySmall.fontStyle,
                                   lineHeight: 1.4,
                                 ),
                           ),
-                          Container(),
                         ].divide(SizedBox(height: 8.0)),
                       ),
-                      Divider(
-                        color: FlutterFlowTheme.of(context).divider,
+                      ContactsSyncPromptWidget(
+                        onSynchronized: () => safeSetState(() {}),
                       ),
-                      StreamBuilder<UserRecord>(
-                        stream:
-                            UserRecord.getDocument(widget!.serviceDoc!.owner!),
-                        builder: (context, snapshot) {
-                          // Customize what your widget looks like when it's loading.
-                          if (!snapshot.hasData) {
-                            return Center(
-                              child: SizedBox(
-                                width: 50.0,
-                                height: 50.0,
-                                child: SpinKitPulse(
-                                  color: FlutterFlowTheme.of(context).primary,
-                                  size: 50.0,
+                      if (!isOwnService && masterContactName != null)
+                        const MasterContactBadgeWidget(),
+                      RecommendationMetricsWidget(
+                        totalCount: recommendationPhones.length,
+                        contactsCount: contactRecommendationsCount,
+                        scopeDescription: 'эту услугу',
+                      ),
+                      if (recommenderNames.isNotEmpty)
+                        Container(
+                          margin: EdgeInsets.only(top: 8.0),
+                          padding: EdgeInsets.all(16.0),
+                          decoration: BoxDecoration(
+                            color: FlutterFlowTheme.of(
+                              context,
+                            ).primary.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.star,
+                                    color: FlutterFlowTheme.of(context).primary,
+                                  ),
+                                  SizedBox(width: 8.0),
+                                  Text(
+                                    'Рекомендуют ваши контакты:',
+                                    style: FlutterFlowTheme.of(context)
+                                        .titleSmall
+                                        .override(
+                                          font: GoogleFonts.inter(
+                                            fontWeight: FontWeight.bold,
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).primary,
+                                          ),
+                                        ),
+                                  ),
+                                ],
+                              ),
+                              SizedBox(height: 8.0),
+                              ...recommenderNames.map(
+                                (name) => Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 4.0),
+                                  child: Text(
+                                    '• $name',
+                                    style: FlutterFlowTheme.of(
+                                      context,
+                                    ).bodyMedium,
+                                  ),
                                 ),
                               ),
-                            );
+                            ],
+                          ),
+                        ),
+                      Divider(color: FlutterFlowTheme.of(context).divider),
+                      Builder(
+                        builder: (context) {
+                          final containerUserRecord = _publicMasterProfile;
+                          final masterPhoto =
+                              containerUserRecord?.masterData.mainPhoto
+                                      .trim()
+                                      .isNotEmpty ==
+                                  true
+                              ? containerUserRecord!.masterData.mainPhoto
+                              : widget.serviceDoc?.masterPhoto ?? '';
+                          final masterTitle =
+                              containerUserRecord?.masterData.title
+                                      .trim()
+                                      .isNotEmpty ==
+                                  true
+                              ? containerUserRecord!.masterData.title
+                              : (widget.serviceDoc?.masterTitle
+                                            .trim()
+                                            .isNotEmpty ==
+                                        true
+                                    ? widget.serviceDoc!.masterTitle
+                                    : 'Мастер');
+                          Future<void> openMasterPage() async {
+                            if (_isOpeningMasterPage) return;
+                            safeSetState(() => _isOpeningMasterPage = true);
+                            final ownerRef = widget.serviceDoc?.owner;
+                            try {
+                              final masterDoc =
+                                  containerUserRecord ??
+                                  (ownerRef == null
+                                      ? null
+                                      : UserRecord.getDocumentFromData({
+                                          'masterData': {
+                                            'title': masterTitle,
+                                            'mainPhoto': masterPhoto,
+                                            'descrip': '',
+                                          },
+                                        }, ownerRef));
+                              if (masterDoc == null) return;
+                              context.pushNamed(
+                                MasterPageWidget.routeName,
+                                queryParameters: {
+                                  'masterDoc': serializeParam(
+                                    masterDoc,
+                                    ParamType.Document,
+                                  ),
+                                  'sourceCategoryKey': serializeParam(
+                                    widget.serviceDoc?.categoryKey,
+                                    ParamType.String,
+                                  ),
+                                }.withoutNulls,
+                                extra: <String, dynamic>{
+                                  'masterDoc': masterDoc,
+                                },
+                              );
+                              await Future<void>.delayed(
+                                const Duration(milliseconds: 300),
+                              );
+                            } finally {
+                              if (mounted) {
+                                safeSetState(
+                                  () => _isOpeningMasterPage = false,
+                                );
+                              }
+                            }
                           }
-
-                          final containerUserRecord = snapshot.data!;
 
                           return Container(
                             decoration: BoxDecoration(),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.max,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Container(
-                                  width: 56.0,
-                                  height: 56.0,
-                                  clipBehavior: Clip.antiAlias,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
+                            child: InkWell(
+                              splashColor: Colors.transparent,
+                              focusColor: Colors.transparent,
+                              hoverColor: Colors.transparent,
+                              highlightColor: Colors.transparent,
+                              onTap: _isOpeningMasterPage
+                                  ? null
+                                  : openMasterPage,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.max,
+                                mainAxisAlignment: MainAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  Container(
+                                    width: 56.0,
+                                    height: 56.0,
+                                    clipBehavior: Clip.antiAlias,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: CachedNetworkImage(
+                                      fadeInDuration: Duration(milliseconds: 0),
+                                      fadeOutDuration: Duration(
+                                        milliseconds: 0,
+                                      ),
+                                      imageUrl: masterPhoto,
+                                      fit: BoxFit.cover,
+                                      memCacheWidth: 168,
+                                      memCacheHeight: 168,
+                                      maxWidthDiskCache: 336,
+                                      maxHeightDiskCache: 336,
+                                      errorWidget: (context, url, error) =>
+                                          Icon(
+                                            Icons.person_rounded,
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).secondaryText,
+                                            size: 28.0,
+                                          ),
+                                    ),
                                   ),
-                                  child: CachedNetworkImage(
-                                    fadeInDuration:
-                                        Duration(milliseconds: 2000),
-                                    fadeOutDuration:
-                                        Duration(milliseconds: 2000),
-                                    imageUrl: containerUserRecord
-                                        .masterData.mainPhoto,
-                                    fit: BoxFit.cover,
-                                  ),
-                                ),
-                                Expanded(
-                                  flex: 1,
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        containerUserRecord.masterData.title,
-                                        style: FlutterFlowTheme.of(context)
-                                            .titleMedium
-                                            .override(
-                                              font: GoogleFonts.inter(
+                                  Expanded(
+                                    flex: 1,
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          masterTitle,
+                                          style: FlutterFlowTheme.of(context)
+                                              .titleMedium
+                                              .override(
+                                                font: GoogleFonts.inter(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontStyle:
+                                                      FlutterFlowTheme.of(
+                                                        context,
+                                                      ).titleMedium.fontStyle,
+                                                ),
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).primaryText,
+                                                fontSize: 16.0,
+                                                letterSpacing: 0.0,
                                                 fontWeight: FontWeight.bold,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .titleMedium
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).titleMedium.fontStyle,
+                                                lineHeight: 1.4,
                                               ),
-                                              color:
-                                                  FlutterFlowTheme.of(context)
-                                                      .primaryText,
-                                              fontSize: 16.0,
-                                              letterSpacing: 0.0,
-                                              fontWeight: FontWeight.bold,
-                                              fontStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .titleMedium
-                                                      .fontStyle,
-                                              lineHeight: 1.4,
-                                            ),
-                                      ),
-                                      Text(
-                                        FFLocalizations.of(context).getText(
-                                          'zksodwlb' /* Перейти в профиль */,
                                         ),
-                                        style: FlutterFlowTheme.of(context)
-                                            .bodySmall
-                                            .override(
-                                              font: GoogleFonts.jetBrainsMono(
+                                        Text(
+                                          FFLocalizations.of(context).getText(
+                                            'zksodwlb' /* Перейти в профиль */,
+                                          ),
+                                          style: FlutterFlowTheme.of(context)
+                                              .bodySmall
+                                              .override(
+                                                font: GoogleFonts.jetBrainsMono(
+                                                  fontWeight: FontWeight.normal,
+                                                  fontStyle:
+                                                      FlutterFlowTheme.of(
+                                                        context,
+                                                      ).bodySmall.fontStyle,
+                                                ),
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).secondaryText,
+                                                fontSize: 12.0,
+                                                letterSpacing: 0.0,
                                                 fontWeight: FontWeight.normal,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .bodySmall
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).bodySmall.fontStyle,
+                                                lineHeight: 1.4,
                                               ),
-                                              color:
-                                                  FlutterFlowTheme.of(context)
-                                                      .secondaryText,
-                                              fontSize: 12.0,
-                                              letterSpacing: 0.0,
-                                              fontWeight: FontWeight.normal,
-                                              fontStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .bodySmall
-                                                      .fontStyle,
-                                              lineHeight: 1.4,
+                                        ),
+                                      ].divide(SizedBox(height: 4.0)),
+                                    ),
+                                  ),
+                                  FlutterFlowIconButton(
+                                    buttonSize: 40.0,
+                                    icon: _isOpeningMasterPage
+                                        ? SizedBox(
+                                            width: 20.0,
+                                            height: 20.0,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.0,
+                                              color: FlutterFlowTheme.of(
+                                                context,
+                                              ).primary,
                                             ),
-                                      ),
-                                    ].divide(SizedBox(height: 4.0)),
+                                          )
+                                        : Icon(
+                                            Icons.chevron_right_rounded,
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).secondaryText,
+                                            size: 24.0,
+                                          ),
+                                    onPressed: _isOpeningMasterPage
+                                        ? null
+                                        : openMasterPage,
                                   ),
-                                ),
-                                FlutterFlowIconButton(
-                                  buttonSize: 40.0,
-                                  icon: Icon(
-                                    Icons.chevron_right_rounded,
-                                    color: FlutterFlowTheme.of(context)
-                                        .secondaryText,
-                                    size: 24.0,
-                                  ),
-                                  onPressed: () {
-                                    print('IconButton pressed ...');
-                                  },
-                                ),
-                              ].divide(SizedBox(width: 16.0)),
+                                ].divide(SizedBox(width: 16.0)),
+                              ),
                             ),
                           );
                         },
                       ),
                       Container(
                         decoration: BoxDecoration(
-                          color:
-                              FlutterFlowTheme.of(context).secondaryBackground,
+                          color: FlutterFlowTheme.of(
+                            context,
+                          ).secondaryBackground,
                           borderRadius: BorderRadius.circular(24.0),
                           border: Border.all(
                             color: FlutterFlowTheme.of(context).accent3,
@@ -614,7 +1148,7 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                           ),
                         ),
                         child: Padding(
-                          padding: EdgeInsets.all(24.0),
+                          padding: EdgeInsets.all(16.0),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.start,
@@ -641,21 +1175,19 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                             .override(
                                               font: GoogleFonts.inter(
                                                 fontWeight: FontWeight.bold,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .titleMedium
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).titleMedium.fontStyle,
                                               ),
-                                              color:
-                                                  FlutterFlowTheme.of(context)
-                                                      .primaryText,
+                                              color: FlutterFlowTheme.of(
+                                                context,
+                                              ).primaryText,
                                               fontSize: 16.0,
                                               letterSpacing: 0.0,
                                               fontWeight: FontWeight.bold,
-                                              fontStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .titleMedium
-                                                      .fontStyle,
+                                              fontStyle: FlutterFlowTheme.of(
+                                                context,
+                                              ).titleMedium.fontStyle,
                                               lineHeight: 1.4,
                                             ),
                                       ),
@@ -668,14 +1200,13 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                         children: [
                                           Icon(
                                             Icons.group_rounded,
-                                            color: FlutterFlowTheme.of(context)
-                                                .accent3,
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).accent3,
                                             size: 16.0,
                                           ),
                                           Text(
-                                            FFLocalizations.of(context).getText(
-                                              '4i4hb62t' /* Recommended by 12 people */,
-                                            ),
+                                            'Рекомендуют ${_currentServiceDoc?.recommenderPhones.length ?? 0} ${_getPeopleNoun(_currentServiceDoc?.recommenderPhones.length ?? 0)}',
                                             style: FlutterFlowTheme.of(context)
                                                 .labelMedium
                                                 .override(
@@ -683,21 +1214,19 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                                     fontWeight: FontWeight.w600,
                                                     fontStyle:
                                                         FlutterFlowTheme.of(
-                                                                context)
-                                                            .labelMedium
-                                                            .fontStyle,
+                                                          context,
+                                                        ).labelMedium.fontStyle,
                                                   ),
                                                   color: FlutterFlowTheme.of(
-                                                          context)
-                                                      .accent3,
+                                                    context,
+                                                  ).accent3,
                                                   fontSize: 12.0,
                                                   letterSpacing: 0.0,
                                                   fontWeight: FontWeight.w600,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .labelMedium
-                                                          .fontStyle,
+                                                        context,
+                                                      ).labelMedium.fontStyle,
                                                   lineHeight: 1.3,
                                                 ),
                                           ),
@@ -712,33 +1241,52 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                     ),
                                     child: Padding(
                                       padding: EdgeInsetsDirectional.fromSTEB(
-                                          8.0, 4.0, 8.0, 4.0),
-                                      child: Text(
-                                        FFLocalizations.of(context).getText(
-                                          '92ybfn60' /* 3 Contacts */,
-                                        ),
-                                        style: FlutterFlowTheme.of(context)
-                                            .labelSmall
-                                            .override(
-                                              font: GoogleFonts.jetBrainsMono(
-                                                fontWeight: FontWeight.bold,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .labelSmall
-                                                        .fontStyle,
-                                              ),
-                                              color:
-                                                  FlutterFlowTheme.of(context)
-                                                      .accent3,
-                                              fontSize: 10.0,
-                                              letterSpacing: 0.0,
-                                              fontWeight: FontWeight.bold,
-                                              fontStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .labelSmall
-                                                      .fontStyle,
-                                              lineHeight: 1.2,
-                                            ),
+                                        8.0,
+                                        4.0,
+                                        8.0,
+                                        4.0,
+                                      ),
+                                      child: Builder(
+                                        builder: (context) {
+                                          final count =
+                                              _currentServiceDoc
+                                                  ?.recommenderPhones
+                                                  .where(
+                                                    (phone) => globalContactsMap
+                                                        .containsKey(phone),
+                                                  )
+                                                  .length ??
+                                              0;
+                                          return Text(
+                                            '$count ${_getContactsNoun(count)}',
+                                            style: FlutterFlowTheme.of(context)
+                                                .labelSmall
+                                                .override(
+                                                  font:
+                                                      GoogleFonts.jetBrainsMono(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontStyle:
+                                                            FlutterFlowTheme.of(
+                                                                  context,
+                                                                )
+                                                                .labelSmall
+                                                                .fontStyle,
+                                                      ),
+                                                  color: FlutterFlowTheme.of(
+                                                    context,
+                                                  ).accent3,
+                                                  fontSize: 10.0,
+                                                  letterSpacing: 0.0,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontStyle:
+                                                      FlutterFlowTheme.of(
+                                                        context,
+                                                      ).labelSmall.fontStyle,
+                                                  lineHeight: 1.2,
+                                                ),
+                                          );
+                                        },
                                       ),
                                     ),
                                   ),
@@ -748,40 +1296,127 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                 thickness: 0.5,
                                 color: FlutterFlowTheme.of(context).divider,
                               ),
-                              ListView(
-                                padding: EdgeInsets.zero,
-                                shrinkWrap: true,
-                                scrollDirection: Axis.vertical,
-                                children: [
-                                  wrapWithModel(
-                                    model: _model.contactRecommendationModel1,
-                                    updateCallback: () => safeSetState(() {}),
-                                    child: ContactRecommendationWidget(
-                                      initials: 'AM',
-                                      name: 'Саня одноклассник',
-                                      comment: 'Сходил, подстригли все круто',
-                                    ),
-                                  ),
-                                  wrapWithModel(
-                                    model: _model.contactRecommendationModel2,
-                                    updateCallback: () => safeSetState(() {}),
-                                    child: ContactRecommendationWidget(
-                                      initials: 'SK',
-                                      name: 'Олег работа',
-                                      comment: 'Быстро, недорого',
-                                    ),
-                                  ),
-                                  wrapWithModel(
-                                    model: _model.contactRecommendationModel3,
-                                    updateCallback: () => safeSetState(() {}),
-                                    child: ContactRecommendationWidget(
-                                      initials: 'JL',
-                                      name: 'Jane Lee',
-                                      comment:
-                                          'Sarah is amazing. Very intuitive touch.',
-                                    ),
-                                  ),
-                                ],
+                              Builder(
+                                builder: (context) {
+                                  final contactRecs =
+                                      _currentServiceDoc?.recommendations
+                                          .where(
+                                            (rec) => globalContactsMap
+                                                .containsKey(rec.phone),
+                                          )
+                                          .toList() ??
+                                      [];
+
+                                  if (contactRecs.isEmpty) {
+                                    return Container(
+                                      width: double.infinity,
+                                      decoration: BoxDecoration(
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).secondaryBackground,
+                                        borderRadius: BorderRadius.circular(
+                                          12.0,
+                                        ),
+                                        border: Border.all(
+                                          color: FlutterFlowTheme.of(
+                                            context,
+                                          ).alternate,
+                                          width: 1.0,
+                                        ),
+                                      ),
+                                      child: Padding(
+                                        padding: EdgeInsets.all(16.0),
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(
+                                              Icons.people_outline_rounded,
+                                              color: FlutterFlowTheme.of(
+                                                context,
+                                              ).secondaryText,
+                                              size: 32.0,
+                                            ),
+                                            SizedBox(height: 8.0),
+                                            Text(
+                                              'Никто из Ваших знакомых еще не рекомендовал эту услугу.',
+                                              textAlign: TextAlign.center,
+                                              style:
+                                                  FlutterFlowTheme.of(
+                                                    context,
+                                                  ).bodyMedium.override(
+                                                    font: GoogleFonts.interTight(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      fontStyle:
+                                                          FlutterFlowTheme.of(
+                                                                context,
+                                                              )
+                                                              .bodyMedium
+                                                              .fontStyle,
+                                                    ),
+                                                    color: FlutterFlowTheme.of(
+                                                      context,
+                                                    ).primaryText,
+                                                    fontSize: 14.0,
+                                                  ),
+                                            ),
+                                            SizedBox(height: 4.0),
+                                            Text(
+                                              'Будьте первым, кто оставит рекомендацию после визита!',
+                                              textAlign: TextAlign.center,
+                                              style:
+                                                  FlutterFlowTheme.of(
+                                                    context,
+                                                  ).bodySmall.override(
+                                                    font: GoogleFonts.interTight(
+                                                      fontWeight:
+                                                          FontWeight.normal,
+                                                      fontStyle:
+                                                          FlutterFlowTheme.of(
+                                                            context,
+                                                          ).bodySmall.fontStyle,
+                                                    ),
+                                                    color: FlutterFlowTheme.of(
+                                                      context,
+                                                    ).secondaryText,
+                                                    fontSize: 12.0,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }
+
+                                  return ListView(
+                                    padding: EdgeInsets.zero,
+                                    shrinkWrap: true,
+                                    physics: NeverScrollableScrollPhysics(),
+                                    scrollDirection: Axis.vertical,
+                                    children: contactRecs.map((rec) {
+                                      final localName =
+                                          globalContactsMap[rec.phone] ??
+                                          rec.phone;
+                                      final initials = localName.isNotEmpty
+                                          ? localName
+                                                .split(' ')
+                                                .map(
+                                                  (e) =>
+                                                      e.isNotEmpty ? e[0] : '',
+                                                )
+                                                .take(2)
+                                                .join()
+                                                .toUpperCase()
+                                          : '';
+                                      return ContactRecommendationWidget(
+                                        key: ValueKey(rec.phone),
+                                        initials: initials,
+                                        name: localName,
+                                        comment: rec.comment,
+                                      );
+                                    }).toList(),
+                                  );
+                                },
                               ),
                             ].divide(SizedBox(height: 16.0)),
                           ),
@@ -790,233 +1425,157 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                       Column(
                         mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Expanded(
-                                flex: 1,
-                                child: InkWell(
-                                  splashColor: Colors.transparent,
-                                  focusColor: Colors.transparent,
-                                  hoverColor: Colors.transparent,
-                                  highlightColor: Colors.transparent,
-                                  onTap: () async {
-                                    await RecordsRecord.collection.add({
-                                      ...createRecordsRecordData(
-                                        master: widget!.serviceDoc?.owner,
-                                        client: currentUserReference,
-                                        service: widget!.serviceDoc?.reference,
-                                        date: getCurrentTimestamp,
-                                        status: RecordStatus.newRec,
+                          if (_hasCompletedService)
+                            Container(
+                              decoration: BoxDecoration(
+                                color: FlutterFlowTheme.of(
+                                  context,
+                                ).primaryBackground,
+                                borderRadius: BorderRadius.circular(12.0),
+                                border: Border.all(
+                                  color: FlutterFlowTheme.of(context).divider,
+                                  width: 1.0,
+                                ),
+                              ),
+                              child: Align(
+                                alignment: AlignmentDirectional(0.0, 0.0),
+                                child: Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.check_circle_outline_rounded,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryText,
+                                        size: 20.0,
                                       ),
-                                    });
-
-                                    context.pushNamed(
-                                      'recordPageClient',
-                                      queryParameters: {
-                                        'serviceDoc': serializeParam(
-                                          widget!.serviceDoc,
-                                          ParamType.Document,
-                                        ),
-                                      }.withoutNulls,
-                                      extra: <String, dynamic>{
-                                        'serviceDoc': widget!.serviceDoc,
-                                      },
-                                    );
-                                  },
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      color: FlutterFlowTheme.of(context).primary,
-                                      borderRadius: BorderRadius.circular(12.0),
-                                      border: Border.all(
-                                        color:
-                                            FlutterFlowTheme.of(context).primary,
-                                        width: 1.0,
-                                      ),
-                                    ),
-                                    child: Align(
-                                      alignment: AlignmentDirectional(0.0, 0.0),
-                                      child: Padding(
-                                        padding: EdgeInsets.all(16.0),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.max,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons.calendar_today_rounded,
-                                              color: Colors.white,
-                                              size: 20.0,
+                                      Text(
+                                        FFLocalizations.of(
+                                          context,
+                                        ).getText('o255lgwn' /* I visited */),
+                                        style: FlutterFlowTheme.of(context)
+                                            .labelLarge
+                                            .override(
+                                              font: GoogleFonts.inter(
+                                                fontWeight: FontWeight.w600,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).labelLarge.fontStyle,
+                                              ),
+                                              color: FlutterFlowTheme.of(
+                                                context,
+                                              ).primaryText,
+                                              fontSize: 14.0,
+                                              letterSpacing: 0.0,
+                                              fontWeight: FontWeight.w600,
+                                              fontStyle: FlutterFlowTheme.of(
+                                                context,
+                                              ).labelLarge.fontStyle,
+                                              lineHeight: 1.3,
                                             ),
-                                            Text(
-                                              'Записаться',
-                                              style: FlutterFlowTheme.of(context)
-                                                  .labelLarge
-                                                  .override(
-                                                    font: GoogleFonts.inter(
-                                                      fontWeight: FontWeight.w600,
-                                                      fontStyle:
-                                                          FlutterFlowTheme.of(
-                                                                  context)
-                                                              .labelLarge
-                                                              .fontStyle,
-                                                    ),
-                                                    color: Colors.white,
-                                                    fontSize: 14.0,
-                                                    letterSpacing: 0.0,
-                                                    fontWeight: FontWeight.w600,
-                                                    fontStyle:
-                                                        FlutterFlowTheme.of(
-                                                                context)
-                                                            .labelLarge
-                                                            .fontStyle,
-                                                    lineHeight: 1.3,
-                                                  ),
-                                            ),
-                                          ].divide(SizedBox(width: 8.0)),
-                                        ),
                                       ),
-                                    ),
+                                    ].divide(SizedBox(width: 8.0)),
                                   ),
                                 ),
                               ),
-                              Expanded(
-                                flex: 1,
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: FlutterFlowTheme.of(context)
-                                        .primaryBackground,
-                                    borderRadius: BorderRadius.circular(12.0),
-                                    border: Border.all(
-                                      color:
-                                          FlutterFlowTheme.of(context).divider,
-                                      width: 1.0,
+                            ),
+                          if (_hasCompletedService &&
+                              !isOwnService &&
+                              !hasAlreadyRecommended)
+                            InkWell(
+                              onTap: () async {
+                                if (normalizedUserPhone.isNotEmpty &&
+                                    _currentServiceDoc != null) {
+                                  final result = await showDialog<bool>(
+                                    context: context,
+                                    builder: (dialogContext) => Dialog(
+                                      backgroundColor: Colors.transparent,
+                                      insetPadding: EdgeInsets.symmetric(
+                                        horizontal: 16.0,
+                                      ),
+                                      child: RecommendDialogWidget(
+                                        serviceDoc: _currentServiceDoc!,
+                                      ),
                                     ),
-                                  ),
-                                  child: Align(
-                                    alignment: AlignmentDirectional(0.0, 0.0),
-                                    child: Padding(
-                                      padding: EdgeInsets.all(16.0),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.max,
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.check_circle_outline_rounded,
-                                            color: FlutterFlowTheme.of(context)
-                                                .primaryText,
-                                            size: 20.0,
-                                          ),
-                                          Text(
-                                            FFLocalizations.of(context).getText(
-                                              'o255lgwn' /* I visited */,
-                                            ),
-                                            style: FlutterFlowTheme.of(context)
-                                                .labelLarge
-                                                .override(
-                                                  font: GoogleFonts.inter(
-                                                    fontWeight: FontWeight.w600,
-                                                    fontStyle:
-                                                        FlutterFlowTheme.of(
-                                                                context)
-                                                            .labelLarge
-                                                            .fontStyle,
-                                                  ),
-                                                  color: FlutterFlowTheme.of(
-                                                          context)
-                                                      .primaryText,
-                                                  fontSize: 14.0,
-                                                  letterSpacing: 0.0,
-                                                  fontWeight: FontWeight.w600,
+                                  );
+                                  if (result == true) {
+                                    final updatedDoc =
+                                        await ServiceRecord.getDocumentOnce(
+                                          _currentServiceDoc!.reference,
+                                        );
+                                    safeSetState(() {
+                                      _currentServiceDoc = updatedDoc;
+                                    });
+                                  }
+                                }
+                              },
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: FlutterFlowTheme.of(context).success,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      blurRadius: 4.0,
+                                      color: Color(0x1A000000),
+                                      offset: Offset(0.0, 2.0),
+                                      spreadRadius: 0.0,
+                                    ),
+                                  ],
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                alignment: AlignmentDirectional(0.0, 0.0),
+                                child: Padding(
+                                  padding: EdgeInsets.all(16.0),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.max,
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.thumb_up_alt_rounded,
+                                        color: Colors.white,
+                                        size: 22.0,
+                                      ),
+                                      Expanded(
+                                        child: Text(
+                                          'Порекомендовать услугу знакомым',
+                                          textAlign: TextAlign.center,
+                                          style: FlutterFlowTheme.of(context)
+                                              .titleMedium
+                                              .override(
+                                                font: GoogleFonts.inter(
+                                                  fontWeight: FontWeight.bold,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .labelLarge
-                                                          .fontStyle,
-                                                  lineHeight: 1.3,
+                                                        context,
+                                                      ).titleMedium.fontStyle,
                                                 ),
-                                          ),
-                                        ].divide(SizedBox(width: 8.0)),
+                                                color: Colors.white,
+                                                fontSize: 14.0,
+                                                letterSpacing: 0.0,
+                                                fontWeight: FontWeight.bold,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).titleMedium.fontStyle,
+                                                lineHeight: 1.3,
+                                              ),
+                                        ),
                                       ),
-                                    ),
+                                    ].divide(SizedBox(width: 8.0)),
                                   ),
                                 ),
                               ),
-                            ].divide(SizedBox(width: 16.0)),
-                          ),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(context).success,
-                              boxShadow: [
-                                BoxShadow(
-                                  blurRadius: 4.0,
-                                  color: Color(0x1A000000),
-                                  offset: Offset(
-                                    0.0,
-                                    2.0,
-                                  ),
-                                  spreadRadius: 0.0,
-                                )
-                              ],
-                              borderRadius: BorderRadius.circular(12.0),
                             ),
-                            alignment: AlignmentDirectional(0.0, 0.0),
-                            child: Padding(
-                              padding: EdgeInsets.all(24.0),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.thumb_up_alt_rounded,
-                                    color: Colors.white,
-                                    size: 22.0,
-                                  ),
-                                  Text(
-                                    FFLocalizations.of(context).getText(
-                                      'agpx2kyu' /* Recommend to Circle */,
-                                    ),
-                                    style: FlutterFlowTheme.of(context)
-                                        .titleMedium
-                                        .override(
-                                          font: GoogleFonts.inter(
-                                            fontWeight: FontWeight.bold,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .titleMedium
-                                                    .fontStyle,
-                                          ),
-                                          color: Colors.white,
-                                          fontSize: 16.0,
-                                          letterSpacing: 0.0,
-                                          fontWeight: FontWeight.bold,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .titleMedium
-                                                  .fontStyle,
-                                          lineHeight: 1.4,
-                                        ),
-                                  ),
-                                ].divide(SizedBox(width: 8.0)),
-                              ),
-                            ),
-                          ),
                         ].divide(SizedBox(height: 16.0)),
                       ),
-                      Container(
-                        height: 24.0,
-                      ),
-                    ].divide(SizedBox(height: 32.0)),
+                    ].divide(SizedBox(height: 16.0)),
                   ),
                 ),
               ),

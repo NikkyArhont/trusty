@@ -13,14 +13,7 @@ export 'dart:async' show Completer;
 export 'package:google_maps_flutter/google_maps_flutter.dart' hide LatLng;
 export 'lat_lng.dart' show LatLng;
 
-enum GoogleMapStyle {
-  standard,
-  silver,
-  retro,
-  dark,
-  night,
-  aubergine,
-}
+enum GoogleMapStyle { standard, silver, retro, dark, night, aubergine }
 
 enum GoogleMarkerColor {
   red,
@@ -72,6 +65,7 @@ class FlutterFlowGoogleMap extends StatefulWidget {
     this.initialLocation,
     this.markers = const [],
     this.markerColor = GoogleMarkerColor.red,
+    this.markerColorValue,
     this.markerImage,
     this.mapType = MapType.normal,
     this.style = GoogleMapStyle.standard,
@@ -96,6 +90,7 @@ class FlutterFlowGoogleMap extends StatefulWidget {
   final latlng.LatLng? initialLocation;
   final Iterable<FlutterFlowMarker> markers;
   final GoogleMarkerColor markerColor;
+  final Color? markerColorValue;
   final MarkerImage? markerImage;
   final MapType mapType;
   final GoogleMapStyle style;
@@ -123,8 +118,57 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
   BitmapDescriptor? _markerDescriptor;
   late LatLng currentMapCenter;
 
+  Future<BitmapDescriptor> _createColoredMarker(Color color) async {
+    const canvasSize = Size(48.0, 60.0);
+    final recorder = PictureRecorder();
+    final canvas = Canvas(recorder);
+    final pinPath = Path()
+      ..moveTo(24.0, 58.0)
+      ..cubicTo(20.0, 49.0, 6.0, 38.0, 6.0, 24.0)
+      ..cubicTo(6.0, 13.0, 14.0, 5.0, 24.0, 5.0)
+      ..cubicTo(34.0, 5.0, 42.0, 13.0, 42.0, 24.0)
+      ..cubicTo(42.0, 38.0, 28.0, 49.0, 24.0, 58.0)
+      ..close();
+
+    canvas.drawPath(
+      pinPath,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.18)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2.0),
+    );
+    canvas.drawPath(pinPath, Paint()..color = color);
+    canvas.drawCircle(
+      const Offset(24.0, 23.0),
+      8.0,
+      Paint()..color = Colors.white,
+    );
+
+    final image = await recorder.endRecording().toImage(
+      canvasSize.width.toInt(),
+      canvasSize.height.toInt(),
+    );
+    final bytes = await image.toByteData(format: ImageByteFormat.png);
+    return BitmapDescriptor.bytes(
+      bytes!.buffer.asUint8List(),
+      width: 32.0,
+      height: 40.0,
+    );
+  }
+
   void initializeMarkerBitmap() {
     final markerImage = widget.markerImage;
+
+    if (widget.markerColorValue != null) {
+      _markerDescriptor = BitmapDescriptor.defaultMarkerWithHue(
+        googleMarkerColorMap[GoogleMarkerColor.blue]!,
+      );
+      _createColoredMarker(widget.markerColorValue!).then((descriptor) {
+        if (mounted) {
+          setState(() => _markerDescriptor = descriptor);
+        }
+      });
+      return;
+    }
 
     if (markerImage == null) {
       _markerDescriptor = BitmapDescriptor.defaultMarkerWithHue(
@@ -151,20 +195,26 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
           allowUpscaling: true,
         );
       }
-      final imageConfiguration =
-          createLocalImageConfiguration(context, size: markerImageSize);
+      final imageConfiguration = createLocalImageConfiguration(
+        context,
+        size: markerImageSize,
+      );
       imageProvider
           .resolve(imageConfiguration)
-          .addListener(ImageStreamListener((img, _) async {
-        final bytes = await img.image.toByteData(format: ImageByteFormat.png);
-        if (bytes != null && mounted) {
-          _markerDescriptor = BitmapDescriptor.fromBytes(
-            bytes.buffer.asUint8List(),
-            size: markerImageSize,
+          .addListener(
+            ImageStreamListener((img, _) async {
+              final bytes = await img.image.toByteData(
+                format: ImageByteFormat.png,
+              );
+              if (bytes != null && mounted) {
+                _markerDescriptor = BitmapDescriptor.fromBytes(
+                  bytes.buffer.asUint8List(),
+                  size: markerImageSize,
+                );
+                setState(() {});
+              }
+            }),
           );
-          setState(() {});
-        }
-      }));
     });
   }
 
@@ -182,7 +232,8 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
   void didUpdateWidget(FlutterFlowGoogleMap oldWidget) {
     super.didUpdateWidget(oldWidget);
     // Rebuild the marker bitmap if the marker image changes.
-    if (widget.markerImage != oldWidget.markerImage) {
+    if (widget.markerImage != oldWidget.markerImage ||
+        widget.markerColorValue != oldWidget.markerColorValue) {
       initializeMarkerBitmap();
       setState(() {});
     }
@@ -190,7 +241,8 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
 
   @override
   Widget build(BuildContext context) {
-    final mapHasGesturePreference = widget.mapTakesGesturePreference &&
+    final mapHasGesturePreference =
+        widget.mapTakesGesturePreference &&
         widget.allowInteraction &&
         widget.allowZoom;
 
@@ -240,8 +292,9 @@ class _FlutterFlowGoogleMapState extends State<FlutterFlowGoogleMap> {
               EagerGestureRecognizer.new,
             ),
         },
-        webGestureHandling:
-            mapHasGesturePreference ? WebGestureHandling.cooperative : null,
+        webGestureHandling: mapHasGesturePreference
+            ? WebGestureHandling.cooperative
+            : null,
       ),
     );
 

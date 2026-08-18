@@ -8,6 +8,33 @@ import 'package:csv/csv.dart';
 import 'package:synchronized/synchronized.dart';
 import 'flutter_flow/flutter_flow_util.dart';
 
+List<CategoriesStruct> _buildPresetCategories() => [
+  createCategoriesStruct(key: 'health', titleRU: 'Здоровье'),
+  createCategoriesStruct(key: 'beauty', titleRU: 'Красота'),
+  createCategoriesStruct(key: 'animals', titleRU: 'Животные'),
+  createCategoriesStruct(key: 'build', titleRU: 'Строительство'),
+  createCategoriesStruct(key: 'repair', titleRU: 'Ремонт'),
+  createCategoriesStruct(key: 'home', titleRU: 'Дом и быт'),
+  createCategoriesStruct(key: 'auto', titleRU: 'Авто'),
+  createCategoriesStruct(key: 'education', titleRU: 'Обучение'),
+  createCategoriesStruct(key: 'it_digital', titleRU: 'IT и цифровые услуги'),
+  createCategoriesStruct(key: 'photo_video', titleRU: 'Фото и видео'),
+  createCategoriesStruct(key: 'legal', titleRU: 'Юридические услуги'),
+  createCategoriesStruct(
+    key: 'accounting_finance',
+    titleRU: 'Бухгалтерия и финансы',
+  ),
+  createCategoriesStruct(key: 'events', titleRU: 'Мероприятия'),
+  createCategoriesStruct(key: 'sport_fitness', titleRU: 'Спорт и фитнес'),
+  createCategoriesStruct(key: 'psychology', titleRU: 'Психология'),
+  createCategoriesStruct(
+    key: 'moving_transport',
+    titleRU: 'Переезды и перевозки',
+  ),
+  createCategoriesStruct(key: 'garden', titleRU: 'Сад и участок'),
+  createCategoriesStruct(key: 'business', titleRU: 'Бизнес-услуги'),
+];
+
 class FFAppState extends ChangeNotifier {
   static FFAppState _instance = FFAppState._internal();
 
@@ -31,18 +58,11 @@ class FFAppState extends ChangeNotifier {
           await secureStorage.getBool('ff_specialistMode') ?? _specialistMode;
     });
     await _safeInitAsync(() async {
-      _presetCategory = (await secureStorage.getStringList('ff_presetCategory'))
-              ?.map((x) {
-                try {
-                  return CategoriesStruct.fromSerializableMap(jsonDecode(x));
-                } catch (e) {
-                  print("Can't decode persisted data type. Error: $e.");
-                  return null;
-                }
-              })
-              .withoutNulls
-              .toList() ??
-          _presetCategory;
+      _presetCategory = _buildPresetCategories();
+      await secureStorage.setStringList(
+        'ff_presetCategory',
+        _presetCategory.map((category) => category.serialize()).toList(),
+      );
     });
     await _safeInitAsync(() async {
       if (await secureStorage.read(key: 'ff_globalFilter') != null) {
@@ -50,7 +70,8 @@ class FFAppState extends ChangeNotifier {
           final serializedData =
               await secureStorage.getString('ff_globalFilter') ?? '{}';
           _globalFilter = GlobalFilterStruct.fromSerializableMap(
-              jsonDecode(serializedData));
+            jsonDecode(serializedData),
+          );
         } catch (e) {
           print("Can't decode persisted data type. Error: $e.");
         }
@@ -60,7 +81,8 @@ class FFAppState extends ChangeNotifier {
       _geo = await secureStorage.getString('ff_geo') ?? _geo;
     });
     await _safeInitAsync(() async {
-      _listRUCities = (await secureStorage.getStringList('ff_listRUCities'))
+      _listRUCities =
+          (await secureStorage.getStringList('ff_listRUCities'))
               ?.map((x) {
                 try {
                   return PlaceStruct.fromSerializableMap(jsonDecode(x));
@@ -108,25 +130,14 @@ class FFAppState extends ChangeNotifier {
     secureStorage.delete(key: 'ff_specialistMode');
   }
 
-  List<CategoriesStruct> _presetCategory = [
-    CategoriesStruct.fromSerializableMap(
-        jsonDecode('{\"key\":\"health\",\"titleRU\":\"Здоровье\"}')),
-    CategoriesStruct.fromSerializableMap(
-        jsonDecode('{\"key\":\"beauty\",\"titleRU\":\"Красота\"}')),
-    CategoriesStruct.fromSerializableMap(
-        jsonDecode('{\"key\":\"animals\",\"titleRU\":\"Животные\"}')),
-    CategoriesStruct.fromSerializableMap(
-        jsonDecode('{\"key\":\"build\",\"titleRU\":\"Строительство\"}')),
-    CategoriesStruct.fromSerializableMap(
-        jsonDecode('{\"key\":\"Hello World\",\"titleRU\":\"Hello World\"}')),
-    CategoriesStruct.fromSerializableMap(
-        jsonDecode('{\"key\":\"repair\",\"titleRU\":\"Ремонт\"}'))
-  ];
+  List<CategoriesStruct> _presetCategory = _buildPresetCategories();
   List<CategoriesStruct> get presetCategory => _presetCategory;
   set presetCategory(List<CategoriesStruct> value) {
     _presetCategory = value;
     secureStorage.setStringList(
-        'ff_presetCategory', value.map((x) => x.serialize()).toList());
+      'ff_presetCategory',
+      value.map((x) => x.serialize()).toList(),
+    );
   }
 
   void deletePresetCategory() {
@@ -135,20 +146,26 @@ class FFAppState extends ChangeNotifier {
 
   void addToPresetCategory(CategoriesStruct value) {
     presetCategory.add(value);
-    secureStorage.setStringList('ff_presetCategory',
-        _presetCategory.map((x) => x.serialize()).toList());
+    secureStorage.setStringList(
+      'ff_presetCategory',
+      _presetCategory.map((x) => x.serialize()).toList(),
+    );
   }
 
   void removeFromPresetCategory(CategoriesStruct value) {
     presetCategory.remove(value);
-    secureStorage.setStringList('ff_presetCategory',
-        _presetCategory.map((x) => x.serialize()).toList());
+    secureStorage.setStringList(
+      'ff_presetCategory',
+      _presetCategory.map((x) => x.serialize()).toList(),
+    );
   }
 
   void removeAtIndexFromPresetCategory(int index) {
     presetCategory.removeAt(index);
-    secureStorage.setStringList('ff_presetCategory',
-        _presetCategory.map((x) => x.serialize()).toList());
+    secureStorage.setStringList(
+      'ff_presetCategory',
+      _presetCategory.map((x) => x.serialize()).toList(),
+    );
   }
 
   void updatePresetCategoryAtIndex(
@@ -156,14 +173,18 @@ class FFAppState extends ChangeNotifier {
     CategoriesStruct Function(CategoriesStruct) updateFn,
   ) {
     presetCategory[index] = updateFn(_presetCategory[index]);
-    secureStorage.setStringList('ff_presetCategory',
-        _presetCategory.map((x) => x.serialize()).toList());
+    secureStorage.setStringList(
+      'ff_presetCategory',
+      _presetCategory.map((x) => x.serialize()).toList(),
+    );
   }
 
   void insertAtIndexInPresetCategory(int index, CategoriesStruct value) {
     presetCategory.insert(index, value);
-    secureStorage.setStringList('ff_presetCategory',
-        _presetCategory.map((x) => x.serialize()).toList());
+    secureStorage.setStringList(
+      'ff_presetCategory',
+      _presetCategory.map((x) => x.serialize()).toList(),
+    );
   }
 
   GlobalFilterStruct _globalFilter = GlobalFilterStruct();
@@ -180,6 +201,16 @@ class FFAppState extends ChangeNotifier {
   void updateGlobalFilterStruct(Function(GlobalFilterStruct) updateFn) {
     updateFn(_globalFilter);
     secureStorage.setString('ff_globalFilter', _globalFilter.serialize());
+  }
+
+  PlaceStruct? _tempServiceAddress;
+  PlaceStruct? get tempServiceAddress => _tempServiceAddress;
+  set tempServiceAddress(PlaceStruct? value) {
+    _tempServiceAddress = value;
+  }
+
+  void updateTempServiceAddressStruct(Function(PlaceStruct) updateFn) {
+    updateFn(_tempServiceAddress ??= PlaceStruct());
   }
 
   List<String> _previosSearch = [];
@@ -200,10 +231,7 @@ class FFAppState extends ChangeNotifier {
     previosSearch.removeAt(index);
   }
 
-  void updatePreviosSearchAtIndex(
-    int index,
-    String Function(String) updateFn,
-  ) {
+  void updatePreviosSearchAtIndex(int index, String Function(String) updateFn) {
     previosSearch[index] = updateFn(_previosSearch[index]);
   }
 
@@ -227,7 +255,9 @@ class FFAppState extends ChangeNotifier {
   set listRUCities(List<PlaceStruct> value) {
     _listRUCities = value;
     secureStorage.setStringList(
-        'ff_listRUCities', value.map((x) => x.serialize()).toList());
+      'ff_listRUCities',
+      value.map((x) => x.serialize()).toList(),
+    );
   }
 
   void deleteListRUCities() {
@@ -237,19 +267,25 @@ class FFAppState extends ChangeNotifier {
   void addToListRUCities(PlaceStruct value) {
     listRUCities.add(value);
     secureStorage.setStringList(
-        'ff_listRUCities', _listRUCities.map((x) => x.serialize()).toList());
+      'ff_listRUCities',
+      _listRUCities.map((x) => x.serialize()).toList(),
+    );
   }
 
   void removeFromListRUCities(PlaceStruct value) {
     listRUCities.remove(value);
     secureStorage.setStringList(
-        'ff_listRUCities', _listRUCities.map((x) => x.serialize()).toList());
+      'ff_listRUCities',
+      _listRUCities.map((x) => x.serialize()).toList(),
+    );
   }
 
   void removeAtIndexFromListRUCities(int index) {
     listRUCities.removeAt(index);
     secureStorage.setStringList(
-        'ff_listRUCities', _listRUCities.map((x) => x.serialize()).toList());
+      'ff_listRUCities',
+      _listRUCities.map((x) => x.serialize()).toList(),
+    );
   }
 
   void updateListRUCitiesAtIndex(
@@ -258,13 +294,17 @@ class FFAppState extends ChangeNotifier {
   ) {
     listRUCities[index] = updateFn(_listRUCities[index]);
     secureStorage.setStringList(
-        'ff_listRUCities', _listRUCities.map((x) => x.serialize()).toList());
+      'ff_listRUCities',
+      _listRUCities.map((x) => x.serialize()).toList(),
+    );
   }
 
   void insertAtIndexInListRUCities(int index, PlaceStruct value) {
     listRUCities.insert(index, value);
     secureStorage.setStringList(
-        'ff_listRUCities', _listRUCities.map((x) => x.serialize()).toList());
+      'ff_listRUCities',
+      _listRUCities.map((x) => x.serialize()).toList(),
+    );
   }
 
   String _listCityVocab =

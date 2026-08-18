@@ -12,10 +12,9 @@ export 'api_manager.dart' show ApiCallResponse;
 const _kPrivateApiFunctionName = 'ffPrivateApiCall';
 
 class AdresCall {
-  static Future<ApiCallResponse> call({
-    String? search = '',
-  }) async {
-    final ffApiRequestBody = '''
+  static Future<ApiCallResponse> call({String? search = ''}) async {
+    final ffApiRequestBody =
+        '''
 {
   "input": "${escapeStringForJson(search)}",
   "languageCode": "ru",
@@ -35,47 +34,101 @@ class AdresCall {
       body: ffApiRequestBody,
       bodyType: BodyType.JSON,
       returnBody: true,
-      encodeBodyUtf8: false,
-      decodeUtf8: false,
+      encodeBodyUtf8: true,
+      decodeUtf8: true,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
     );
   }
 
-  static List<String>? placeid(dynamic response) => (getJsonField(
-        response,
-        r'''$.suggestions[:].placePrediction.placeId''',
-        true,
-      ) as List?)
+  static List<String>? placeid(dynamic response) =>
+      (getJsonField(
+                response,
+                r'''$.suggestions[:].placePrediction.placeId''',
+                true,
+              )
+              as List?)
           ?.withoutNulls
           .map((x) => castToType<String>(x))
           .withoutNulls
           .toList();
-  static List<String>? title(dynamic response) => (getJsonField(
-        response,
-        r'''$.suggestions[:].placePrediction.text.text''',
-        true,
-      ) as List?)
+  static List<String>? title(dynamic response) =>
+      (getJsonField(
+                response,
+                r'''$.suggestions[:].placePrediction.text.text''',
+                true,
+              )
+              as List?)
           ?.withoutNulls
           .map((x) => castToType<String>(x))
           .withoutNulls
           .toList();
-  static List<String>? description(dynamic response) => (getJsonField(
-        response,
-        r'''$.suggestions[:].placePrediction.structuredFormat.secondaryText.text''',
-        true,
-      ) as List?)
+  static List<String>? description(dynamic response) =>
+      (getJsonField(
+                response,
+                r'''$.suggestions[:].placePrediction.structuredFormat.secondaryText.text''',
+                true,
+              )
+              as List?)
           ?.withoutNulls
           .map((x) => castToType<String>(x))
           .withoutNulls
           .toList();
+
+  static List<PlaceStruct> places(dynamic response, {String? cityId}) {
+    final suggestions = response is Map
+        ? response['suggestions']
+        : response is List
+        ? response
+        : null;
+    if (suggestions is! List) {
+      return [];
+    }
+
+    return suggestions
+        .map((suggestion) {
+          final prediction = suggestion is Map
+              ? suggestion['placePrediction']
+              : null;
+          if (prediction is! Map) {
+            return null;
+          }
+
+          final structuredFormat = prediction['structuredFormat'];
+          final mainText = structuredFormat is Map
+              ? structuredFormat['mainText']
+              : null;
+          final secondaryText = structuredFormat is Map
+              ? structuredFormat['secondaryText']
+              : null;
+          final text = prediction['text'];
+          final placeId = prediction['placeId'];
+          final title = mainText is Map
+              ? mainText['text']
+              : text is Map
+              ? text['text']
+              : null;
+          final description = secondaryText is Map ? secondaryText['text'] : '';
+
+          if (placeId is! String || title is! String || title.isEmpty) {
+            return null;
+          }
+
+          return PlaceStruct(
+            id: placeId,
+            title: title,
+            description: description is String ? description : '',
+            cityId: cityId ?? '',
+          );
+        })
+        .whereType<PlaceStruct>()
+        .toList();
+  }
 }
 
 class IdToGeoCall {
-  static Future<ApiCallResponse> call({
-    String? placeId = '',
-  }) async {
+  static Future<ApiCallResponse> call({String? placeId = ''}) async {
     return ApiManager.instance.makeApiCall(
       callName: 'idToGeo',
       apiUrl: 'https://places.googleapis.com/v1/places/${placeId}',
@@ -85,28 +138,33 @@ class IdToGeoCall {
         'X-Goog-Api-Key': 'AIzaSyDT7xqBZZ0vakT3CGNYrQoRijsLsbW6nTU',
         'X-Goog-FieldMask': 'location,formattedAddress,displayName',
       },
-      params: {},
+      params: {'languageCode': 'ru', 'regionCode': 'RU'},
       returnBody: true,
       encodeBodyUtf8: false,
-      decodeUtf8: false,
+      decodeUtf8: true,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
     );
   }
+
+  static String? formattedAddress(dynamic response) =>
+      castToType<String>(getJsonField(response, r'''$.formattedAddress'''));
+  static String? displayName(dynamic response) =>
+      castToType<String>(getJsonField(response, r'''$.displayName.text'''));
+  static double? lat(dynamic response) =>
+      castToType<double>(getJsonField(response, r'''$.location.latitude'''));
+  static double? lng(dynamic response) =>
+      castToType<double>(getJsonField(response, r'''$.location.longitude'''));
 }
 
 class GeocodeCall {
-  static Future<ApiCallResponse> call({
-    String? adress = '',
-  }) async {
+  static Future<ApiCallResponse> call({String? adress = ''}) async {
     return ApiManager.instance.makeApiCall(
       callName: 'geocode',
       apiUrl: 'https://maps.googleapis.com/maps/api/geocode/json',
       callType: ApiCallType.GET,
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: {'Content-Type': 'application/json'},
       params: {
         'address': adress,
         'key': "AIzaSyDT7xqBZZ0vakT3CGNYrQoRijsLsbW6nTU",
@@ -114,35 +172,31 @@ class GeocodeCall {
       },
       returnBody: true,
       encodeBodyUtf8: false,
-      decodeUtf8: false,
+      decodeUtf8: true,
       cache: false,
       isStreamingApi: false,
       alwaysAllowBody: false,
     );
   }
 
-  static String? adresID(dynamic response) => castToType<String>(getJsonField(
-        response,
-        r'''$.results[:].place_id''',
-      ));
-  static String? adressTitle(dynamic response) =>
-      castToType<String>(getJsonField(
-        response,
-        r'''$.results[:].formatted_address''',
-      ));
-  static double? lat(dynamic response) => castToType<double>(getJsonField(
-        response,
-        r'''$.results[:].geometry.location.lat''',
-      ));
-  static double? lng(dynamic response) => castToType<double>(getJsonField(
-        response,
-        r'''$.results[:].geometry.location.lng''',
-      ));
-  static List<String>? shortadress(dynamic response) => (getJsonField(
-        response,
-        r'''$.results[:].address_components[:].short_name''',
-        true,
-      ) as List?)
+  static String? adresID(dynamic response) =>
+      castToType<String>(getJsonField(response, r'''$.results[0].place_id'''));
+  static String? adressTitle(dynamic response) => castToType<String>(
+    getJsonField(response, r'''$.results[0].formatted_address'''),
+  );
+  static double? lat(dynamic response) => castToType<double>(
+    getJsonField(response, r'''$.results[0].geometry.location.lat'''),
+  );
+  static double? lng(dynamic response) => castToType<double>(
+    getJsonField(response, r'''$.results[0].geometry.location.lng'''),
+  );
+  static List<String>? shortadress(dynamic response) =>
+      (getJsonField(
+                response,
+                r'''$.results[:].address_components[:].short_name''',
+                true,
+              )
+              as List?)
           ?.withoutNulls
           .map((x) => castToType<String>(x))
           .withoutNulls

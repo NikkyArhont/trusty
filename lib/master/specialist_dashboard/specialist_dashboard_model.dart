@@ -1,6 +1,5 @@
 import '/auth/firebase_auth/auth_util.dart';
 import '/backend/schema/enums/enums.dart';
-import '/components/service_item_widget.dart';
 import '/components/stat_card_widget.dart';
 import '/flutter_flow/flutter_flow_charts.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -27,12 +26,6 @@ class SpecialistDashboardModel
   late StatCardModel statCardModel3;
   // Model for StatCard component.
   late StatCardModel statCardModel4;
-  // Model for ServiceItem component.
-  late ServiceItemModel serviceItemModel1;
-  // Model for ServiceItem component.
-  late ServiceItemModel serviceItemModel2;
-  // Model for ServiceItem component.
-  late ServiceItemModel serviceItemModel3;
   // Model for menu component.
   late MenuModel menuModel;
 
@@ -42,9 +35,6 @@ class SpecialistDashboardModel
     statCardModel2 = createModel(context, () => StatCardModel());
     statCardModel3 = createModel(context, () => StatCardModel());
     statCardModel4 = createModel(context, () => StatCardModel());
-    serviceItemModel1 = createModel(context, () => ServiceItemModel());
-    serviceItemModel2 = createModel(context, () => ServiceItemModel());
-    serviceItemModel3 = createModel(context, () => ServiceItemModel());
     menuModel = createModel(context, () => MenuModel());
   }
 
@@ -54,9 +44,6 @@ class SpecialistDashboardModel
     statCardModel2.dispose();
     statCardModel3.dispose();
     statCardModel4.dispose();
-    serviceItemModel1.dispose();
-    serviceItemModel2.dispose();
-    serviceItemModel3.dispose();
     menuModel.dispose();
   }
 }

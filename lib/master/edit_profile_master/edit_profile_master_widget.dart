@@ -1,6 +1,7 @@
 import '/auth/firebase_auth/auth_util.dart';
 import '/backend/backend.dart';
 import '/backend/firebase_storage/storage.dart';
+import '/backend/chat/chat_profile_sync.dart';
 import '/backend/schema/structs/index.dart';
 import '/components/form_label_widget.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
@@ -23,7 +24,9 @@ import 'edit_profile_master_model.dart';
 export 'edit_profile_master_model.dart';
 
 class EditProfileMasterWidget extends StatefulWidget {
-  const EditProfileMasterWidget({super.key});
+  const EditProfileMasterWidget({super.key, this.setupMode = false});
+
+  final bool setupMode;
 
   static String routeName = 'EditProfileMaster';
   static String routePath = '/editProfileMaster';
@@ -37,6 +40,107 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
   late EditProfileMasterModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _isSaving = false;
+  bool _showValidationErrors = false;
+
+  String _categorySortKey(CategoriesStruct category) =>
+      category.titleRU.trim().toLowerCase().replaceAll('ё', 'е');
+
+  PlaceStruct? get _selectedPlace {
+    final selectedPlace = _model.initPlace;
+    if (selectedPlace != null && selectedPlace.title.trim().isNotEmpty) {
+      return selectedPlace;
+    }
+
+    final masterPlace = currentUserDocument?.masterData.mainAdres;
+    if (masterPlace != null && masterPlace.title.trim().isNotEmpty) {
+      return masterPlace;
+    }
+
+    final registrationCity = FFAppState().globalFilter.place;
+    return registrationCity.title.trim().isNotEmpty ? registrationCity : null;
+  }
+
+  String get _selectedCategoryKey {
+    final selectedKey = _model.initCat?.key.trim() ?? '';
+    if (selectedKey.isNotEmpty) return selectedKey;
+    return currentUserDocument?.masterData.initCat.trim() ?? '';
+  }
+
+  bool get _hasMasterPhoto =>
+      _model.uploadedFileUrl_uploadDataPhotoMaster.isNotEmpty ||
+      (currentUserDocument?.masterData.mainPhoto.trim().isNotEmpty ?? false);
+
+  bool get _isNameMissing =>
+      normalizeUserText(_model.nameTextController.text).isEmpty;
+  bool get _isBioMissing =>
+      normalizeUserText(_model.bioTextController.text).isEmpty;
+  bool get _isPlaceMissing => _selectedPlace?.title.trim().isEmpty ?? true;
+  bool get _isCategoryMissing => _selectedCategoryKey.isEmpty;
+
+  Future<void> _saveProfile() async {
+    if (_isSaving) return;
+
+    final userReference = currentUserReference;
+    final place = _selectedPlace;
+    final name = normalizeUserText(_model.nameTextController.text);
+    final bio = normalizeUserText(_model.bioTextController.text);
+    final categoryKey = _selectedCategoryKey;
+
+    if (userReference == null ||
+        name.isEmpty ||
+        bio.isEmpty ||
+        (place?.title.trim().isEmpty ?? true) ||
+        categoryKey.isEmpty ||
+        !_hasMasterPhoto) {
+      safeSetState(() => _showValidationErrors = true);
+      if (categoryKey.isEmpty) {
+        _model.expandableExpandableController.expanded = true;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Заполните все обязательные поля')),
+      );
+      return;
+    }
+
+    safeSetState(() => _isSaving = true);
+    try {
+      await userReference.update(
+        createUserRecordData(
+          masterMode: widget.setupMode ? true : null,
+          masterData: createMasterDataStruct(
+            title: name,
+            descrip: bio,
+            initCat: categoryKey,
+            mainAdres: updatePlaceStruct(place, clearUnsetFields: false),
+            onboardingCompleted: true,
+            profileCompleted: true,
+            clearUnsetFields: false,
+          ),
+        ),
+      );
+      await syncCurrentUserChatProfile(masterName: name);
+
+      if (!mounted) return;
+      if (widget.setupMode) {
+        FFAppState().specialistMode = true;
+        FFAppState().update(() {});
+        context.goNamed(SpecialistDashboardWidget.routeName);
+      } else {
+        context.goNamed(UserProfileWidget.routeName);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      debugPrint('Failed to save master profile: $error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Не удалось сохранить профиль. Попробуйте ещё раз'),
+        ),
+      );
+    } finally {
+      if (mounted) safeSetState(() => _isSaving = false);
+    }
+  }
 
   @override
   void initState() {
@@ -45,26 +149,27 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
 
     // On page load action.
     SchedulerBinding.instance.addPostFrameCallback((_) async {
-      _model.initPlace = currentUserDocument?.masterData?.mainAdres;
-      _model.initCat = FFAppState()
-          .presetCategory
+      _model.initPlace = _selectedPlace;
+      _model.initCat = FFAppState().presetCategory
           .where((e) => e.key == currentUserDocument?.masterData?.initCat)
           .toList()
           .firstOrNull;
       safeSetState(() {});
     });
 
-    _model.nameTextController ??=
-        TextEditingController(text: currentUserDocument?.masterData?.title);
+    _model.nameTextController ??= TextEditingController(
+      text: currentUserDocument?.masterData?.title,
+    );
     _model.nameFocusNode ??= FocusNode();
 
-    _model.bioTextController ??=
-        TextEditingController(text: currentUserDocument?.masterData?.descrip);
+    _model.bioTextController ??= TextEditingController(
+      text: currentUserDocument?.masterData?.descrip,
+    );
     _model.bioFocusNode ??= FocusNode();
 
-    _model.expandableExpandableController =
-        ExpandableController(initialExpanded: false)
-          ..addListener(() => safeSetState(() {}));
+    _model.expandableExpandableController = ExpandableController(
+      initialExpanded: false,
+    )..addListener(() => safeSetState(() {}));
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
@@ -108,41 +213,34 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                         ),
                         Expanded(
                           child: Text(
-                            FFLocalizations.of(context).getText(
-                              '0xrybang' /* Профиль мастера */,
-                            ),
+                            FFLocalizations.of(
+                              context,
+                            ).getText('0xrybang' /* Профиль мастера */),
                             textAlign: TextAlign.center,
-                            style: FlutterFlowTheme.of(context)
-                                .headlineMedium
+                            style: FlutterFlowTheme.of(context).headlineMedium
                                 .override(
                                   font: GoogleFonts.interTight(
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .headlineMedium
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .headlineMedium
-                                        .fontStyle,
+                                    fontWeight: FlutterFlowTheme.of(
+                                      context,
+                                    ).headlineMedium.fontWeight,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).headlineMedium.fontStyle,
                                   ),
-                                  color:
-                                      FlutterFlowTheme.of(context).primaryText,
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).primaryText,
                                   letterSpacing: 0.0,
-                                  fontWeight: FlutterFlowTheme.of(context)
-                                      .headlineMedium
-                                      .fontWeight,
-                                  fontStyle: FlutterFlowTheme.of(context)
-                                      .headlineMedium
-                                      .fontStyle,
+                                  fontWeight: FlutterFlowTheme.of(
+                                    context,
+                                  ).headlineMedium.fontWeight,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).headlineMedium.fontStyle,
                                 ),
                           ),
                         ),
-                        Container(
-                          width: 40.0,
-                          height: 40.0,
-                          decoration: BoxDecoration(
-                            color: FlutterFlowTheme.of(context)
-                                .secondaryBackground,
-                          ),
-                        ),
+                        const SizedBox(width: 40.0, height: 40.0),
                       ],
                     ),
                   ),
@@ -166,33 +264,75 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                                     BoxShadow(
                                       blurRadius: 4.0,
                                       color: Color(0x1A000000),
-                                      offset: Offset(
-                                        0.0,
-                                        2.0,
-                                      ),
+                                      offset: Offset(0.0, 2.0),
                                       spreadRadius: 0.0,
-                                    )
+                                    ),
                                   ],
                                   shape: BoxShape.circle,
                                   border: Border.all(
-                                    color: FlutterFlowTheme.of(context)
-                                        .primaryBackground,
+                                    color:
+                                        _showValidationErrors &&
+                                            !_hasMasterPhoto
+                                        ? FlutterFlowTheme.of(context).error
+                                        : FlutterFlowTheme.of(
+                                            context,
+                                          ).primaryBackground,
                                     width: 4.0,
                                   ),
                                 ),
                                 child: AuthUserStreamWidget(
-                                  builder: (context) => Container(
-                                    width: 200.0,
-                                    height: 200.0,
-                                    clipBehavior: Clip.antiAlias,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Image.network(
-                                      currentUserPhoto,
-                                      fit: BoxFit.cover,
-                                    ),
-                                  ),
+                                  builder: (context) {
+                                    final localBytes = _model.setPhpto?.bytes;
+                                    final masterPhoto =
+                                        currentUserDocument
+                                            ?.masterData
+                                            .mainPhoto
+                                            .trim() ??
+                                        '';
+
+                                    return Container(
+                                      width: 200.0,
+                                      height: 200.0,
+                                      clipBehavior: Clip.antiAlias,
+                                      decoration: BoxDecoration(
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).secondaryBackground,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child:
+                                          localBytes != null &&
+                                              localBytes.isNotEmpty
+                                          ? Image.memory(
+                                              localBytes,
+                                              fit: BoxFit.cover,
+                                            )
+                                          : masterPhoto.isNotEmpty
+                                          ? Image.network(
+                                              masterPhoto,
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (
+                                                    context,
+                                                    error,
+                                                    stackTrace,
+                                                  ) => Icon(
+                                                    Icons.person_rounded,
+                                                    color: FlutterFlowTheme.of(
+                                                      context,
+                                                    ).secondaryText,
+                                                    size: 48.0,
+                                                  ),
+                                            )
+                                          : Icon(
+                                              Icons.person_rounded,
+                                              color: FlutterFlowTheme.of(
+                                                context,
+                                              ).secondaryText,
+                                              size: 48.0,
+                                            ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
@@ -207,17 +347,15 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                                     BoxShadow(
                                       blurRadius: 2.0,
                                       color: Color(0x1A000000),
-                                      offset: Offset(
-                                        0.0,
-                                        1.0,
-                                      ),
+                                      offset: Offset(0.0, 1.0),
                                       spreadRadius: 0.0,
-                                    )
+                                    ),
                                   ],
                                   borderRadius: BorderRadius.circular(9999.0),
                                   border: Border.all(
-                                    color: FlutterFlowTheme.of(context)
-                                        .primaryBackground,
+                                    color: FlutterFlowTheme.of(
+                                      context,
+                                    ).primaryBackground,
                                     width: 3.0,
                                   ),
                                 ),
@@ -235,18 +373,26 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                                       context: context,
                                       builder: (context) {
                                         return Padding(
-                                          padding:
-                                              MediaQuery.viewInsetsOf(context),
-                                          child: UploadMediaWidget(),
+                                          padding: MediaQuery.viewInsetsOf(
+                                            context,
+                                          ),
+                                          child: UploadMediaWidget(
+                                            maxOutputSize: 640,
+                                          ),
                                         );
                                       },
-                                    ).then((value) => safeSetState(
-                                        () => _model.setPhpto = value));
+                                    ).then(
+                                      (value) => safeSetState(
+                                        () => _model.setPhpto = value,
+                                      ),
+                                    );
 
                                     {
-                                      safeSetState(() => _model
-                                              .isDataUploading_uploadDataPhotoMaster =
-                                          true);
+                                      safeSetState(
+                                        () =>
+                                            _model.isDataUploading_uploadDataPhotoMaster =
+                                                true,
+                                      );
                                       var selectedUploadedFiles =
                                           <FFUploadedFile>[];
                                       var selectedMedia = <SelectedFile>[];
@@ -254,21 +400,25 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                                       try {
                                         selectedUploadedFiles =
                                             _model.setPhpto!.bytes!.isNotEmpty
-                                                ? [_model.setPhpto!]
-                                                : <FFUploadedFile>[];
+                                            ? [_model.setPhpto!]
+                                            : <FFUploadedFile>[];
                                         selectedMedia =
                                             selectedFilesFromUploadedFiles(
-                                          selectedUploadedFiles,
-                                        );
-                                        downloadUrls = (await Future.wait(
-                                          selectedMedia.map(
-                                            (m) async => await uploadData(
-                                                m.storagePath, m.bytes),
-                                          ),
-                                        ))
-                                            .where((u) => u != null)
-                                            .map((u) => u!)
-                                            .toList();
+                                              selectedUploadedFiles,
+                                            );
+                                        downloadUrls =
+                                            (await Future.wait(
+                                                  selectedMedia.map(
+                                                    (m) async =>
+                                                        await uploadData(
+                                                          m.storagePath,
+                                                          m.bytes,
+                                                        ),
+                                                  ),
+                                                ))
+                                                .where((u) => u != null)
+                                                .map((u) => u!)
+                                                .toList();
                                       } finally {
                                         _model.isDataUploading_uploadDataPhotoMaster =
                                             false;
@@ -289,21 +439,27 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                                       }
                                     }
 
-                                    await currentUserReference!
-                                        .update(createUserRecordData(
-                                      masterData: createMasterDataStruct(
-                                        mainPhoto: _model
-                                            .uploadedFileUrl_uploadDataPhotoMaster,
-                                        clearUnsetFields: false,
+                                    await currentUserReference!.update(
+                                      createUserRecordData(
+                                        masterData: createMasterDataStruct(
+                                          mainPhoto: _model
+                                              .uploadedFileUrl_uploadDataPhotoMaster,
+                                          clearUnsetFields: false,
+                                        ),
                                       ),
-                                    ));
+                                    );
+                                    await syncCurrentUserChatProfile(
+                                      masterPhoto: _model
+                                          .uploadedFileUrl_uploadDataPhotoMaster,
+                                    );
 
                                     safeSetState(() {});
                                   },
                                   child: Icon(
                                     Icons.photo_camera_rounded,
-                                    color: FlutterFlowTheme.of(context)
-                                        .primaryBackground,
+                                    color: FlutterFlowTheme.of(
+                                      context,
+                                    ).primaryBackground,
                                     size: 18.0,
                                   ),
                                 ),
@@ -318,23 +474,23 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                     builder: (context) => Text(
                       currentPhoneNumber,
                       style: FlutterFlowTheme.of(context).bodyLarge.override(
-                            font: GoogleFonts.jetBrainsMono(
-                              fontWeight: FlutterFlowTheme.of(context)
-                                  .bodyLarge
-                                  .fontWeight,
-                              fontStyle: FlutterFlowTheme.of(context)
-                                  .bodyLarge
-                                  .fontStyle,
-                            ),
-                            color: FlutterFlowTheme.of(context).primaryText,
-                            letterSpacing: 0.0,
-                            fontWeight: FlutterFlowTheme.of(context)
-                                .bodyLarge
-                                .fontWeight,
-                            fontStyle: FlutterFlowTheme.of(context)
-                                .bodyLarge
-                                .fontStyle,
-                          ),
+                        font: GoogleFonts.jetBrainsMono(
+                          fontWeight: FlutterFlowTheme.of(
+                            context,
+                          ).bodyLarge.fontWeight,
+                          fontStyle: FlutterFlowTheme.of(
+                            context,
+                          ).bodyLarge.fontStyle,
+                        ),
+                        color: FlutterFlowTheme.of(context).primaryText,
+                        letterSpacing: 0.0,
+                        fontWeight: FlutterFlowTheme.of(
+                          context,
+                        ).bodyLarge.fontWeight,
+                        fontStyle: FlutterFlowTheme.of(
+                          context,
+                        ).bodyLarge.fontStyle,
+                      ),
                     ),
                   ),
                   AuthUserStreamWidget(
@@ -342,6 +498,7 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                       width: 400.0,
                       child: TextFormField(
                         controller: _model.nameTextController,
+                        textCapitalization: TextCapitalization.sentences,
                         focusNode: _model.nameFocusNode,
                         onChanged: (_) => EasyDebounce.debounce(
                           '_model.nameTextController',
@@ -350,48 +507,55 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                         ),
                         autofocus: false,
                         enabled: true,
+                        keyboardType: TextInputType.multiline,
                         obscureText: false,
                         decoration: InputDecoration(
+                          alignLabelWithHint: true,
                           isDense: false,
-                          labelText: FFLocalizations.of(context).getText(
-                            'usmerrp4' /* Название */,
-                          ),
-                          labelStyle:
-                              FlutterFlowTheme.of(context).labelMedium.override(
-                                    font: GoogleFonts.jetBrainsMono(
-                                      fontWeight: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .fontWeight,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .fontStyle,
-                                    ),
-                                    letterSpacing: 0.0,
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .labelMedium
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .labelMedium
-                                        .fontStyle,
-                                  ),
-                          hintStyle:
-                              FlutterFlowTheme.of(context).labelMedium.override(
-                                    font: GoogleFonts.jetBrainsMono(
-                                      fontWeight: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .fontWeight,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .fontStyle,
-                                    ),
-                                    letterSpacing: 0.0,
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .labelMedium
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .labelMedium
-                                        .fontStyle,
-                                  ),
+                          labelText:
+                              FFLocalizations.of(
+                                context,
+                              ).getText('usmerrp4' /* Название */) +
+                              ' *',
+                          errorText: _showValidationErrors && _isNameMissing
+                              ? 'Обязательное поле'
+                              : null,
+                          labelStyle: FlutterFlowTheme.of(context).labelMedium
+                              .override(
+                                font: GoogleFonts.jetBrainsMono(
+                                  fontWeight: FlutterFlowTheme.of(
+                                    context,
+                                  ).labelMedium.fontWeight,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).labelMedium.fontStyle,
+                                ),
+                                letterSpacing: 0.0,
+                                fontWeight: FlutterFlowTheme.of(
+                                  context,
+                                ).labelMedium.fontWeight,
+                                fontStyle: FlutterFlowTheme.of(
+                                  context,
+                                ).labelMedium.fontStyle,
+                              ),
+                          hintStyle: FlutterFlowTheme.of(context).labelMedium
+                              .override(
+                                font: GoogleFonts.jetBrainsMono(
+                                  fontWeight: FlutterFlowTheme.of(
+                                    context,
+                                  ).labelMedium.fontWeight,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).labelMedium.fontStyle,
+                                ),
+                                letterSpacing: 0.0,
+                                fontWeight: FlutterFlowTheme.of(
+                                  context,
+                                ).labelMedium.fontWeight,
+                                fontStyle: FlutterFlowTheme.of(
+                                  context,
+                                ).labelMedium.fontStyle,
+                              ),
                           enabledBorder: OutlineInputBorder(
                             borderSide: BorderSide(
                               color: FlutterFlowTheme.of(context).secondary,
@@ -421,35 +585,36 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                             borderRadius: BorderRadius.circular(8.0),
                           ),
                           filled: true,
-                          fillColor:
-                              FlutterFlowTheme.of(context).secondaryBackground,
-                          prefixIcon: Icon(
-                            Icons.person_outline_rounded,
-                          ),
+                          fillColor: FlutterFlowTheme.of(
+                            context,
+                          ).secondaryBackground,
+                          prefixIcon: Icon(Icons.person_outline_rounded),
                         ),
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
-                              font: GoogleFonts.jetBrainsMono(
-                                fontWeight: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .fontWeight,
-                                fontStyle: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .fontStyle,
-                              ),
-                              letterSpacing: 0.0,
-                              fontWeight: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .fontWeight,
-                              fontStyle: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .fontStyle,
-                            ),
+                          font: GoogleFonts.jetBrainsMono(
+                            fontWeight: FlutterFlowTheme.of(
+                              context,
+                            ).bodyMedium.fontWeight,
+                            fontStyle: FlutterFlowTheme.of(
+                              context,
+                            ).bodyMedium.fontStyle,
+                          ),
+                          letterSpacing: 0.0,
+                          fontWeight: FlutterFlowTheme.of(
+                            context,
+                          ).bodyMedium.fontWeight,
+                          fontStyle: FlutterFlowTheme.of(
+                            context,
+                          ).bodyMedium.fontStyle,
+                        ),
                         maxLength: 50,
-                        buildCounter: (context,
-                                {required currentLength,
-                                required isFocused,
-                                maxLength}) =>
-                            null,
+                        buildCounter:
+                            (
+                              context, {
+                              required currentLength,
+                              required isFocused,
+                              maxLength,
+                            }) => null,
                         cursorColor: FlutterFlowTheme.of(context).primaryText,
                         enableInteractiveSelection: true,
                         validator: _model.nameTextControllerValidator
@@ -462,6 +627,7 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                       width: 400.0,
                       child: TextFormField(
                         controller: _model.bioTextController,
+                        textCapitalization: TextCapitalization.sentences,
                         focusNode: _model.bioFocusNode,
                         onChanged: (_) => EasyDebounce.debounce(
                           '_model.bioTextController',
@@ -473,45 +639,50 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                         obscureText: false,
                         decoration: InputDecoration(
                           isDense: false,
-                          labelText: FFLocalizations.of(context).getText(
-                            'x6pqju0g' /* Описание */,
-                          ),
-                          labelStyle:
-                              FlutterFlowTheme.of(context).labelMedium.override(
-                                    font: GoogleFonts.jetBrainsMono(
-                                      fontWeight: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .fontWeight,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .fontStyle,
-                                    ),
-                                    letterSpacing: 0.0,
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .labelMedium
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .labelMedium
-                                        .fontStyle,
-                                  ),
-                          hintStyle:
-                              FlutterFlowTheme.of(context).labelMedium.override(
-                                    font: GoogleFonts.jetBrainsMono(
-                                      fontWeight: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .fontWeight,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .fontStyle,
-                                    ),
-                                    letterSpacing: 0.0,
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .labelMedium
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .labelMedium
-                                        .fontStyle,
-                                  ),
+                          labelText:
+                              FFLocalizations.of(
+                                context,
+                              ).getText('x6pqju0g' /* Описание */) +
+                              ' *',
+                          errorText: _showValidationErrors && _isBioMissing
+                              ? 'Обязательное поле'
+                              : null,
+                          labelStyle: FlutterFlowTheme.of(context).labelMedium
+                              .override(
+                                font: GoogleFonts.jetBrainsMono(
+                                  fontWeight: FlutterFlowTheme.of(
+                                    context,
+                                  ).labelMedium.fontWeight,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).labelMedium.fontStyle,
+                                ),
+                                letterSpacing: 0.0,
+                                fontWeight: FlutterFlowTheme.of(
+                                  context,
+                                ).labelMedium.fontWeight,
+                                fontStyle: FlutterFlowTheme.of(
+                                  context,
+                                ).labelMedium.fontStyle,
+                              ),
+                          hintStyle: FlutterFlowTheme.of(context).labelMedium
+                              .override(
+                                font: GoogleFonts.jetBrainsMono(
+                                  fontWeight: FlutterFlowTheme.of(
+                                    context,
+                                  ).labelMedium.fontWeight,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).labelMedium.fontStyle,
+                                ),
+                                letterSpacing: 0.0,
+                                fontWeight: FlutterFlowTheme.of(
+                                  context,
+                                ).labelMedium.fontWeight,
+                                fontStyle: FlutterFlowTheme.of(
+                                  context,
+                                ).labelMedium.fontStyle,
+                              ),
                           enabledBorder: OutlineInputBorder(
                             borderSide: BorderSide(
                               color: FlutterFlowTheme.of(context).secondary,
@@ -541,29 +712,30 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                             borderRadius: BorderRadius.circular(8.0),
                           ),
                           filled: true,
-                          fillColor:
-                              FlutterFlowTheme.of(context).secondaryBackground,
-                          prefixIcon: Icon(
-                            Icons.text_snippet,
-                          ),
+                          fillColor: FlutterFlowTheme.of(
+                            context,
+                          ).secondaryBackground,
+                          prefixIcon: Icon(Icons.text_snippet),
                         ),
                         style: FlutterFlowTheme.of(context).bodyMedium.override(
-                              font: GoogleFonts.jetBrainsMono(
-                                fontWeight: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .fontWeight,
-                                fontStyle: FlutterFlowTheme.of(context)
-                                    .bodyMedium
-                                    .fontStyle,
-                              ),
-                              letterSpacing: 0.0,
-                              fontWeight: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .fontWeight,
-                              fontStyle: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .fontStyle,
-                            ),
+                          font: GoogleFonts.jetBrainsMono(
+                            fontWeight: FlutterFlowTheme.of(
+                              context,
+                            ).bodyMedium.fontWeight,
+                            fontStyle: FlutterFlowTheme.of(
+                              context,
+                            ).bodyMedium.fontStyle,
+                          ),
+                          letterSpacing: 0.0,
+                          fontWeight: FlutterFlowTheme.of(
+                            context,
+                          ).bodyMedium.fontWeight,
+                          fontStyle: FlutterFlowTheme.of(
+                            context,
+                          ).bodyMedium.fontStyle,
+                        ),
+                        minLines: 1,
+                        maxLines: null,
                         maxLength: 200,
                         cursorColor: FlutterFlowTheme.of(context).primaryText,
                         enableInteractiveSelection: true,
@@ -579,97 +751,138 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                       ),
                       maxLines: 4,
                       style: FlutterFlowTheme.of(context).bodyMedium.override(
-                            font: GoogleFonts.jetBrainsMono(
-                              fontWeight: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .fontWeight,
-                              fontStyle: FlutterFlowTheme.of(context)
-                                  .bodyMedium
-                                  .fontStyle,
-                            ),
-                            color: FlutterFlowTheme.of(context).primaryText,
-                            letterSpacing: 0.0,
-                            fontWeight: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .fontWeight,
-                            fontStyle: FlutterFlowTheme.of(context)
-                                .bodyMedium
-                                .fontStyle,
-                          ),
+                        font: GoogleFonts.jetBrainsMono(
+                          fontWeight: FlutterFlowTheme.of(
+                            context,
+                          ).bodyMedium.fontWeight,
+                          fontStyle: FlutterFlowTheme.of(
+                            context,
+                          ).bodyMedium.fontStyle,
+                        ),
+                        color: FlutterFlowTheme.of(context).primaryText,
+                        letterSpacing: 0.0,
+                        fontWeight: FlutterFlowTheme.of(
+                          context,
+                        ).bodyMedium.fontWeight,
+                        fontStyle: FlutterFlowTheme.of(
+                          context,
+                        ).bodyMedium.fontStyle,
+                      ),
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Row(
-                    mainAxisSize: MainAxisSize.max,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Flexible(
-                        child: Align(
-                          alignment: AlignmentDirectional(-1.0, 0.0),
-                          child: wrapWithModel(
-                            model: _model.formLabelModel1,
-                            updateCallback: () => safeSetState(() {}),
-                            child: FormLabelWidget(
-                              label:
-                                  'Город оказания услуг: ${FFAppState().globalFilter.place.title}',
+                  Container(
+                    padding: _showValidationErrors && _isPlaceMissing
+                        ? const EdgeInsets.all(8.0)
+                        : EdgeInsets.zero,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8.0),
+                      border: _showValidationErrors && _isPlaceMissing
+                          ? Border.all(
+                              color: FlutterFlowTheme.of(context).error,
+                            )
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.max,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Align(
+                            alignment: AlignmentDirectional(-1.0, 0.0),
+                            child: wrapWithModel(
+                              model: _model.formLabelModel1,
+                              updateCallback: () => safeSetState(() {}),
+                              child: FormLabelWidget(
+                                label:
+                                    'Город оказания услуг *: '
+                                    '${_selectedPlace?.title ?? 'не выбран'}',
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                      FFButtonWidget(
-                        onPressed: () {
-                          print('Button pressed ...');
-                        },
-                        text: FFLocalizations.of(context).getText(
-                          'v5prgqlh' /* Изменить */,
-                        ),
-                        icon: Icon(
-                          Icons.map,
-                          size: 15.0,
-                        ),
-                        options: FFButtonOptions(
-                          height: 40.0,
-                          padding: EdgeInsetsDirectional.fromSTEB(
-                              16.0, 0.0, 16.0, 0.0),
-                          iconPadding: EdgeInsetsDirectional.fromSTEB(
-                              0.0, 0.0, 0.0, 0.0),
-                          color: FlutterFlowTheme.of(context).primary,
-                          textStyle:
-                              FlutterFlowTheme.of(context).titleSmall.override(
-                                    font: GoogleFonts.interTight(
-                                      fontWeight: FontWeight.normal,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .titleSmall
-                                          .fontStyle,
-                                    ),
-                                    color: Colors.white,
-                                    letterSpacing: 0.0,
+                        FFButtonWidget(
+                          onPressed: () async {
+                            await context.pushNamed(
+                              ChooseLocationCityWidget.routeName,
+                              queryParameters: {
+                                'edit': serializeParam(true, ParamType.bool),
+                                'addressMode': serializeParam(
+                                  false,
+                                  ParamType.bool,
+                                ),
+                                'initialPlace': serializeParam(
+                                  _selectedPlace,
+                                  ParamType.DataStruct,
+                                ),
+                              }.withoutNulls,
+                            );
+
+                            _model.initPlace = FFAppState().globalFilter.place;
+                            safeSetState(() {});
+                          },
+                          text: FFLocalizations.of(
+                            context,
+                          ).getText('v5prgqlh' /* Изменить */),
+                          icon: Icon(Icons.map, size: 15.0),
+                          options: FFButtonOptions(
+                            height: 40.0,
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                              16.0,
+                              0.0,
+                              16.0,
+                              0.0,
+                            ),
+                            iconPadding: EdgeInsetsDirectional.fromSTEB(
+                              0.0,
+                              0.0,
+                              0.0,
+                              0.0,
+                            ),
+                            color: FlutterFlowTheme.of(context).primary,
+                            textStyle: FlutterFlowTheme.of(context).titleSmall
+                                .override(
+                                  font: GoogleFonts.interTight(
                                     fontWeight: FontWeight.normal,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .titleSmall
-                                        .fontStyle,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).titleSmall.fontStyle,
                                   ),
-                          elevation: 0.0,
-                          borderRadius: BorderRadius.circular(8.0),
+                                  color: Colors.white,
+                                  letterSpacing: 0.0,
+                                  fontWeight: FontWeight.normal,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).titleSmall.fontStyle,
+                                ),
+                            elevation: 0.0,
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
                         ),
-                      ),
-                    ].divide(SizedBox(width: 8.0)),
+                      ].divide(SizedBox(width: 8.0)),
+                    ),
                   ),
                   Container(
                     decoration: BoxDecoration(),
                     child: Container(
                       width: double.infinity,
-                      height: 200.0,
-                      color: Color(0x00000000),
+                      padding: EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        color: FlutterFlowTheme.of(context).secondaryBackground,
+                        borderRadius: BorderRadius.circular(12.0),
+                        border: Border.all(
+                          color: _showValidationErrors && _isCategoryMissing
+                              ? FlutterFlowTheme.of(context).error
+                              : FlutterFlowTheme.of(context).divider,
+                        ),
+                      ),
                       child: ExpandableNotifier(
                         controller: _model.expandableExpandableController,
                         child: ExpandablePanel(
                           header: wrapWithModel(
                             model: _model.formLabelModel2,
                             updateCallback: () => safeSetState(() {}),
-                            child: FormLabelWidget(
-                              label: 'Категория',
-                            ),
+                            child: FormLabelWidget(label: 'Категория *'),
                           ),
                           collapsed: Visibility(
                             visible: _model.initCat != null,
@@ -685,32 +898,29 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                                   child: Text(
                                     valueOrDefault<String>(
                                       _model.initCat?.titleRU,
-                                      'noTitle',
+                                      'Без названия',
                                     ),
                                     style: FlutterFlowTheme.of(context)
                                         .bodyMedium
                                         .override(
                                           font: GoogleFonts.jetBrainsMono(
-                                            fontWeight:
-                                                FlutterFlowTheme.of(context)
-                                                    .bodyMedium
-                                                    .fontWeight,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .bodyMedium
-                                                    .fontStyle,
+                                            fontWeight: FlutterFlowTheme.of(
+                                              context,
+                                            ).bodyMedium.fontWeight,
+                                            fontStyle: FlutterFlowTheme.of(
+                                              context,
+                                            ).bodyMedium.fontStyle,
                                           ),
-                                          color: FlutterFlowTheme.of(context)
-                                              .primaryText,
+                                          color: FlutterFlowTheme.of(
+                                            context,
+                                          ).primaryText,
                                           letterSpacing: 0.0,
-                                          fontWeight:
-                                              FlutterFlowTheme.of(context)
-                                                  .bodyMedium
-                                                  .fontWeight,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .bodyMedium
-                                                  .fontStyle,
+                                          fontWeight: FlutterFlowTheme.of(
+                                            context,
+                                          ).bodyMedium.fontWeight,
+                                          fontStyle: FlutterFlowTheme.of(
+                                            context,
+                                          ).bodyMedium.fontStyle,
                                         ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -721,18 +931,20 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                           expanded: Builder(
                             builder: (context) {
                               final presetCat =
-                                  FFAppState().presetCategory.toList();
+                                  FFAppState().presetCategory.toList()..sort(
+                                    (first, second) => _categorySortKey(
+                                      first,
+                                    ).compareTo(_categorySortKey(second)),
+                                  );
 
-                              return ListView.separated(
-                                padding: EdgeInsets.zero,
-                                shrinkWrap: true,
-                                scrollDirection: Axis.vertical,
-                                itemCount: presetCat.length,
-                                separatorBuilder: (_, __) =>
-                                    SizedBox(height: 8.0),
-                                itemBuilder: (context, presetCatIndex) {
+                              return Column(
+                                children: List.generate(presetCat.length, (
+                                  presetCatIndex,
+                                ) {
                                   final presetCatItem =
                                       presetCat[presetCatIndex];
+                                  final isSelectedCategory =
+                                      presetCatItem.key == _model.initCat?.key;
                                   return InkWell(
                                     splashColor: Colors.transparent,
                                     focusColor: Colors.transparent,
@@ -747,18 +959,20 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.max,
                                       children: [
-                                        if (presetCatItem != presetCatItem)
+                                        if (!isSelectedCategory)
                                           Icon(
                                             Icons.circle_outlined,
-                                            color: FlutterFlowTheme.of(context)
-                                                .primary,
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).primary,
                                             size: 24.0,
                                           ),
-                                        if (presetCatItem == presetCatItem)
+                                        if (isSelectedCategory)
                                           Icon(
                                             Icons.radio_button_checked,
-                                            color: FlutterFlowTheme.of(context)
-                                                .primary,
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).primary,
                                             size: 24.0,
                                           ),
                                         Flexible(
@@ -769,31 +983,31 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                                                 .override(
                                                   font:
                                                       GoogleFonts.jetBrainsMono(
-                                                    fontWeight:
-                                                        FlutterFlowTheme.of(
-                                                                context)
-                                                            .bodyMedium
-                                                            .fontWeight,
-                                                    fontStyle:
-                                                        FlutterFlowTheme.of(
-                                                                context)
-                                                            .bodyMedium
-                                                            .fontStyle,
-                                                  ),
+                                                        fontWeight:
+                                                            FlutterFlowTheme.of(
+                                                                  context,
+                                                                )
+                                                                .bodyMedium
+                                                                .fontWeight,
+                                                        fontStyle:
+                                                            FlutterFlowTheme.of(
+                                                                  context,
+                                                                )
+                                                                .bodyMedium
+                                                                .fontStyle,
+                                                      ),
                                                   color: FlutterFlowTheme.of(
-                                                          context)
-                                                      .primaryText,
+                                                    context,
+                                                  ).primaryText,
                                                   letterSpacing: 0.0,
                                                   fontWeight:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .bodyMedium
-                                                          .fontWeight,
+                                                        context,
+                                                      ).bodyMedium.fontWeight,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .bodyMedium
-                                                          .fontStyle,
+                                                        context,
+                                                      ).bodyMedium.fontStyle,
                                                 ),
                                             overflow: TextOverflow.ellipsis,
                                           ),
@@ -801,7 +1015,7 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                                       ].divide(SizedBox(width: 8.0)),
                                     ),
                                   );
-                                },
+                                }).divide(SizedBox(height: 8.0)),
                               );
                             },
                           ),
@@ -820,74 +1034,51 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                   ),
                   AuthUserStreamWidget(
                     builder: (context) => FFButtonWidget(
-                      onPressed: ((_model.nameTextController.text == null ||
-                                  _model.nameTextController.text == '') ||
-                              (_model.bioTextController.text == null ||
-                                  _model.bioTextController.text == '') ||
-                              (_model.initPlace == null) ||
-                              (_model.initCat == null) ||
-                              !currentUserDocument!.masterData.hasMainPhoto() ||
-                              (_model.uploadedFileUrl_uploadDataPhotoMaster !=
-                                      null &&
-                                  _model.uploadedFileUrl_uploadDataPhotoMaster !=
-                                      ''))
-                          ? null
-                          : () async {
-                              await currentUserReference!
-                                  .update(createUserRecordData(
-                                masterData: createMasterDataStruct(
-                                  title: _model.nameTextController.text,
-                                  descrip: _model.bioTextController.text,
-                                  initCat: _model.initCat?.key,
-                                  mainAdres: updatePlaceStruct(
-                                    _model.initPlace,
-                                    clearUnsetFields: false,
-                                  ),
-                                  clearUnsetFields: false,
-                                ),
-                              ));
-
-                              context.goNamed(UserProfileWidget.routeName);
-                            },
-                      text: FFLocalizations.of(context).getText(
-                        '4fyt8tg9' /* Сохранить */,
-                      ),
+                      onPressed: _isSaving ? null : _saveProfile,
+                      text: FFLocalizations.of(
+                        context,
+                      ).getText('4fyt8tg9' /* Сохранить */),
                       options: FFButtonOptions(
                         width: MediaQuery.sizeOf(context).width * 1.0,
                         height: 40.0,
                         padding: EdgeInsetsDirectional.fromSTEB(
-                            16.0, 0.0, 16.0, 0.0),
-                        iconPadding:
-                            EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
+                          16.0,
+                          0.0,
+                          16.0,
+                          0.0,
+                        ),
+                        iconPadding: EdgeInsetsDirectional.fromSTEB(
+                          0.0,
+                          0.0,
+                          0.0,
+                          0.0,
+                        ),
                         color: FlutterFlowTheme.of(context).primary,
-                        textStyle:
-                            FlutterFlowTheme.of(context).titleSmall.override(
-                                  font: GoogleFonts.interTight(
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .titleSmall
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .titleSmall
-                                        .fontStyle,
-                                  ),
-                                  color: Colors.white,
-                                  letterSpacing: 0.0,
-                                  fontWeight: FlutterFlowTheme.of(context)
-                                      .titleSmall
-                                      .fontWeight,
-                                  fontStyle: FlutterFlowTheme.of(context)
-                                      .titleSmall
-                                      .fontStyle,
-                                ),
+                        textStyle: FlutterFlowTheme.of(context).titleSmall
+                            .override(
+                              font: GoogleFonts.interTight(
+                                fontWeight: FlutterFlowTheme.of(
+                                  context,
+                                ).titleSmall.fontWeight,
+                                fontStyle: FlutterFlowTheme.of(
+                                  context,
+                                ).titleSmall.fontStyle,
+                              ),
+                              color: Colors.white,
+                              letterSpacing: 0.0,
+                              fontWeight: FlutterFlowTheme.of(
+                                context,
+                              ).titleSmall.fontWeight,
+                              fontStyle: FlutterFlowTheme.of(
+                                context,
+                              ).titleSmall.fontStyle,
+                            ),
                         elevation: 0.0,
                         borderRadius: BorderRadius.circular(8.0),
                       ),
                     ),
                   ),
-                ]
-                    .divide(SizedBox(height: 32.0))
-                    .addToStart(SizedBox(height: 24.0))
-                    .addToEnd(SizedBox(height: 120.0)),
+                ].divide(SizedBox(height: 32.0)).addToStart(SizedBox(height: 24.0)).addToEnd(SizedBox(height: 120.0)),
               ),
             ),
           ),

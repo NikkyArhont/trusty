@@ -70,12 +70,13 @@ class _SearchInputWidgetState extends State<SearchInputWidget> {
               flex: 1,
               child: TextFormField(
                 controller: _model.textController,
+                textCapitalization: TextCapitalization.sentences,
                 focusNode: _model.textFieldFocusNode,
                 obscureText: false,
                 decoration: InputDecoration(
-                  hintText: FFLocalizations.of(context).getText(
-                    'wy7vqevc' /* Search services... */,
-                  ),
+                  hintText: FFLocalizations.of(
+                    context,
+                  ).getText('wy7vqevc' /* Search services... */),
                   hintStyle: TextStyle(
                     color: FlutterFlowTheme.of(context).secondaryText,
                   ),

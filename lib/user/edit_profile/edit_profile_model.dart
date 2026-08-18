@@ -41,9 +41,6 @@ class EditProfileModel extends FlutterFlowModel<EditProfileWidget> {
   FocusNode? bioFocusNode;
   TextEditingController? bioTextController;
   String? Function(BuildContext, String?)? bioTextControllerValidator;
-  // State field(s) for Switch widget.
-  bool? switchValue;
-
   @override
   void initState(BuildContext context) {
     navBackModel = createModel(context, () => NavBackModel());
