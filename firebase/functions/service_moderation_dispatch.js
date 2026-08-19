@@ -31,6 +31,7 @@ const MODERATION_FIELDS = [
   "description",
   "price",
   "image",
+  "place",
 ];
 
 function normalizeImages(value) {
@@ -87,6 +88,9 @@ async function buildModerationPayload({serviceId, service}) {
   }
 
   const categoryKey = String(service.categoryKey || "").trim();
+  const city = String(
+    user?.masterData?.mainAdres?.title || service?.place?.title || "",
+  ).trim();
   return {
     serviceId,
     creator: {
@@ -98,6 +102,7 @@ async function buildModerationPayload({serviceId, service}) {
       key: categoryKey,
       title: CATEGORY_TITLES[categoryKey] || categoryKey,
     },
+    city,
     title: String(service.title || "").trim(),
     description: String(service.description || "").trim(),
     price: Number.isFinite(service.price) ? service.price : 0,

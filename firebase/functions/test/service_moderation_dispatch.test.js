@@ -42,7 +42,10 @@ test("builds the confirmed Telegram bot payload", async () => {
         data: () => ({
           display_name: "Иван",
           phone_number: "+79990000000",
-          masterData: {title: "Иван Петров"},
+          masterData: {
+            title: "Иван Петров",
+            mainAdres: {title: "Москва"},
+          },
         }),
       };
     },
@@ -68,9 +71,21 @@ test("builds the confirmed Telegram bot payload", async () => {
       phone: "+79990000000",
     },
     category: {key: "beauty", title: "Красота"},
+    city: "Москва",
     title: "Массаж лица",
     description: "60 минут",
     price: 2500,
     images: ["https://one", "https://two"],
   });
+});
+
+test("falls back to the service place when the master city is missing", async () => {
+  const payload = await buildModerationPayload({
+    serviceId: "service-2",
+    service: {
+      place: {title: "Краснодар"},
+      title: "Услуга",
+    },
+  });
+  assert.equal(payload.city, "Краснодар");
 });
