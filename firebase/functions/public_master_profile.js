@@ -22,9 +22,10 @@ function isMasterProfile(user) {
     nonEmpty(masterData.mainPhoto);
 }
 
-function buildPublicMasterProfile(user) {
+function buildPublicMasterProfile(user, fallbackPhone = "") {
   const masterData = user.masterData || {};
-  const normalizedPhone = normalizePhone(user.phone_number);
+  const normalizedPhone = normalizePhone(user.phone_number) ||
+    normalizePhone(fallbackPhone);
   return {
     title: String(masterData.title || user.display_name || "").trim(),
     description: String(masterData.descrip || "").trim(),

@@ -19,7 +19,7 @@ Future<UserRecord?> loadPublicMasterProfile(DocumentReference ownerRef) {
     () => _fetchPublicMasterProfile(ownerRef),
   );
   return load.then((profile) {
-    if (profile != null) {
+    if (profile != null && profile.contactPhoneHash.isNotEmpty) {
       _publicMasterProfileCache[ownerRef.id] = profile;
     }
     if (identical(_publicMasterProfileLoads[ownerRef.id], load)) {
@@ -32,17 +32,22 @@ Future<UserRecord?> loadPublicMasterProfile(DocumentReference ownerRef) {
 Future<UserRecord?> _fetchPublicMasterProfile(
   DocumentReference ownerRef,
 ) async {
+  UserRecord? storedProfile;
   try {
     final publicSnapshot = await FirebaseFirestore.instance
         .collection('publicMasterProfiles')
         .doc(ownerRef.id)
         .get();
     if (publicSnapshot.exists) {
-      return _profileFromPublicData(publicSnapshot.data() ?? {}, ownerRef);
+      storedProfile = _profileFromPublicData(
+        publicSnapshot.data() ?? {},
+        ownerRef,
+      );
+      if (storedProfile.contactPhoneHash.isNotEmpty) return storedProfile;
     }
 
     final token = await FirebaseAuth.instance.currentUser?.getIdToken();
-    if (token == null || token.isEmpty) return null;
+    if (token == null || token.isEmpty) return storedProfile;
 
     final uri = Uri.https(
       'us-central1-trusty-kzh1sb.cloudfunctions.net',
@@ -53,13 +58,13 @@ Future<UserRecord?> _fetchPublicMasterProfile(
       uri,
       headers: {'Authorization': 'Bearer $token'},
     );
-    if (response.statusCode != 200) return null;
+    if (response.statusCode != 200) return storedProfile;
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     return _profileFromPublicData(data, ownerRef);
   } catch (error) {
     debugPrint('Failed to load public master profile: $error');
-    return null;
+    return storedProfile;
   }
 }
 

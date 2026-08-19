@@ -37,6 +37,7 @@ const {dispatchChatMessagePush} = require("./chat_message_push");
 const {
   buildPublicMasterProfile,
   isMasterProfile,
+  normalizePhone: normalizePublicProfilePhone,
 } = require("./public_master_profile");
 admin.initializeApp();
 
@@ -169,8 +170,21 @@ exports.onUserWrittenSyncPublicMasterProfile = onDocumentWritten(
       return;
     }
 
+    let authPhone = "";
+    if (!normalizePublicProfilePhone(user.phone_number)) {
+      try {
+        const authUser = await admin.auth().getUser(event.params.userId);
+        authPhone = authUser.phoneNumber || "";
+      } catch (error) {
+        console.warn("Could not load master phone from Firebase Auth", {
+          userId: event.params.userId,
+          code: error && error.code,
+        });
+      }
+    }
+
     await publicReference.set({
-      ...buildPublicMasterProfile(user),
+      ...buildPublicMasterProfile(user, authPhone),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
   },
@@ -442,9 +456,20 @@ exports.getPublicMasterProfile = functions.https.onRequest(
         return;
       }
 
-      const publicProfile = buildPublicMasterProfile(
-        masterSnapshot.data() || {},
-      );
+      const master = masterSnapshot.data() || {};
+      let authPhone = "";
+      if (!normalizePublicProfilePhone(master.phone_number)) {
+        try {
+          const authUser = await admin.auth().getUser(masterId);
+          authPhone = authUser.phoneNumber || "";
+        } catch (error) {
+          console.warn("Could not load master phone from Firebase Auth", {
+            masterId,
+            code: error && error.code,
+          });
+        }
+      }
+      const publicProfile = buildPublicMasterProfile(master, authPhone);
       await admin.firestore()
         .collection("publicMasterProfiles")
         .doc(masterId)

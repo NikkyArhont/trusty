@@ -27,6 +27,17 @@ test("builds a public profile without exposing the phone number", () => {
   assert.equal(Object.hasOwn(profile, "phone_number"), false);
 });
 
+test("uses the Firebase Auth phone when the profile field is empty", () => {
+  const profile = buildPublicMasterProfile(
+    {phone_number: "", masterData: {title: "Анна"}},
+    "+7 918 123-45-67",
+  );
+  assert.equal(
+    profile.contactPhoneHash,
+    crypto.createHash("sha256").update("79181234567").digest("hex"),
+  );
+});
+
 test("keeps completed master profiles public after switching modes", () => {
   assert.equal(isMasterProfile({masterMode: false, masterData: {}}), false);
   assert.equal(isMasterProfile({
