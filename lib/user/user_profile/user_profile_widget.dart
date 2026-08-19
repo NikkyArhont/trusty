@@ -1,4 +1,5 @@
 import '/auth/firebase_auth/auth_util.dart';
+import '/admin/system_communications_preview_dialog.dart';
 import '/backend/backend.dart';
 import '/backend/schema/enums/enums.dart';
 import '/backend/share_prompt/share_prompt_service.dart';
@@ -544,6 +545,67 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
     );
   }
 
+  bool get _isAdminAccount {
+    final phone = currentPhoneNumber.isNotEmpty
+        ? currentPhoneNumber
+        : (currentUserDocument?.phoneNumber ?? '');
+    return normalizePhone(phone) == '79183633636';
+  }
+
+  Widget _buildAdminDialogsCard(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    return Material(
+      color: theme.secondaryBackground,
+      borderRadius: BorderRadius.circular(16.0),
+      child: InkWell(
+        onTap: () => showSystemCommunicationsPreview(context),
+        borderRadius: BorderRadius.circular(16.0),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                width: 44.0,
+                height: 44.0,
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.view_carousel_rounded,
+                  color: theme.primary,
+                  size: 22.0,
+                ),
+              ),
+              const SizedBox(width: 16.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Диалоги',
+                      style: theme.titleSmall.override(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3.0),
+                    Text(
+                      'Системные диалоги и push-сценарии',
+                      style: theme.bodySmall.override(
+                        color: theme.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: theme.secondaryText),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
@@ -1008,6 +1070,11 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
                       ),
                       child: _buildProjectSupportCard(context),
                     ),
+                    if (_isAdminAccount)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                        child: _buildAdminDialogsCard(context),
+                      ),
                     Padding(
                       padding: EdgeInsetsDirectional.fromSTEB(
                         0.0,
