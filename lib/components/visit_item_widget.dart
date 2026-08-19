@@ -88,7 +88,7 @@ class _VisitItemWidgetState extends State<VisitItemWidget> {
                     imageUrl:
                         'https://dimg.dreamflow.cloud/v1/image/${valueOrDefault<String>(
                       widget!.img_desc,
-                      'massage spa room',
+                      'массажный кабинет',
                     )}',
                     width: 56.0,
                     height: 56.0,
@@ -106,7 +106,7 @@ class _VisitItemWidgetState extends State<VisitItemWidget> {
                     Text(
                       valueOrDefault<String>(
                         widget!.service,
-                        'Deep Tissue Massage',
+                        'Глубокий массаж',
                       ),
                       maxLines: 1,
                       style: FlutterFlowTheme.of(context).bodyMedium.override(
@@ -130,7 +130,7 @@ class _VisitItemWidgetState extends State<VisitItemWidget> {
                     Text(
                       valueOrDefault<String>(
                         widget!.specialist,
-                        'Elena Rodriguez',
+                        'Елена Родригес',
                       ),
                       style: FlutterFlowTheme.of(context).bodySmall.override(
                             font: GoogleFonts.jetBrainsMono(
@@ -162,7 +162,7 @@ class _VisitItemWidgetState extends State<VisitItemWidget> {
                         Text(
                           valueOrDefault<String>(
                             widget!.date,
-                            'Oct 12, 2023',
+                            '12 октября 2023',
                           ),
                           style:
                               FlutterFlowTheme.of(context).labelSmall.override(
@@ -195,7 +195,7 @@ class _VisitItemWidgetState extends State<VisitItemWidget> {
                   Text(
                     valueOrDefault<String>(
                       widget!.price,
-                      '\$85',
+                      '8 500 ₽',
                     ),
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                           font: GoogleFonts.inter(

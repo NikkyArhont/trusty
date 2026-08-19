@@ -11,6 +11,7 @@ import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'favorites_model.dart';
@@ -68,46 +69,72 @@ class _FavoritesWidgetState extends State<FavoritesWidget> {
                       Container(
                         child: Padding(
                           padding: EdgeInsetsDirectional.fromSTEB(
-                              24.0, 24.0, 24.0, 16.0),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            24.0,
+                            24.0,
+                            24.0,
+                            16.0,
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.max,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Text(
-                                FFLocalizations.of(context).getText(
-                                  'auge734r' /* Избранное */,
+                              IconButton(
+                                tooltip: 'Назад',
+                                style: IconButton.styleFrom(
+                                  minimumSize: const Size.square(44.0),
+                                  padding: EdgeInsets.zero,
                                 ),
-                                style: FlutterFlowTheme.of(context)
-                                    .headlineMedium
-                                    .override(
-                                      font: GoogleFonts.interTight(
-                                        fontWeight: FlutterFlowTheme.of(context)
-                                            .headlineMedium
-                                            .fontWeight,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .headlineMedium
-                                            .fontStyle,
-                                      ),
-                                      color: FlutterFlowTheme.of(context)
-                                          .primaryText,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FlutterFlowTheme.of(context)
-                                          .headlineMedium
-                                          .fontWeight,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .headlineMedium
-                                          .fontStyle,
-                                    ),
+                                icon: Icon(
+                                  Icons.arrow_back_ios_new_rounded,
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).primaryText,
+                                  size: 22.0,
+                                ),
+                                onPressed: context.safePop,
                               ),
-                            ].divide(SizedBox(height: 4.0)),
+                              SizedBox(width: 8.0),
+                              Expanded(
+                                child: Text(
+                                  FFLocalizations.of(
+                                    context,
+                                  ).getText('auge734r' /* Избранное */),
+                                  style: FlutterFlowTheme.of(context)
+                                      .headlineMedium
+                                      .override(
+                                        font: GoogleFonts.interTight(
+                                          fontWeight: FlutterFlowTheme.of(
+                                            context,
+                                          ).headlineMedium.fontWeight,
+                                          fontStyle: FlutterFlowTheme.of(
+                                            context,
+                                          ).headlineMedium.fontStyle,
+                                        ),
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryText,
+                                        letterSpacing: 0.0,
+                                        fontWeight: FlutterFlowTheme.of(
+                                          context,
+                                        ).headlineMedium.fontWeight,
+                                        fontStyle: FlutterFlowTheme.of(
+                                          context,
+                                        ).headlineMedium.fontStyle,
+                                      ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
                       Container(
                         child: Padding(
                           padding: EdgeInsetsDirectional.fromSTEB(
-                              16.0, 0.0, 16.0, 0.0),
+                            12.0,
+                            0.0,
+                            12.0,
+                            0.0,
+                          ),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.start,
@@ -116,26 +143,23 @@ class _FavoritesWidgetState extends State<FavoritesWidget> {
                               AuthUserStreamWidget(
                                 builder: (context) => Builder(
                                   builder: (context) {
-                                    final favServ = (currentUserDocument
-                                                ?.favoriteServices
-                                                ?.toList() ??
-                                            [])
-                                        .toList();
+                                    final favServ =
+                                        (currentUserDocument?.favoriteServices
+                                                    ?.toList() ??
+                                                [])
+                                            .toList();
                                     if (favServ.isEmpty) {
-                                      return Center(
-                                        child: NoFavoriteWidget(),
-                                      );
+                                      return Center(child: NoFavoriteWidget());
                                     }
-
-                                    return GridView.builder(
-                                      padding: EdgeInsets.zero,
+                                    return MasonryGridView.builder(
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
                                       gridDelegate:
-                                          SliverGridDelegateWithFixedCrossAxisCount(
-                                        crossAxisCount: 2,
-                                        crossAxisSpacing: 16.0,
-                                        mainAxisSpacing: 16.0,
-                                        childAspectRatio: 0.65,
-                                      ),
+                                          SliverSimpleGridDelegateWithFixedCrossAxisCount(
+                                            crossAxisCount: 2,
+                                          ),
+                                      crossAxisSpacing: 10.0,
+                                      mainAxisSpacing: 10.0,
                                       shrinkWrap: true,
                                       itemCount: favServ.length,
                                       itemBuilder: (context, favServIndex) {
@@ -143,7 +167,8 @@ class _FavoritesWidgetState extends State<FavoritesWidget> {
                                             favServ[favServIndex];
                                         return StreamBuilder<ServiceRecord>(
                                           stream: ServiceRecord.getDocument(
-                                              favServItem),
+                                            favServItem,
+                                          ),
                                           builder: (context, snapshot) {
                                             // Customize what your widget looks like when it's loading.
                                             if (!snapshot.hasData) {
@@ -153,8 +178,8 @@ class _FavoritesWidgetState extends State<FavoritesWidget> {
                                                   height: 50.0,
                                                   child: SpinKitPulse(
                                                     color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .primary,
+                                                      context,
+                                                    ).primary,
                                                     size: 50.0,
                                                   ),
                                                 ),
@@ -166,7 +191,8 @@ class _FavoritesWidgetState extends State<FavoritesWidget> {
 
                                             return ServiceCardClientWidget(
                                               key: Key(
-                                                  'Keyfcn_${favServIndex}_of_${favServ.length}'),
+                                                'Keyfcn_${favServIndex}_of_${favServ.length}',
+                                              ),
                                               servicedoc:
                                                   serviceCardClientServiceRecord,
                                             );
@@ -191,9 +217,7 @@ class _FavoritesWidgetState extends State<FavoritesWidget> {
               child: wrapWithModel(
                 model: _model.menuModel,
                 updateCallback: () => safeSetState(() {}),
-                child: MenuWidget(
-                  currentPage: Menu.favorite,
-                ),
+                child: MenuWidget(currentPage: Menu.favorite),
               ),
             ),
           ],

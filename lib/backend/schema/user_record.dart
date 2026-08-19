@@ -10,10 +10,8 @@ import 'index.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 
 class UserRecord extends FirestoreRecord {
-  UserRecord._(
-    DocumentReference reference,
-    Map<String, dynamic> data,
-  ) : super(reference, data) {
+  UserRecord._(DocumentReference reference, Map<String, dynamic> data)
+    : super(reference, data) {
     _initializeFields();
   }
 
@@ -47,6 +45,11 @@ class UserRecord extends FirestoreRecord {
   String get phoneNumber => _phoneNumber ?? '';
   bool hasPhoneNumber() => _phoneNumber != null;
 
+  // SHA-256 of the normalized phone returned only by the public profile API.
+  String? _contactPhoneHash;
+  String get contactPhoneHash => _contactPhoneHash ?? '';
+  bool hasContactPhoneHash() => _contactPhoneHash != null;
+
   // "favoriteServices" field.
   List<DocumentReference>? _favoriteServices;
   List<DocumentReference> get favoriteServices => _favoriteServices ?? const [];
@@ -67,6 +70,16 @@ class UserRecord extends FirestoreRecord {
   bool get masterMode => _masterMode ?? false;
   bool hasMasterMode() => _masterMode != null;
 
+  // "clientProfileCompleted" field.
+  bool? _clientProfileCompleted;
+  bool get clientProfileCompleted => _clientProfileCompleted ?? false;
+  bool hasClientProfileCompleted() => _clientProfileCompleted != null;
+
+  // "blockedUserIds" field.
+  List<String>? _blockedUserIds;
+  List<String> get blockedUserIds => _blockedUserIds ?? const [];
+  bool hasBlockedUserIds() => _blockedUserIds != null;
+
   // "masterData" field.
   MasterDataStruct? _masterData;
   MasterDataStruct get masterData => _masterData ?? MasterDataStruct();
@@ -79,12 +92,15 @@ class UserRecord extends FirestoreRecord {
     _uid = snapshotData['uid'] as String?;
     _createdTime = snapshotData['created_time'] as DateTime?;
     _phoneNumber = snapshotData['phone_number'] as String?;
+    _contactPhoneHash = snapshotData['contactPhoneHash'] as String?;
     _favoriteServices = getDataList(snapshotData['favoriteServices']);
     _bio = snapshotData['bio'] as String?;
     _mainLoc = snapshotData['mainLoc'] is PlaceStruct
         ? snapshotData['mainLoc']
         : PlaceStruct.maybeFromMap(snapshotData['mainLoc']);
     _masterMode = snapshotData['masterMode'] as bool?;
+    _clientProfileCompleted = snapshotData['clientProfileCompleted'] as bool?;
+    _blockedUserIds = getDataList(snapshotData['blockedUserIds']);
     _masterData = snapshotData['masterData'] is MasterDataStruct
         ? snapshotData['masterData']
         : MasterDataStruct.maybeFromMap(snapshotData['masterData']);
@@ -100,15 +116,14 @@ class UserRecord extends FirestoreRecord {
       ref.get().then((s) => UserRecord.fromSnapshot(s));
 
   static UserRecord fromSnapshot(DocumentSnapshot snapshot) => UserRecord._(
-        snapshot.reference,
-        mapFromFirestore(snapshot.data() as Map<String, dynamic>),
-      );
+    snapshot.reference,
+    mapFromFirestore(snapshot.data() as Map<String, dynamic>),
+  );
 
   static UserRecord getDocumentFromData(
     Map<String, dynamic> data,
     DocumentReference reference,
-  ) =>
-      UserRecord._(reference, mapFromFirestore(data));
+  ) => UserRecord._(reference, mapFromFirestore(data));
 
   @override
   String toString() =>
@@ -133,19 +148,25 @@ Map<String, dynamic> createUserRecordData({
   String? bio,
   PlaceStruct? mainLoc,
   bool? masterMode,
+  bool? clientProfileCompleted,
+  List<String>? blockedUserIds,
   MasterDataStruct? masterData,
 }) {
   final firestoreData = mapToFirestore(
     <String, dynamic>{
       'email': email,
-      'display_name': displayName,
+      'display_name': displayName == null
+          ? null
+          : normalizeUserText(displayName),
       'photo_url': photoUrl,
       'uid': uid,
       'created_time': createdTime,
       'phone_number': phoneNumber,
-      'bio': bio,
+      'bio': bio == null ? null : normalizeUserText(bio),
       'mainLoc': PlaceStruct().toMap(),
       'masterMode': masterMode,
+      'clientProfileCompleted': clientProfileCompleted,
+      'blockedUserIds': blockedUserIds,
       'masterData': MasterDataStruct().toMap(),
     }.withoutNulls,
   );
@@ -171,27 +192,33 @@ class UserRecordDocumentEquality implements Equality<UserRecord> {
         e1?.uid == e2?.uid &&
         e1?.createdTime == e2?.createdTime &&
         e1?.phoneNumber == e2?.phoneNumber &&
+        e1?.contactPhoneHash == e2?.contactPhoneHash &&
         listEquality.equals(e1?.favoriteServices, e2?.favoriteServices) &&
         e1?.bio == e2?.bio &&
         e1?.mainLoc == e2?.mainLoc &&
         e1?.masterMode == e2?.masterMode &&
+        e1?.clientProfileCompleted == e2?.clientProfileCompleted &&
+        listEquality.equals(e1?.blockedUserIds, e2?.blockedUserIds) &&
         e1?.masterData == e2?.masterData;
   }
 
   @override
   int hash(UserRecord? e) => const ListEquality().hash([
-        e?.email,
-        e?.displayName,
-        e?.photoUrl,
-        e?.uid,
-        e?.createdTime,
-        e?.phoneNumber,
-        e?.favoriteServices,
-        e?.bio,
-        e?.mainLoc,
-        e?.masterMode,
-        e?.masterData
-      ]);
+    e?.email,
+    e?.displayName,
+    e?.photoUrl,
+    e?.uid,
+    e?.createdTime,
+    e?.phoneNumber,
+    e?.contactPhoneHash,
+    e?.favoriteServices,
+    e?.bio,
+    e?.mainLoc,
+    e?.masterMode,
+    e?.clientProfileCompleted,
+    e?.blockedUserIds,
+    e?.masterData,
+  ]);
 
   @override
   bool isValidKey(Object? o) => o is UserRecord;

@@ -87,7 +87,7 @@ class _ServiceItemWidgetState extends State<ServiceItemWidget> {
                     imageUrl:
                         'https://dimg.dreamflow.cloud/v1/image/${valueOrDefault<String>(
                       widget!.img_desc,
-                      'massage therapy session',
+                      'сеанс массажа',
                     )}',
                     width: 64.0,
                     height: 64.0,
@@ -105,7 +105,7 @@ class _ServiceItemWidgetState extends State<ServiceItemWidget> {
                     Text(
                       valueOrDefault<String>(
                         widget!.name,
-                        'Deep Tissue Massage',
+                        'Глубокий массаж',
                       ),
                       style: FlutterFlowTheme.of(context).titleMedium.override(
                             font: GoogleFonts.inter(

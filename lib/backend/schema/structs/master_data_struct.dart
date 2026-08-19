@@ -16,13 +16,17 @@ class MasterDataStruct extends FFFirebaseStruct {
     String? initCat,
     String? mainPhoto,
     PlaceStruct? mainAdres,
+    bool? onboardingCompleted,
+    bool? profileCompleted,
     FirestoreUtilData firestoreUtilData = const FirestoreUtilData(),
-  })  : _title = title,
-        _descrip = descrip,
-        _initCat = initCat,
-        _mainPhoto = mainPhoto,
-        _mainAdres = mainAdres,
-        super(firestoreUtilData);
+  }) : _title = title,
+       _descrip = descrip,
+       _initCat = initCat,
+       _mainPhoto = mainPhoto,
+       _mainAdres = mainAdres,
+       _onboardingCompleted = onboardingCompleted,
+       _profileCompleted = profileCompleted,
+       super(firestoreUtilData);
 
   // "title" field.
   String? _title;
@@ -63,6 +67,20 @@ class MasterDataStruct extends FFFirebaseStruct {
 
   bool hasMainAdres() => _mainAdres != null;
 
+  // "onboardingCompleted" field.
+  bool? _onboardingCompleted;
+  bool get onboardingCompleted => _onboardingCompleted ?? false;
+  set onboardingCompleted(bool? val) => _onboardingCompleted = val;
+
+  bool hasOnboardingCompleted() => _onboardingCompleted != null;
+
+  // "profileCompleted" field.
+  bool? _profileCompleted;
+  bool get profileCompleted => _profileCompleted ?? false;
+  set profileCompleted(bool? val) => _profileCompleted = val;
+
+  bool hasProfileCompleted() => _profileCompleted != null;
+
   static MasterDataStruct fromMap(Map<String, dynamic> data) =>
       MasterDataStruct(
         title: data['title'] as String?,
@@ -72,6 +90,8 @@ class MasterDataStruct extends FFFirebaseStruct {
         mainAdres: data['mainAdres'] is PlaceStruct
             ? data['mainAdres']
             : PlaceStruct.maybeFromMap(data['mainAdres']),
+        onboardingCompleted: data['onboardingCompleted'] as bool?,
+        profileCompleted: data['profileCompleted'] as bool?,
       );
 
   static MasterDataStruct? maybeFromMap(dynamic data) => data is Map
@@ -79,64 +99,47 @@ class MasterDataStruct extends FFFirebaseStruct {
       : null;
 
   Map<String, dynamic> toMap() => {
-        'title': _title,
-        'descrip': _descrip,
-        'initCat': _initCat,
-        'mainPhoto': _mainPhoto,
-        'mainAdres': _mainAdres?.toMap(),
-      }.withoutNulls;
+    'title': _title,
+    'descrip': _descrip,
+    'initCat': _initCat,
+    'mainPhoto': _mainPhoto,
+    'mainAdres': _mainAdres?.toMap(),
+    'onboardingCompleted': _onboardingCompleted,
+    'profileCompleted': _profileCompleted,
+  }.withoutNulls;
 
   @override
   Map<String, dynamic> toSerializableMap() => {
-        'title': serializeParam(
-          _title,
-          ParamType.String,
-        ),
-        'descrip': serializeParam(
-          _descrip,
-          ParamType.String,
-        ),
-        'initCat': serializeParam(
-          _initCat,
-          ParamType.String,
-        ),
-        'mainPhoto': serializeParam(
-          _mainPhoto,
-          ParamType.String,
-        ),
-        'mainAdres': serializeParam(
-          _mainAdres,
-          ParamType.DataStruct,
-        ),
-      }.withoutNulls;
+    'title': serializeParam(_title, ParamType.String),
+    'descrip': serializeParam(_descrip, ParamType.String),
+    'initCat': serializeParam(_initCat, ParamType.String),
+    'mainPhoto': serializeParam(_mainPhoto, ParamType.String),
+    'mainAdres': serializeParam(_mainAdres, ParamType.DataStruct),
+    'onboardingCompleted': serializeParam(_onboardingCompleted, ParamType.bool),
+    'profileCompleted': serializeParam(_profileCompleted, ParamType.bool),
+  }.withoutNulls;
 
   static MasterDataStruct fromSerializableMap(Map<String, dynamic> data) =>
       MasterDataStruct(
-        title: deserializeParam(
-          data['title'],
-          ParamType.String,
-          false,
-        ),
-        descrip: deserializeParam(
-          data['descrip'],
-          ParamType.String,
-          false,
-        ),
-        initCat: deserializeParam(
-          data['initCat'],
-          ParamType.String,
-          false,
-        ),
-        mainPhoto: deserializeParam(
-          data['mainPhoto'],
-          ParamType.String,
-          false,
-        ),
+        title: deserializeParam(data['title'], ParamType.String, false),
+        descrip: deserializeParam(data['descrip'], ParamType.String, false),
+        initCat: deserializeParam(data['initCat'], ParamType.String, false),
+        mainPhoto: deserializeParam(data['mainPhoto'], ParamType.String, false),
         mainAdres: deserializeStructParam(
           data['mainAdres'],
           ParamType.DataStruct,
           false,
           structBuilder: PlaceStruct.fromSerializableMap,
+        ),
+        onboardingCompleted: deserializeParam(
+          data['onboardingCompleted'],
+          ParamType.bool,
+          false,
+        ),
+        profileCompleted: deserializeParam(
+          data['profileCompleted'],
+          ParamType.bool,
+          false,
         ),
       );
 
@@ -150,12 +153,21 @@ class MasterDataStruct extends FFFirebaseStruct {
         descrip == other.descrip &&
         initCat == other.initCat &&
         mainPhoto == other.mainPhoto &&
-        mainAdres == other.mainAdres;
+        mainAdres == other.mainAdres &&
+        onboardingCompleted == other.onboardingCompleted &&
+        profileCompleted == other.profileCompleted;
   }
 
   @override
-  int get hashCode => const ListEquality()
-      .hash([title, descrip, initCat, mainPhoto, mainAdres]);
+  int get hashCode => const ListEquality().hash([
+    title,
+    descrip,
+    initCat,
+    mainPhoto,
+    mainAdres,
+    onboardingCompleted,
+    profileCompleted,
+  ]);
 }
 
 MasterDataStruct createMasterDataStruct({
@@ -164,35 +176,37 @@ MasterDataStruct createMasterDataStruct({
   String? initCat,
   String? mainPhoto,
   PlaceStruct? mainAdres,
+  bool? onboardingCompleted,
+  bool? profileCompleted,
   Map<String, dynamic> fieldValues = const {},
   bool clearUnsetFields = true,
   bool create = false,
   bool delete = false,
-}) =>
-    MasterDataStruct(
-      title: title,
-      descrip: descrip,
-      initCat: initCat,
-      mainPhoto: mainPhoto,
-      mainAdres: mainAdres ?? (clearUnsetFields ? PlaceStruct() : null),
-      firestoreUtilData: FirestoreUtilData(
-        clearUnsetFields: clearUnsetFields,
-        create: create,
-        delete: delete,
-        fieldValues: fieldValues,
-      ),
-    );
+}) => MasterDataStruct(
+  title: title == null ? null : normalizeUserText(title),
+  descrip: descrip == null ? null : normalizeUserText(descrip),
+  initCat: initCat,
+  mainPhoto: mainPhoto,
+  mainAdres: mainAdres ?? (clearUnsetFields ? PlaceStruct() : null),
+  onboardingCompleted: onboardingCompleted,
+  profileCompleted: profileCompleted,
+  firestoreUtilData: FirestoreUtilData(
+    clearUnsetFields: clearUnsetFields,
+    create: create,
+    delete: delete,
+    fieldValues: fieldValues,
+  ),
+);
 
 MasterDataStruct? updateMasterDataStruct(
   MasterDataStruct? masterData, {
   bool clearUnsetFields = true,
   bool create = false,
-}) =>
-    masterData
-      ?..firestoreUtilData = FirestoreUtilData(
-        clearUnsetFields: clearUnsetFields,
-        create: create,
-      );
+}) => masterData
+  ?..firestoreUtilData = FirestoreUtilData(
+    clearUnsetFields: clearUnsetFields,
+    create: create,
+  );
 
 void addMasterDataStructData(
   Map<String, dynamic> firestoreData,
@@ -217,8 +231,9 @@ void addMasterDataStructData(
   final nestedData = masterDataData.map((k, v) => MapEntry('$fieldName.$k', v));
 
   final mergeFields = masterData.firestoreUtilData.create || clearFields;
-  firestoreData
-      .addAll(mergeFields ? mergeNestedFields(nestedData) : nestedData);
+  firestoreData.addAll(
+    mergeFields ? mergeNestedFields(nestedData) : nestedData,
+  );
 }
 
 Map<String, dynamic> getMasterDataFirestoreData(
@@ -239,8 +254,9 @@ Map<String, dynamic> getMasterDataFirestoreData(
   );
 
   // Add any Firestore field values
-  mapToFirestore(masterData.firestoreUtilData.fieldValues)
-      .forEach((k, v) => firestoreData[k] = v);
+  mapToFirestore(
+    masterData.firestoreUtilData.fieldValues,
+  ).forEach((k, v) => firestoreData[k] = v);
 
   return forFieldValue ? mergeNestedFields(firestoreData) : firestoreData;
 }

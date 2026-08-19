@@ -136,7 +136,7 @@ class _ServiceCardExtraWidgetState extends State<ServiceCardExtraWidget> {
                                   size: 14.0,
                                 ),
                                 Text(
-                                  'Trust ${widget!.trust_score}',
+                                  'Доверие ${widget!.trust_score}',
                                   style: FlutterFlowTheme.of(context)
                                       .labelSmall
                                       .override(
@@ -183,7 +183,7 @@ class _ServiceCardExtraWidgetState extends State<ServiceCardExtraWidget> {
                           Text(
                             valueOrDefault<String>(
                               widget!.name,
-                              'Minimalist Interior Design',
+                              'Минималистичный дизайн интерьера',
                             ),
                             style: FlutterFlowTheme.of(context)
                                 .titleLarge
@@ -208,7 +208,7 @@ class _ServiceCardExtraWidgetState extends State<ServiceCardExtraWidget> {
                           Text(
                             valueOrDefault<String>(
                               widget!.desc,
-                              'Residential and office spaces',
+                              'Жилые и офисные помещения',
                             ),
                             style: FlutterFlowTheme.of(context)
                                 .bodyMedium
@@ -329,7 +329,7 @@ class _ServiceCardExtraWidgetState extends State<ServiceCardExtraWidget> {
                                 Text(
                                   valueOrDefault<String>(
                                     widget!.specialist_name,
-                                    'Elena Vance',
+                                    'Елена Вэнс',
                                   ),
                                   style: FlutterFlowTheme.of(context)
                                       .labelLarge
@@ -364,7 +364,7 @@ class _ServiceCardExtraWidgetState extends State<ServiceCardExtraWidget> {
                                       size: 14.0,
                                     ),
                                     Text(
-                                      '${widget!.recommenders} from your contacts',
+                                      '${widget!.recommenders} из ваших контактов',
                                       style: FlutterFlowTheme.of(context)
                                           .labelSmall
                                           .override(

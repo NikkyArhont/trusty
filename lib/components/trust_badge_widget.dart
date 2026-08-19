@@ -75,7 +75,7 @@ class _TrustBadgeWidgetState extends State<TrustBadgeWidget> {
                     size: 14.0,
                   ),
                   Text(
-                    'Trust ${widget!.score}%',
+                    'Доверие ${widget!.score}%',
                     style: FlutterFlowTheme.of(context).labelSmall.override(
                           font: GoogleFonts.jetBrainsMono(
                             fontWeight: FlutterFlowTheme.of(context)

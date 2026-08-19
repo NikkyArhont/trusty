@@ -1,0 +1,38 @@
+# Flutter and Dart generated files
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+
+# Package manager dependencies and caches
+node_modules/
+.pnpm-store/
+
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+android/key.properties
+android/*.jks
+android/*.keystore
+*.p12
+*.mobileprovision
+
+# IDE and operating-system files
+.DS_Store
+*.log
+.idea/
+.vscode/
+
+# Firebase local state
+.firebase/
+firebase-debug.log
+firepit-log.txt
+
+# Platform-generated ephemeral files
+ios/Flutter/ephemeral/
+macos/Flutter/ephemeral/
+
+# The support bot is maintained as a separate repository.
+trustySupportBot/

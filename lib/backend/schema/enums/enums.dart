@@ -4,25 +4,18 @@ enum Menu {
   main,
   profile,
   favorite,
+  cabinet,
+  chats,
   search,
   dashboard,
   myService,
+  masterChats,
   records,
 }
 
-enum ServiceStatus {
-  onModerate,
-  show,
-  arhive,
-  denied,
-}
+enum ServiceStatus { onModerate, show, arhive, denied }
 
-enum RecordStatus {
-  newRec,
-  confirmed,
-  denied,
-  complite,
-}
+enum RecordStatus { newRec, confirmed, denied, complite }
 
 extension FFEnumExtensions<T extends Enum> on T {
   String serialize() => name;

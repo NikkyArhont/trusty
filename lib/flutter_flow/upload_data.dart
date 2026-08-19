@@ -32,19 +32,12 @@ class SelectedFile {
 }
 
 class MediaDimensions {
-  const MediaDimensions({
-    this.height,
-    this.width,
-  });
+  const MediaDimensions({this.height, this.width});
   final double? height;
   final double? width;
 }
 
-enum MediaSource {
-  photoGallery,
-  videoGallery,
-  camera,
-}
+enum MediaSource { photoGallery, videoGallery, camera }
 
 Future<List<SelectedFile>?> selectMediaWithSourceBottomSheet({
   required BuildContext context,
@@ -60,30 +53,29 @@ Future<List<SelectedFile>?> selectMediaWithSourceBottomSheet({
   bool includeDimensions = false,
   bool includeBlurHash = false,
 }) async {
-  final createUploadMediaListTile =
-      (String label, MediaSource mediaSource) => ListTile(
-            title: Text(
-              label,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.getFont(
-                pickerFontFamily,
-                color: textColor,
-                fontWeight: FontWeight.w600,
-                fontSize: 20,
-              ),
-            ),
-            tileColor: backgroundColor,
-            dense: false,
-            onTap: () => Navigator.pop(
-              context,
-              mediaSource,
-            ),
-          );
+  final createUploadMediaListTile = (String label, MediaSource mediaSource) =>
+      ListTile(
+        title: Text(
+          label,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.getFont(
+            pickerFontFamily,
+            color: textColor,
+            fontWeight: FontWeight.w600,
+            fontSize: 20,
+          ),
+        ),
+        tileColor: backgroundColor,
+        dense: false,
+        onTap: () => Navigator.pop(context, mediaSource),
+      );
   final mediaSource = await showModalBottomSheet<MediaSource>(
-      context: context,
-      backgroundColor: backgroundColor,
-      builder: (context) {
-        return Column(
+    context: context,
+    backgroundColor: backgroundColor,
+    builder: (context) {
+      return SafeArea(
+        top: false,
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             if (!kIsWeb) ...[
@@ -91,7 +83,7 @@ Future<List<SelectedFile>?> selectMediaWithSourceBottomSheet({
                 padding: EdgeInsets.fromLTRB(0, 8, 0, 0),
                 child: ListTile(
                   title: Text(
-                    'Choose Source',
+                    'Выберите источник',
                     textAlign: TextAlign.center,
                     style: GoogleFonts.getFont(
                       pickerFontFamily,
@@ -108,33 +100,27 @@ Future<List<SelectedFile>?> selectMediaWithSourceBottomSheet({
             ],
             if (allowPhoto && allowVideo) ...[
               createUploadMediaListTile(
-                'Gallery (Photo)',
+                'Галерея (фото)',
                 MediaSource.photoGallery,
               ),
               const Divider(),
               createUploadMediaListTile(
-                'Gallery (Video)',
+                'Галерея (видео)',
                 MediaSource.videoGallery,
               ),
             ] else if (allowPhoto)
-              createUploadMediaListTile(
-                'Gallery',
-                MediaSource.photoGallery,
-              )
+              createUploadMediaListTile('Галерея', MediaSource.photoGallery)
             else
-              createUploadMediaListTile(
-                'Gallery',
-                MediaSource.videoGallery,
-              ),
+              createUploadMediaListTile('Галерея', MediaSource.videoGallery),
             if (!kIsWeb) ...[
               const Divider(),
-              createUploadMediaListTile('Camera', MediaSource.camera),
-              const Divider(),
+              createUploadMediaListTile('Камера', MediaSource.camera),
             ],
-            const SizedBox(height: 10),
           ],
-        );
-      });
+        ),
+      );
+    },
+  );
   if (mediaSource == null) {
     return null;
   }
@@ -143,7 +129,8 @@ Future<List<SelectedFile>?> selectMediaWithSourceBottomSheet({
     maxWidth: maxWidth,
     maxHeight: maxHeight,
     imageQuality: imageQuality,
-    isVideo: mediaSource == MediaSource.videoGallery ||
+    isVideo:
+        mediaSource == MediaSource.videoGallery ||
         (mediaSource == MediaSource.camera && allowVideo && !allowPhoto),
     mediaSource: mediaSource,
     includeDimensions: includeDimensions,
@@ -174,25 +161,32 @@ Future<List<SelectedFile>?> selectMedia({
     if (pickedMedia.isEmpty) {
       return null;
     }
-    return Future.wait(pickedMedia.asMap().entries.map((e) async {
-      final index = e.key;
-      final media = e.value;
-      final mediaBytes = await media.readAsBytes();
-      final path = _getStoragePath(storageFolderPath, media.name, false, index);
-      final dimensions = includeDimensions
-          ? isVideo
-              ? _getVideoDimensions(media.path)
-              : _getImageDimensions(mediaBytes)
-          : null;
+    return Future.wait(
+      pickedMedia.asMap().entries.map((e) async {
+        final index = e.key;
+        final media = e.value;
+        final mediaBytes = await media.readAsBytes();
+        final path = _getStoragePath(
+          storageFolderPath,
+          media.name,
+          false,
+          index,
+        );
+        final dimensions = includeDimensions
+            ? isVideo
+                  ? _getVideoDimensions(media.path)
+                  : _getImageDimensions(mediaBytes)
+            : null;
 
-      return SelectedFile(
-        storagePath: path,
-        filePath: media.path,
-        bytes: mediaBytes,
-        dimensions: await dimensions,
-        originalFilename: media.name,
-      );
-    }));
+        return SelectedFile(
+          storagePath: path,
+          filePath: media.path,
+          bytes: mediaBytes,
+          dimensions: await dimensions,
+          originalFilename: media.name,
+        );
+      }),
+    );
   }
 
   final source = mediaSource == MediaSource.camera
@@ -214,8 +208,8 @@ Future<List<SelectedFile>?> selectMedia({
   final path = _getStoragePath(storageFolderPath, pickedMedia!.name, isVideo);
   final dimensions = includeDimensions
       ? isVideo
-          ? _getVideoDimensions(pickedMedia.path)
-          : _getImageDimensions(mediaBytes)
+            ? _getVideoDimensions(pickedMedia.path)
+            : _getImageDimensions(mediaBytes)
       : null;
 
   return [
@@ -235,21 +229,20 @@ bool validateFileFormat(String filePath, BuildContext context) {
   }
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(
-      content: Text('Invalid file format: ${mime(filePath)}'),
-    ));
+    ..showSnackBar(
+      SnackBar(content: Text('Неверный формат файла: ${mime(filePath)}')),
+    );
   return false;
 }
 
 Future<SelectedFile?> selectFile({
   String? storageFolderPath,
   List<String>? allowedExtensions,
-}) =>
-    selectFiles(
-      storageFolderPath: storageFolderPath,
-      allowedExtensions: allowedExtensions,
-      multiFile: false,
-    ).then((value) => value?.first);
+}) => selectFiles(
+  storageFolderPath: storageFolderPath,
+  allowedExtensions: allowedExtensions,
+  multiFile: false,
+).then((value) => value?.first);
 
 Future<List<SelectedFile>?> selectFiles({
   String? storageFolderPath,
@@ -266,18 +259,24 @@ Future<List<SelectedFile>?> selectFiles({
     return null;
   }
   if (multiFile) {
-    return Future.wait(pickedFiles.files.asMap().entries.map((e) async {
-      final index = e.key;
-      final file = e.value;
-      final storagePath =
-          _getStoragePath(storageFolderPath, file.name, false, index);
-      return SelectedFile(
-        storagePath: storagePath,
-        filePath: isWeb ? null : file.path,
-        bytes: file.bytes!,
-        originalFilename: file.name,
-      );
-    }));
+    return Future.wait(
+      pickedFiles.files.asMap().entries.map((e) async {
+        final index = e.key;
+        final file = e.value;
+        final storagePath = _getStoragePath(
+          storageFolderPath,
+          file.name,
+          false,
+          index,
+        );
+        return SelectedFile(
+          storagePath: storagePath,
+          filePath: isWeb ? null : file.path,
+          bytes: file.bytes!,
+          originalFilename: file.name,
+        );
+      }),
+    );
   }
   final file = pickedFiles.files.first;
   if (file.bytes == null) {
@@ -290,7 +289,7 @@ Future<List<SelectedFile>?> selectFiles({
       filePath: isWeb ? null : file.path,
       bytes: file.bytes!,
       originalFilename: file.name,
-    )
+    ),
   ];
 }
 
@@ -298,22 +297,20 @@ List<SelectedFile> selectedFilesFromUploadedFiles(
   List<FFUploadedFile> uploadedFiles, {
   String? storageFolderPath,
   bool isMultiData = false,
-}) =>
-    uploadedFiles.asMap().entries.map(
-      (entry) {
-        final index = entry.key;
-        final file = entry.value;
-        return SelectedFile(
-            storagePath: _getStoragePath(
-              storageFolderPath != null ? storageFolderPath : null,
-              file.name!,
-              false,
-              isMultiData ? index : null,
-            ),
-            bytes: file.bytes!,
-            originalFilename: file.originalFilename);
-      },
-    ).toList();
+}) => uploadedFiles.asMap().entries.map((entry) {
+  final index = entry.key;
+  final file = entry.value;
+  return SelectedFile(
+    storagePath: _getStoragePath(
+      storageFolderPath != null ? storageFolderPath : null,
+      file.name!,
+      false,
+      isMultiData ? index : null,
+    ),
+    bytes: file.bytes!,
+    originalFilename: file.originalFilename,
+  );
+}).toList();
 
 Future<MediaDimensions> _getImageDimensions(Uint8List mediaBytes) async {
   final image = await decodeImageFromList(mediaBytes);
@@ -371,7 +368,8 @@ void showUploadMessage(
                 child: CircularProgressIndicator(
                   valueColor: Theme.of(context).brightness == Brightness.dark
                       ? AlwaysStoppedAnimation<Color>(
-                          FlutterFlowTheme.of(context).accent4)
+                          FlutterFlowTheme.of(context).accent4,
+                        )
                       : null,
                 ),
               ),

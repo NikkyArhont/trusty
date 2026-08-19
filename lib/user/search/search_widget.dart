@@ -58,6 +58,141 @@ class _SearchWidgetState extends State<SearchWidget> {
     super.dispose();
   }
 
+  List<ServiceRecord> _searchServices(
+    List<ServiceRecord> services,
+    String query,
+  ) {
+    final searchQuery = query.trim();
+    if (searchQuery.isEmpty) {
+      return services;
+    }
+
+    return TextSearch(
+      services
+          .map(
+            (record) => TextSearchItem.fromTerms(record, [
+              record.title,
+              record.description,
+              record.categoryKey,
+            ]),
+          )
+          .toList(),
+    ).search(searchQuery).map((r) => r.object).toList();
+  }
+
+  void _activateSearch(String query, {bool saveHistory = true}) {
+    final searchQuery = query.trim();
+    _model.searchActive = true;
+
+    if (saveHistory &&
+        searchQuery.isNotEmpty &&
+        !FFAppState().previosSearch.contains(searchQuery)) {
+      FFAppState().addToPreviosSearch(searchQuery);
+    }
+  }
+
+  Widget _buildCategoryChip({
+    required BuildContext context,
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      splashColor: Colors.transparent,
+      focusColor: Colors.transparent,
+      hoverColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(100.0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 7.0),
+        decoration: BoxDecoration(
+          color: selected
+              ? FlutterFlowTheme.of(context).primary
+              : FlutterFlowTheme.of(context).secondaryBackground,
+          borderRadius: BorderRadius.circular(100.0),
+          border: Border.all(
+            color: selected
+                ? FlutterFlowTheme.of(context).primary
+                : FlutterFlowTheme.of(context).divider,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected
+                ? Colors.white
+                : FlutterFlowTheme.of(context).secondaryText,
+            fontWeight: FontWeight.w500,
+            fontSize: 13.0,
+          ),
+        ),
+      ),
+    );
+  }
+
+  double _categoryChipWidth(BuildContext context, String label) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: const TextStyle(fontSize: 13.0, fontWeight: FontWeight.w500),
+      ),
+      maxLines: 1,
+      textDirection: Directionality.of(context),
+    )..layout();
+    return painter.width + 30.0;
+  }
+
+  int _categoryWrapRowCount(
+    List<double> itemWidths,
+    double maxWidth, {
+    double spacing = 8.0,
+  }) {
+    var rows = 1;
+    var usedWidth = 0.0;
+
+    for (final itemWidth in itemWidths) {
+      if (usedWidth == 0.0) {
+        usedWidth = itemWidth;
+      } else if (usedWidth + spacing + itemWidth <= maxWidth) {
+        usedWidth += spacing + itemWidth;
+      } else {
+        rows += 1;
+        usedWidth = itemWidth;
+      }
+    }
+
+    return rows;
+  }
+
+  double _twoRowCategoryWrapWidth(
+    BuildContext context,
+    List<String> labels,
+    double viewportWidth,
+  ) {
+    final itemWidths = labels
+        .map((label) => _categoryChipWidth(context, label))
+        .toList();
+    final totalWidth =
+        itemWidths.fold<double>(0.0, (total, width) => total + width) +
+        (itemWidths.length - 1) * 8.0;
+    var lowerBound = viewportWidth;
+    var upperBound = totalWidth > viewportWidth ? totalWidth : viewportWidth;
+
+    for (var iteration = 0; iteration < 16; iteration++) {
+      final candidate = (lowerBound + upperBound) / 2;
+      if (_categoryWrapRowCount(itemWidths, candidate) <= 2) {
+        upperBound = candidate;
+      } else {
+        lowerBound = candidate;
+      }
+    }
+
+    // Text rendering in the browser can be a few pixels wider than TextPainter
+    // reports. Keep a small reserve so the final chip stays on the second row.
+    return upperBound.ceilToDouble() + 32.0;
+  }
+
   @override
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
@@ -95,7 +230,15 @@ class _SearchWidgetState extends State<SearchWidget> {
             ),
           );
         }
-        List<ServiceRecord> searchServiceRecordList = snapshot.data!;
+        final searchServiceRecordList = (snapshot.data ?? [])
+            .where((service) => service.status == ServiceStatus.show)
+            .toList();
+        final visibleSearchResults = _model.searchActive
+            ? _searchServices(
+                searchServiceRecordList,
+                _model.textController.text,
+              )
+            : searchServiceRecordList;
 
         return Scaffold(
           key: scaffoldKey,
@@ -110,167 +253,213 @@ class _SearchWidgetState extends State<SearchWidget> {
                     children: [
                       Padding(
                         padding: EdgeInsetsDirectional.fromSTEB(
-                            16.0, 0.0, 16.0, 0.0),
+                          16.0,
+                          24.0,
+                          16.0,
+                          0.0,
+                        ),
                         child: Row(
                           mainAxisSize: MainAxisSize.max,
                           children: [
                             Expanded(
                               child: Container(
                                 width: 400.0,
+                                height: 40.0,
                                 child: TextFormField(
                                   controller: _model.textController,
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
                                   focusNode: _model.textFieldFocusNode,
                                   onChanged: (_) => EasyDebounce.debounce(
                                     '_model.textController',
                                     Duration(milliseconds: 100),
                                     () => safeSetState(() {}),
                                   ),
-                                  onFieldSubmitted: (_) async {
-                                    safeSetState(() {
-                                      _model.simpleSearchResults = TextSearch(
-                                        searchServiceRecordList
-                                            .map(
-                                              (record) =>
-                                                  TextSearchItem.fromTerms(
-                                                      record, [
-                                                record.title!,
-                                                record.description!
-                                              ]),
-                                            )
-                                            .toList(),
-                                      )
-                                          .search(_model.textController.text)
-                                          .map((r) => r.object)
-                                          .toList();
-                                      ;
-                                    });
-                                    _model.searchActive = true;
-                                    safeSetState(() {});
-                                  },
                                   autofocus: false,
                                   enabled: true,
                                   obscureText: false,
                                   decoration: InputDecoration(
-                                    isDense: false,
+                                    isDense: true,
+                                    contentPadding:
+                                        const EdgeInsetsDirectional.fromSTEB(
+                                          16.0,
+                                          8.0,
+                                          16.0,
+                                          8.0,
+                                        ),
                                     labelStyle: FlutterFlowTheme.of(context)
                                         .labelMedium
                                         .override(
                                           font: GoogleFonts.interTight(
-                                            fontWeight:
-                                                FlutterFlowTheme.of(context)
-                                                    .labelMedium
-                                                    .fontWeight,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .labelMedium
-                                                    .fontStyle,
+                                            fontWeight: FlutterFlowTheme.of(
+                                              context,
+                                            ).labelMedium.fontWeight,
+                                            fontStyle: FlutterFlowTheme.of(
+                                              context,
+                                            ).labelMedium.fontStyle,
                                           ),
                                           fontSize: 16.0,
                                           letterSpacing: 0.0,
-                                          fontWeight:
-                                              FlutterFlowTheme.of(context)
-                                                  .labelMedium
-                                                  .fontWeight,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .labelMedium
-                                                  .fontStyle,
+                                          fontWeight: FlutterFlowTheme.of(
+                                            context,
+                                          ).labelMedium.fontWeight,
+                                          fontStyle: FlutterFlowTheme.of(
+                                            context,
+                                          ).labelMedium.fontStyle,
                                         ),
-                                    hintText:
-                                        FFLocalizations.of(context).getText(
-                                      '78vel1nk' /* Поиск услуг... */,
-                                    ),
+                                    hintText: FFLocalizations.of(
+                                      context,
+                                    ).getText('78vel1nk' /* Поиск услуг... */),
                                     hintStyle: FlutterFlowTheme.of(context)
                                         .labelMedium
                                         .override(
                                           font: GoogleFonts.interTight(
-                                            fontWeight:
-                                                FlutterFlowTheme.of(context)
-                                                    .labelMedium
-                                                    .fontWeight,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .labelMedium
-                                                    .fontStyle,
+                                            fontWeight: FlutterFlowTheme.of(
+                                              context,
+                                            ).labelMedium.fontWeight,
+                                            fontStyle: FlutterFlowTheme.of(
+                                              context,
+                                            ).labelMedium.fontStyle,
                                           ),
                                           fontSize: 16.0,
                                           letterSpacing: 0.0,
-                                          fontWeight:
-                                              FlutterFlowTheme.of(context)
-                                                  .labelMedium
-                                                  .fontWeight,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .labelMedium
-                                                  .fontStyle,
+                                          fontWeight: FlutterFlowTheme.of(
+                                            context,
+                                          ).labelMedium.fontWeight,
+                                          fontStyle: FlutterFlowTheme.of(
+                                            context,
+                                          ).labelMedium.fontStyle,
                                         ),
                                     enabledBorder: OutlineInputBorder(
                                       borderSide: BorderSide(
-                                        color: FlutterFlowTheme.of(context)
-                                            .secondary,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).secondary,
                                         width: 1.0,
                                       ),
                                       borderRadius: BorderRadius.circular(16.0),
                                     ),
                                     focusedBorder: OutlineInputBorder(
                                       borderSide: BorderSide(
-                                        color: FlutterFlowTheme.of(context)
-                                            .primary,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primary,
                                         width: 1.0,
                                       ),
                                       borderRadius: BorderRadius.circular(16.0),
                                     ),
                                     errorBorder: OutlineInputBorder(
                                       borderSide: BorderSide(
-                                        color:
-                                            FlutterFlowTheme.of(context).error,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).error,
                                         width: 1.0,
                                       ),
                                       borderRadius: BorderRadius.circular(16.0),
                                     ),
                                     focusedErrorBorder: OutlineInputBorder(
                                       borderSide: BorderSide(
-                                        color:
-                                            FlutterFlowTheme.of(context).error,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).error,
                                         width: 1.0,
                                       ),
                                       borderRadius: BorderRadius.circular(16.0),
                                     ),
                                     filled: true,
-                                    fillColor: FlutterFlowTheme.of(context)
-                                        .secondaryBackground,
-                                    prefixIcon: Icon(
+                                    fillColor: FlutterFlowTheme.of(
+                                      context,
+                                    ).secondaryBackground,
+                                    prefixIcon: const Icon(
                                       Icons.search,
+                                      size: 20.0,
+                                    ),
+                                    prefixIconConstraints: const BoxConstraints(
+                                      minWidth: 40.0,
+                                      minHeight: 40.0,
                                     ),
                                   ),
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodyMedium
+                                  style: FlutterFlowTheme.of(context).bodyMedium
                                       .override(
                                         font: GoogleFonts.interTight(
-                                          fontWeight:
-                                              FlutterFlowTheme.of(context)
-                                                  .bodyMedium
-                                                  .fontWeight,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .bodyMedium
-                                                  .fontStyle,
+                                          fontWeight: FlutterFlowTheme.of(
+                                            context,
+                                          ).bodyMedium.fontWeight,
+                                          fontStyle: FlutterFlowTheme.of(
+                                            context,
+                                          ).bodyMedium.fontStyle,
                                         ),
                                         fontSize: 16.0,
                                         letterSpacing: 0.0,
-                                        fontWeight: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontWeight,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
+                                        fontWeight: FlutterFlowTheme.of(
+                                          context,
+                                        ).bodyMedium.fontWeight,
+                                        fontStyle: FlutterFlowTheme.of(
+                                          context,
+                                        ).bodyMedium.fontStyle,
                                       ),
-                                  cursorColor:
-                                      FlutterFlowTheme.of(context).primaryText,
+                                  cursorColor: FlutterFlowTheme.of(
+                                    context,
+                                  ).primaryText,
                                   enableInteractiveSelection: true,
                                   validator: _model.textControllerValidator
                                       .asValidator(context),
                                 ),
+                              ),
+                            ),
+                            FFButtonWidget(
+                              onPressed:
+                                  _model.textController.text.trim().isEmpty
+                                  ? null
+                                  : () async {
+                                      safeSetState(() {
+                                        _activateSearch(
+                                          _model.textController.text,
+                                        );
+                                      });
+                                    },
+                              text: 'Найти',
+                              options: FFButtonOptions(
+                                width: 76.0,
+                                height: 40.0,
+                                padding: EdgeInsetsDirectional.fromSTEB(
+                                  12.0,
+                                  0.0,
+                                  12.0,
+                                  0.0,
+                                ),
+                                iconPadding: EdgeInsetsDirectional.fromSTEB(
+                                  0.0,
+                                  0.0,
+                                  0.0,
+                                  0.0,
+                                ),
+                                color: FlutterFlowTheme.of(context).primary,
+                                disabledColor: FlutterFlowTheme.of(
+                                  context,
+                                ).alternate,
+                                disabledTextColor: FlutterFlowTheme.of(
+                                  context,
+                                ).secondaryText,
+                                textStyle: FlutterFlowTheme.of(context)
+                                    .titleSmall
+                                    .override(
+                                      font: GoogleFonts.interTight(
+                                        fontWeight: FontWeight.w600,
+                                        fontStyle: FlutterFlowTheme.of(
+                                          context,
+                                        ).titleSmall.fontStyle,
+                                      ),
+                                      color: FlutterFlowTheme.of(context).info,
+                                      fontSize: 14.0,
+                                      letterSpacing: 0.0,
+                                      fontWeight: FontWeight.w600,
+                                      fontStyle: FlutterFlowTheme.of(
+                                        context,
+                                      ).titleSmall.fontStyle,
+                                    ),
+                                elevation: 0.0,
+                                borderRadius: BorderRadius.circular(12.0),
                               ),
                             ),
                             InkWell(
@@ -279,30 +468,33 @@ class _SearchWidgetState extends State<SearchWidget> {
                               hoverColor: Colors.transparent,
                               highlightColor: Colors.transparent,
                               onTap: () async {
-                                FFAppState().previosSearch = [];
-                                safeSetState(() {});
+                                safeSetState(() {
+                                  _model.textController?.clear();
+                                  _model.simpleSearchResults = [];
+                                  _model.searchActive = false;
+                                });
                               },
                               child: Text(
-                                FFLocalizations.of(context).getText(
-                                  '6mio2rsv' /* Очистить */,
-                                ),
-                                style: FlutterFlowTheme.of(context)
-                                    .labelLarge
+                                FFLocalizations.of(
+                                  context,
+                                ).getText('6mio2rsv' /* Очистить */),
+                                style: FlutterFlowTheme.of(context).labelLarge
                                     .override(
                                       font: GoogleFonts.inter(
                                         fontWeight: FontWeight.w600,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .labelLarge
-                                            .fontStyle,
+                                        fontStyle: FlutterFlowTheme.of(
+                                          context,
+                                        ).labelLarge.fontStyle,
                                       ),
-                                      color: FlutterFlowTheme.of(context)
-                                          .secondaryText,
+                                      color: FlutterFlowTheme.of(
+                                        context,
+                                      ).secondaryText,
                                       fontSize: 14.0,
                                       letterSpacing: 0.0,
                                       fontWeight: FontWeight.w600,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .labelLarge
-                                          .fontStyle,
+                                      fontStyle: FlutterFlowTheme.of(
+                                        context,
+                                      ).labelLarge.fontStyle,
                                       lineHeight: 1.3,
                                     ),
                               ),
@@ -311,152 +503,84 @@ class _SearchWidgetState extends State<SearchWidget> {
                         ),
                       ),
                       Padding(
-                        padding:
-                            EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 12.0),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              InkWell(
-                                splashColor: Colors.transparent,
-                                focusColor: Colors.transparent,
-                                hoverColor: Colors.transparent,
-                                highlightColor: Colors.transparent,
-                                onTap: () async {
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: Builder(
+                          builder: (context) {
+                            final presetCats =
+                                FFAppState().presetCategory.toList()..sort((
+                                  first,
+                                  second,
+                                ) {
+                                  String sortKey(String value) =>
+                                      value.toLowerCase().replaceAll('ё', 'е');
+                                  return sortKey(
+                                    first.titleRU,
+                                  ).compareTo(sortKey(second.titleRU));
+                                });
+                            final allLabel = FFLocalizations.of(
+                              context,
+                            ).getText('1hsgtllu' /* Все */);
+                            final labels = <String>[
+                              allLabel,
+                              ...presetCats.map((category) => category.titleRU),
+                            ];
+                            final chips = <Widget>[
+                              _buildCategoryChip(
+                                context: context,
+                                label: allLabel,
+                                selected:
+                                    FFAppState().globalFilter.catKey.isEmpty,
+                                onTap: () {
                                   FFAppState().updateGlobalFilterStruct(
-                                    (e) => e..catKey = null,
+                                    (filter) => filter..catKey = '',
                                   );
                                   safeSetState(() {});
                                 },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: FFAppState().globalFilter.catKey ==
-                                                null ||
-                                            FFAppState().globalFilter.catKey ==
-                                                ''
-                                        ? FlutterFlowTheme.of(context).primary
-                                        : FlutterFlowTheme.of(context)
-                                            .secondaryBackground,
-                                    borderRadius: BorderRadius.circular(100.0),
-                                    border: Border.all(
-                                      color: FFAppState().globalFilter.catKey ==
-                                                  null ||
-                                              FFAppState()
-                                                      .globalFilter
-                                                      .catKey ==
-                                                  ''
-                                          ? FlutterFlowTheme.of(context).primary
-                                          : FlutterFlowTheme.of(context)
-                                              .divider,
-                                      width: 1.0,
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                        20.0, 10.0, 20.0, 10.0),
-                                    child: Text(
-                                      FFLocalizations.of(context).getText(
-                                        '1hsgtllu' /* Все */,
-                                      ),
-                                      style: TextStyle(
-                                        color:
-                                            FFAppState().globalFilter.catKey ==
-                                                        null ||
-                                                    FFAppState()
-                                                            .globalFilter
-                                                            .catKey ==
-                                                        ''
-                                                ? Colors.white
-                                                : FlutterFlowTheme.of(context)
-                                                    .secondaryText,
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 14.0,
-                                      ),
-                                    ),
-                                  ),
+                              ),
+                              ...presetCats.map(
+                                (category) => _buildCategoryChip(
+                                  context: context,
+                                  label: category.titleRU,
+                                  selected:
+                                      FFAppState().globalFilter.catKey ==
+                                      category.key,
+                                  onTap: () {
+                                    FFAppState().updateGlobalFilterStruct(
+                                      (filter) => filter..catKey = category.key,
+                                    );
+                                    safeSetState(() {});
+                                  },
                                 ),
                               ),
-                              Builder(
-                                builder: (context) {
-                                  final presetCats =
-                                      FFAppState().presetCategory.toList();
+                            ];
 
-                                  return Row(
-                                    mainAxisSize: MainAxisSize.max,
-                                    children: List.generate(presetCats.length,
-                                        (presetCatsIndex) {
-                                      final presetCatsItem =
-                                          presetCats[presetCatsIndex];
-                                      return InkWell(
-                                        splashColor: Colors.transparent,
-                                        focusColor: Colors.transparent,
-                                        hoverColor: Colors.transparent,
-                                        highlightColor: Colors.transparent,
-                                        onTap: () async {
-                                          FFAppState().updateGlobalFilterStruct(
-                                            (e) =>
-                                                e..catKey = presetCatsItem.key,
-                                          );
-                                          safeSetState(() {});
-                                        },
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: FFAppState()
-                                                        .globalFilter
-                                                        .catKey ==
-                                                    presetCatsItem.key
-                                                ? FlutterFlowTheme.of(context)
-                                                    .primary
-                                                : FlutterFlowTheme.of(context)
-                                                    .secondaryBackground,
-                                            borderRadius:
-                                                BorderRadius.circular(100.0),
-                                            border: Border.all(
-                                              color: FFAppState()
-                                                          .globalFilter
-                                                          .catKey ==
-                                                      presetCatsItem.key
-                                                  ? FlutterFlowTheme.of(context)
-                                                      .primary
-                                                  : FlutterFlowTheme.of(context)
-                                                      .divider,
-                                              width: 1.0,
-                                            ),
-                                          ),
-                                          child: Padding(
-                                            padding:
-                                                EdgeInsetsDirectional.fromSTEB(
-                                                    20.0, 10.0, 20.0, 10.0),
-                                            child: Text(
-                                              presetCatsItem.titleRU,
-                                              style: TextStyle(
-                                                color: FFAppState()
-                                                            .globalFilter
-                                                            .catKey ==
-                                                        presetCatsItem.key
-                                                    ? Colors.white
-                                                    : FlutterFlowTheme.of(
-                                                            context)
-                                                        .secondaryText,
-                                                fontWeight: FontWeight.w500,
-                                                fontSize: 14.0,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      );
-                                    }).divide(SizedBox(width: 12.0)),
-                                  );
-                                },
-                              ),
-                            ]
-                                .divide(SizedBox(width: 12.0))
-                                .addToStart(SizedBox(width: 12.0))
-                                .addToEnd(SizedBox(width: 12.0)),
-                          ),
+                            return LayoutBuilder(
+                              builder: (context, constraints) {
+                                final viewportWidth =
+                                    constraints.maxWidth - 24.0;
+                                final wrapWidth = _twoRowCategoryWrapWidth(
+                                  context,
+                                  labels,
+                                  viewportWidth,
+                                );
+
+                                return SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12.0,
+                                  ),
+                                  child: SizedBox(
+                                    width: wrapWidth,
+                                    child: Wrap(
+                                      spacing: 8.0,
+                                      runSpacing: 8.0,
+                                      children: chips,
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
                         ),
                       ),
                       if (_model.searchActive)
@@ -464,26 +588,30 @@ class _SearchWidgetState extends State<SearchWidget> {
                           alignment: AlignmentDirectional(-1.0, 0.0),
                           child: Padding(
                             padding: EdgeInsetsDirectional.fromSTEB(
-                                24.0, 0.0, 0.0, 0.0),
+                              24.0,
+                              0.0,
+                              0.0,
+                              0.0,
+                            ),
                             child: Text(
-                              'Найдено: ${_model.simpleSearchResults.length.toString()}',
-                              style: FlutterFlowTheme.of(context)
-                                  .titleMedium
+                              'Найдено: ${visibleSearchResults.length.toString()}',
+                              style: FlutterFlowTheme.of(context).titleMedium
                                   .override(
                                     font: GoogleFonts.inter(
                                       fontWeight: FontWeight.bold,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .titleMedium
-                                          .fontStyle,
+                                      fontStyle: FlutterFlowTheme.of(
+                                        context,
+                                      ).titleMedium.fontStyle,
                                     ),
-                                    color: FlutterFlowTheme.of(context)
-                                        .primaryText,
+                                    color: FlutterFlowTheme.of(
+                                      context,
+                                    ).primaryText,
                                     fontSize: 16.0,
                                     letterSpacing: 0.0,
                                     fontWeight: FontWeight.bold,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .titleMedium
-                                        .fontStyle,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).titleMedium.fontStyle,
                                     lineHeight: 1.4,
                                   ),
                             ),
@@ -495,7 +623,11 @@ class _SearchWidgetState extends State<SearchWidget> {
                           decoration: BoxDecoration(),
                           child: Padding(
                             padding: EdgeInsetsDirectional.fromSTEB(
-                                24.0, 0.0, 24.0, 0.0),
+                              24.0,
+                              0.0,
+                              24.0,
+                              0.0,
+                            ),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               mainAxisAlignment: MainAxisAlignment.start,
@@ -516,20 +648,19 @@ class _SearchWidgetState extends State<SearchWidget> {
                                           .override(
                                             font: GoogleFonts.inter(
                                               fontWeight: FontWeight.bold,
-                                              fontStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .titleMedium
-                                                      .fontStyle,
+                                              fontStyle: FlutterFlowTheme.of(
+                                                context,
+                                              ).titleMedium.fontStyle,
                                             ),
-                                            color: FlutterFlowTheme.of(context)
-                                                .primaryText,
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).primaryText,
                                             fontSize: 16.0,
                                             letterSpacing: 0.0,
                                             fontWeight: FontWeight.bold,
-                                            fontStyle:
-                                                FlutterFlowTheme.of(context)
-                                                    .titleMedium
-                                                    .fontStyle,
+                                            fontStyle: FlutterFlowTheme.of(
+                                              context,
+                                            ).titleMedium.fontStyle,
                                             lineHeight: 1.4,
                                           ),
                                     ),
@@ -543,29 +674,27 @@ class _SearchWidgetState extends State<SearchWidget> {
                                         safeSetState(() {});
                                       },
                                       child: Text(
-                                        FFLocalizations.of(context).getText(
-                                          'sgi0zc0m' /* Очистить */,
-                                        ),
+                                        FFLocalizations.of(
+                                          context,
+                                        ).getText('sgi0zc0m' /* Очистить */),
                                         style: FlutterFlowTheme.of(context)
                                             .labelLarge
                                             .override(
                                               font: GoogleFonts.inter(
                                                 fontWeight: FontWeight.w600,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .labelLarge
-                                                        .fontStyle,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).labelLarge.fontStyle,
                                               ),
-                                              color:
-                                                  FlutterFlowTheme.of(context)
-                                                      .secondaryText,
+                                              color: FlutterFlowTheme.of(
+                                                context,
+                                              ).secondaryText,
                                               fontSize: 14.0,
                                               letterSpacing: 0.0,
                                               fontWeight: FontWeight.w600,
-                                              fontStyle:
-                                                  FlutterFlowTheme.of(context)
-                                                      .labelLarge
-                                                      .fontStyle,
+                                              fontStyle: FlutterFlowTheme.of(
+                                                context,
+                                              ).labelLarge.fontStyle,
                                               lineHeight: 1.3,
                                             ),
                                       ),
@@ -574,16 +703,16 @@ class _SearchWidgetState extends State<SearchWidget> {
                                 ),
                                 Builder(
                                   builder: (context) {
-                                    final searchHistory =
-                                        FFAppState().previosSearch.toList();
+                                    final searchHistory = FFAppState()
+                                        .previosSearch
+                                        .toList();
 
                                     return ListView.builder(
                                       padding: EdgeInsets.zero,
                                       shrinkWrap: true,
                                       scrollDirection: Axis.vertical,
                                       itemCount: searchHistory.length,
-                                      itemBuilder:
-                                          (context, searchHistoryIndex) {
+                                      itemBuilder: (context, searchHistoryIndex) {
                                         final searchHistoryItem =
                                             searchHistory[searchHistoryIndex];
                                         return Container(
@@ -591,7 +720,11 @@ class _SearchWidgetState extends State<SearchWidget> {
                                           child: Padding(
                                             padding:
                                                 EdgeInsetsDirectional.fromSTEB(
-                                                    0.0, 8.0, 0.0, 8.0),
+                                                  0.0,
+                                                  8.0,
+                                                  0.0,
+                                                  8.0,
+                                                ),
                                             child: InkWell(
                                               splashColor: Colors.transparent,
                                               focusColor: Colors.transparent,
@@ -602,9 +735,11 @@ class _SearchWidgetState extends State<SearchWidget> {
                                                 safeSetState(() {
                                                   _model.textController?.text =
                                                       searchHistoryItem;
+                                                  _activateSearch(
+                                                    searchHistoryItem,
+                                                    saveHistory: false,
+                                                  );
                                                 });
-                                                _model.searchActive = true;
-                                                safeSetState(() {});
                                               },
                                               child: Row(
                                                 mainAxisSize: MainAxisSize.max,
@@ -616,8 +751,8 @@ class _SearchWidgetState extends State<SearchWidget> {
                                                   Icon(
                                                     Icons.history_rounded,
                                                     color: FlutterFlowTheme.of(
-                                                            context)
-                                                        .hint,
+                                                      context,
+                                                    ).hint,
                                                     size: 20.0,
                                                   ),
                                                   Expanded(
@@ -626,35 +761,36 @@ class _SearchWidgetState extends State<SearchWidget> {
                                                       searchHistoryItem,
                                                       style:
                                                           FlutterFlowTheme.of(
-                                                                  context)
-                                                              .bodyMedium
-                                                              .override(
-                                                                font:
-                                                                    GoogleFonts
-                                                                        .inter(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .normal,
-                                                                  fontStyle: FlutterFlowTheme.of(
-                                                                          context)
+                                                            context,
+                                                          ).bodyMedium.override(
+                                                            font: GoogleFonts.inter(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .normal,
+                                                              fontStyle:
+                                                                  FlutterFlowTheme.of(
+                                                                        context,
+                                                                      )
                                                                       .bodyMedium
                                                                       .fontStyle,
-                                                                ),
-                                                                color: FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .primaryText,
-                                                                fontSize: 14.0,
-                                                                letterSpacing:
-                                                                    0.0,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .normal,
-                                                                fontStyle: FlutterFlowTheme.of(
-                                                                        context)
+                                                            ),
+                                                            color:
+                                                                FlutterFlowTheme.of(
+                                                                  context,
+                                                                ).primaryText,
+                                                            fontSize: 14.0,
+                                                            letterSpacing: 0.0,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .normal,
+                                                            fontStyle:
+                                                                FlutterFlowTheme.of(
+                                                                      context,
+                                                                    )
                                                                     .bodyMedium
                                                                     .fontStyle,
-                                                                lineHeight: 1.5,
-                                                              ),
+                                                            lineHeight: 1.5,
+                                                          ),
                                                     ),
                                                   ),
                                                   InkWell(
@@ -669,15 +805,16 @@ class _SearchWidgetState extends State<SearchWidget> {
                                                     onTap: () async {
                                                       FFAppState()
                                                           .removeFromPreviosSearch(
-                                                              searchHistoryItem);
+                                                            searchHistoryItem,
+                                                          );
                                                       safeSetState(() {});
                                                     },
                                                     child: Icon(
                                                       Icons.close_rounded,
                                                       color:
                                                           FlutterFlowTheme.of(
-                                                                  context)
-                                                              .hint,
+                                                            context,
+                                                          ).hint,
                                                       size: 18.0,
                                                     ),
                                                   ),
@@ -694,20 +831,25 @@ class _SearchWidgetState extends State<SearchWidget> {
                             ),
                           ),
                         ),
-                      if (_model.searchActive)
+                      if (_model.searchActive ||
+                          FFAppState().previosSearch.isEmpty)
                         Padding(
                           padding: EdgeInsetsDirectional.fromSTEB(
-                              12.0, 0.0, 12.0, 0.0),
+                            12.0,
+                            0.0,
+                            12.0,
+                            0.0,
+                          ),
                           child: Builder(
                             builder: (context) {
-                              final serv = _model.simpleSearchResults.toList();
+                              final serv = visibleSearchResults.toList();
 
                               return MasonryGridView.builder(
                                 physics: const NeverScrollableScrollPhysics(),
                                 gridDelegate:
                                     SliverSimpleGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 2,
-                                ),
+                                      crossAxisCount: 2,
+                                    ),
                                 crossAxisSpacing: 10.0,
                                 mainAxisSpacing: 10.0,
                                 itemCount: serv.length,
@@ -716,7 +858,8 @@ class _SearchWidgetState extends State<SearchWidget> {
                                   final servItem = serv[servIndex];
                                   return ServiceCardClientWidget(
                                     key: Key(
-                                        'Keyq2m_${servIndex}_of_${serv.length}'),
+                                      'Keyq2m_${servIndex}_of_${serv.length}',
+                                    ),
                                     servicedoc: servItem,
                                   );
                                 },
@@ -724,9 +867,7 @@ class _SearchWidgetState extends State<SearchWidget> {
                             },
                           ),
                         ),
-                    ]
-                        .divide(SizedBox(height: 12.0))
-                        .addToEnd(SizedBox(height: 100.0)),
+                    ].divide(SizedBox(height: 12.0)).addToEnd(SizedBox(height: 100.0)),
                   ),
                 ),
                 Align(
@@ -734,68 +875,73 @@ class _SearchWidgetState extends State<SearchWidget> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      FFButtonWidget(
-                        onPressed: () async {
-                          context.pushNamed(
-                            SearchResultWidget.routeName,
-                            queryParameters: {
-                              'listResult': serializeParam(
-                                _model.simpleSearchResults,
-                                ParamType.Document,
-                                isList: true,
-                              ),
-                            }.withoutNulls,
-                            extra: <String, dynamic>{
-                              'listResult': _model.simpleSearchResults,
-                            },
-                          );
-                        },
-                        text: FFLocalizations.of(context).getText(
-                          'xzz5cq7c' /*  Посмотреть результаты на карт... */,
-                        ),
-                        icon: Icon(
-                          Icons.map,
-                          size: 24.0,
-                        ),
-                        options: FFButtonOptions(
-                          height: 40.0,
-                          padding: EdgeInsetsDirectional.fromSTEB(
-                              16.0, 0.0, 16.0, 0.0),
-                          iconPadding: EdgeInsetsDirectional.fromSTEB(
-                              0.0, 0.0, 0.0, 0.0),
-                          color: FlutterFlowTheme.of(context).primary,
-                          textStyle:
-                              FlutterFlowTheme.of(context).titleSmall.override(
-                                    font: GoogleFonts.interTight(
-                                      fontWeight: FontWeight.w600,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .titleSmall
-                                          .fontStyle,
-                                    ),
-                                    color: FlutterFlowTheme.of(context).info,
-                                    fontSize: 14.0,
-                                    letterSpacing: 0.0,
-                                    fontWeight: FontWeight.w600,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .titleSmall
-                                        .fontStyle,
-                                  ),
-                          elevation: 0.0,
-                          borderSide: BorderSide(
-                            color: FlutterFlowTheme.of(context)
-                                .secondaryBackground,
+                      if (_model.searchActive)
+                        FFButtonWidget(
+                          onPressed: () async {
+                            context.pushNamed(
+                              SearchResultWidget.routeName,
+                              queryParameters: {
+                                'listResult': serializeParam(
+                                  visibleSearchResults,
+                                  ParamType.Document,
+                                  isList: true,
+                                ),
+                              }.withoutNulls,
+                              extra: <String, dynamic>{
+                                'listResult': visibleSearchResults,
+                              },
+                            );
+                          },
+                          text: FFLocalizations.of(context).getText(
+                            'xzz5cq7c' /*  Посмотреть результаты на карт... */,
                           ),
-                          borderRadius: BorderRadius.circular(8.0),
+                          icon: Icon(Icons.map, size: 24.0),
+                          options: FFButtonOptions(
+                            height: 40.0,
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                              16.0,
+                              0.0,
+                              16.0,
+                              0.0,
+                            ),
+                            iconPadding: EdgeInsetsDirectional.fromSTEB(
+                              0.0,
+                              0.0,
+                              0.0,
+                              0.0,
+                            ),
+                            color: FlutterFlowTheme.of(context).primary,
+                            textStyle: FlutterFlowTheme.of(context).titleSmall
+                                .override(
+                                  font: GoogleFonts.interTight(
+                                    fontWeight: FontWeight.w600,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).titleSmall.fontStyle,
+                                  ),
+                                  color: FlutterFlowTheme.of(context).info,
+                                  fontSize: 14.0,
+                                  letterSpacing: 0.0,
+                                  fontWeight: FontWeight.w600,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).titleSmall.fontStyle,
+                                ),
+                            elevation: 0.0,
+                            borderSide: BorderSide(
+                              color: FlutterFlowTheme.of(
+                                context,
+                              ).secondaryBackground,
+                            ),
+                            borderRadius: BorderRadius.circular(8.0),
+                          ),
                         ),
-                      ),
                       Align(
                         alignment: AlignmentDirectional(0.0, 1.0),
                         child: wrapWithModel(
                           model: _model.menuModel,
                           updateCallback: () => safeSetState(() {}),
-                          child: MenuWidget(
-                            currentPage: Menu.search,
-                          ),
+                          child: MenuWidget(currentPage: Menu.search),
                         ),
                       ),
                     ].divide(SizedBox(height: 12.0)),

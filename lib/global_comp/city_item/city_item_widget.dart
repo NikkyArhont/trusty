@@ -83,7 +83,7 @@ class _CityItemWidgetState extends State<CityItemWidget> {
                     Text(
                       valueOrDefault<String>(
                         widget!.name,
-                        'London',
+                        'Лондон',
                       ),
                       style: FlutterFlowTheme.of(context).titleMedium.override(
                             font: GoogleFonts.interTight(
@@ -107,7 +107,7 @@ class _CityItemWidgetState extends State<CityItemWidget> {
                     Text(
                       valueOrDefault<String>(
                         widget!.region,
-                        'United Kingdom',
+                        'Великобритания',
                       ),
                       style: FlutterFlowTheme.of(context).bodySmall.override(
                             font: GoogleFonts.jetBrainsMono(

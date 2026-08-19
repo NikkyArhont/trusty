@@ -24,7 +24,7 @@ class SearchResultModel extends FlutterFlowModel<SearchResultWidget> {
 
   bool searchActive = false;
 
-  bool listOrMap = true;
+  bool listOrMap = false;
 
   LatLng? setLoc;
 
@@ -36,7 +36,8 @@ class SearchResultModel extends FlutterFlowModel<SearchResultWidget> {
   late NavBackModel navBackModel1;
   // State field(s) for GoogleMap widget.
   LatLng? googleMapsCenter;
-  final googleMapsController = Completer<GoogleMapController>();
+  Completer<GoogleMapController> googleMapsController =
+      Completer<GoogleMapController>();
   // Model for navBack component.
   late NavBackModel navBackModel2;
   // Model for SpecialistServiceCardMap component.
@@ -46,8 +47,10 @@ class SearchResultModel extends FlutterFlowModel<SearchResultWidget> {
   void initState(BuildContext context) {
     navBackModel1 = createModel(context, () => NavBackModel());
     navBackModel2 = createModel(context, () => NavBackModel());
-    specialistServiceCardMapModel =
-        createModel(context, () => SpecialistServiceCardMapModel());
+    specialistServiceCardMapModel = createModel(
+      context,
+      () => SpecialistServiceCardMapModel(),
+    );
   }
 
   @override

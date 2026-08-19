@@ -42,10 +42,8 @@ class _FormInputWidgetState extends State<FormInputWidget> {
     _model = createModel(context, () => FormInputModel());
 
     _model.textController ??= TextEditingController(
-        text: valueOrDefault<String>(
-      widget!.value,
-      'Alex Reed',
-    ));
+      text: valueOrDefault<String>(widget!.value, 'Алексей Рид'),
+    );
     _model.textFieldFocusNode ??= FocusNode();
 
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
@@ -67,49 +65,33 @@ class _FormInputWidgetState extends State<FormInputWidget> {
       children: [
         TextFormField(
           controller: _model.textController,
+          textCapitalization: TextCapitalization.words,
           focusNode: _model.textFieldFocusNode,
           obscureText: false,
           decoration: InputDecoration(
-            hintText: valueOrDefault<String>(
-              widget!.hint,
-              'Enter your name',
-            ),
+            hintText: valueOrDefault<String>(widget!.hint, 'Введите ваше имя'),
             hintStyle: TextStyle(
               color: FlutterFlowTheme.of(context).secondaryText,
             ),
             enabledBorder: OutlineInputBorder(
-              borderSide: BorderSide(
-                color: Color(0x00000000),
-                width: 1.0,
-              ),
+              borderSide: BorderSide(color: Color(0x00000000), width: 1.0),
               borderRadius: BorderRadius.circular(16.0),
             ),
             focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(
-                color: Color(0x00000000),
-                width: 1.0,
-              ),
+              borderSide: BorderSide(color: Color(0x00000000), width: 1.0),
               borderRadius: BorderRadius.circular(16.0),
             ),
             errorBorder: OutlineInputBorder(
-              borderSide: BorderSide(
-                color: Color(0x00000000),
-                width: 1.0,
-              ),
+              borderSide: BorderSide(color: Color(0x00000000), width: 1.0),
               borderRadius: BorderRadius.circular(16.0),
             ),
             focusedErrorBorder: OutlineInputBorder(
-              borderSide: BorderSide(
-                color: Color(0x00000000),
-                width: 1.0,
-              ),
+              borderSide: BorderSide(color: Color(0x00000000), width: 1.0),
               borderRadius: BorderRadius.circular(16.0),
             ),
             filled: true,
             fillColor: FlutterFlowTheme.of(context).secondaryBackground,
-            prefixIcon: Icon(
-              Icons.person_outline_rounded,
-            ),
+            prefixIcon: Icon(Icons.person_outline_rounded),
           ),
           style: TextStyle(),
           validator: _model.textControllerValidator.asValidator(context),

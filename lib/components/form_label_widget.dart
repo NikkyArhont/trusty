@@ -9,12 +9,10 @@ import 'form_label_model.dart';
 export 'form_label_model.dart';
 
 class FormLabelWidget extends StatefulWidget {
-  const FormLabelWidget({
-    super.key,
-    this.label,
-  });
+  const FormLabelWidget({super.key, this.label, this.requiredIndicatorColor});
 
   final String? label;
+  final Color? requiredIndicatorColor;
 
   @override
   State<FormLabelWidget> createState() => _FormLabelWidgetState();
@@ -48,23 +46,31 @@ class _FormLabelWidgetState extends State<FormLabelWidget> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 8.0),
-      child: Text(
-        valueOrDefault<String>(
-          widget!.label,
-          'Service Gallery',
+      child: Text.rich(
+        TextSpan(
+          children: [
+            TextSpan(
+              text: valueOrDefault<String>(widget.label, 'Галерея услуги'),
+            ),
+            if (widget.requiredIndicatorColor != null)
+              TextSpan(
+                text: ' *',
+                style: TextStyle(color: widget.requiredIndicatorColor),
+              ),
+          ],
         ),
         style: FlutterFlowTheme.of(context).labelLarge.override(
-              font: GoogleFonts.inter(
-                fontWeight: FontWeight.w600,
-                fontStyle: FlutterFlowTheme.of(context).labelLarge.fontStyle,
-              ),
-              color: FlutterFlowTheme.of(context).primaryText,
-              fontSize: 16.0,
-              letterSpacing: 0.0,
-              fontWeight: FontWeight.w600,
-              fontStyle: FlutterFlowTheme.of(context).labelLarge.fontStyle,
-              lineHeight: 1.3,
-            ),
+          font: GoogleFonts.inter(
+            fontWeight: FontWeight.w600,
+            fontStyle: FlutterFlowTheme.of(context).labelLarge.fontStyle,
+          ),
+          color: FlutterFlowTheme.of(context).primaryText,
+          fontSize: 16.0,
+          letterSpacing: 0.0,
+          fontWeight: FontWeight.w600,
+          fontStyle: FlutterFlowTheme.of(context).labelLarge.fontStyle,
+          lineHeight: 1.3,
+        ),
       ),
     );
   }

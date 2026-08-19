@@ -47,84 +47,100 @@ class _NoSetLocCopyCopyWidgetState extends State<NoSetLocCopyCopyWidget> {
         color: FlutterFlowTheme.of(context).primaryBackground,
         borderRadius: BorderRadius.circular(16.0),
       ),
-      child: Padding(
-        padding: EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.warning_rounded,
-              color: FlutterFlowTheme.of(context).primary,
-              size: 48.0,
-            ),
-            Text(
-              FFLocalizations.of(context).getText(
-                'hypauy6c' /* Не удается определить местопол... */,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight:
+              MediaQuery.sizeOf(context).height -
+              MediaQuery.paddingOf(context).vertical -
+              48.0,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.warning_rounded,
+                color: FlutterFlowTheme.of(context).primary,
+                size: 48.0,
               ),
-              textAlign: TextAlign.center,
-              style: FlutterFlowTheme.of(context).bodyMedium.override(
-                    font: GoogleFonts.interTight(
-                      fontWeight: FontWeight.w600,
-                      fontStyle:
-                          FlutterFlowTheme.of(context).bodyMedium.fontStyle,
-                    ),
-                    fontSize: 16.0,
-                    letterSpacing: 0.0,
+              Text(
+                FFLocalizations.of(
+                  context,
+                ).getText('hypauy6c' /* Не удается определить местопол... */),
+                textAlign: TextAlign.center,
+                style: FlutterFlowTheme.of(context).bodyMedium.override(
+                  font: GoogleFonts.interTight(
                     fontWeight: FontWeight.w600,
-                    fontStyle:
-                        FlutterFlowTheme.of(context).bodyMedium.fontStyle,
+                    fontStyle: FlutterFlowTheme.of(
+                      context,
+                    ).bodyMedium.fontStyle,
                   ),
-            ),
-            Text(
-              FFLocalizations.of(context).getText(
-                'tuxl5n7t' /* Убедитесь что геолокация включ... */,
+                  fontSize: 16.0,
+                  letterSpacing: 0.0,
+                  fontWeight: FontWeight.w600,
+                  fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
+                ),
               ),
-              textAlign: TextAlign.center,
-              style: FlutterFlowTheme.of(context).bodySmall.override(
-                    font: GoogleFonts.jetBrainsMono(
-                      fontWeight:
-                          FlutterFlowTheme.of(context).bodySmall.fontWeight,
-                      fontStyle:
-                          FlutterFlowTheme.of(context).bodySmall.fontStyle,
-                    ),
-                    letterSpacing: 0.0,
-                    fontWeight:
-                        FlutterFlowTheme.of(context).bodySmall.fontWeight,
+              Text(
+                FFLocalizations.of(
+                  context,
+                ).getText('tuxl5n7t' /* Убедитесь что геолокация включ... */),
+                textAlign: TextAlign.center,
+                style: FlutterFlowTheme.of(context).bodySmall.override(
+                  font: GoogleFonts.jetBrainsMono(
+                    fontWeight: FlutterFlowTheme.of(
+                      context,
+                    ).bodySmall.fontWeight,
                     fontStyle: FlutterFlowTheme.of(context).bodySmall.fontStyle,
                   ),
-            ),
-            FFButtonWidget(
-              onPressed: () async {
-                Navigator.pop(context);
-              },
-              text: FFLocalizations.of(context).getText(
-                'xh00xsmo' /* Хорошо */,
+                  letterSpacing: 0.0,
+                  fontWeight: FlutterFlowTheme.of(context).bodySmall.fontWeight,
+                  fontStyle: FlutterFlowTheme.of(context).bodySmall.fontStyle,
+                ),
               ),
-              options: FFButtonOptions(
-                height: 40.0,
-                padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
-                iconPadding: EdgeInsetsDirectional.fromSTEB(0.0, 0.0, 0.0, 0.0),
-                color: FlutterFlowTheme.of(context).primary,
-                textStyle: FlutterFlowTheme.of(context).titleSmall.override(
-                      font: GoogleFonts.interTight(
-                        fontWeight:
-                            FlutterFlowTheme.of(context).titleSmall.fontWeight,
-                        fontStyle:
-                            FlutterFlowTheme.of(context).titleSmall.fontStyle,
-                      ),
-                      color: Colors.white,
-                      letterSpacing: 0.0,
-                      fontWeight:
-                          FlutterFlowTheme.of(context).titleSmall.fontWeight,
-                      fontStyle:
-                          FlutterFlowTheme.of(context).titleSmall.fontStyle,
+              FFButtonWidget(
+                onPressed: () async {
+                  Navigator.pop(context);
+                },
+                text: FFLocalizations.of(
+                  context,
+                ).getText('xh00xsmo' /* Хорошо */),
+                options: FFButtonOptions(
+                  height: 40.0,
+                  padding: EdgeInsetsDirectional.fromSTEB(16.0, 0.0, 16.0, 0.0),
+                  iconPadding: EdgeInsetsDirectional.fromSTEB(
+                    0.0,
+                    0.0,
+                    0.0,
+                    0.0,
+                  ),
+                  color: FlutterFlowTheme.of(context).primary,
+                  textStyle: FlutterFlowTheme.of(context).titleSmall.override(
+                    font: GoogleFonts.interTight(
+                      fontWeight: FlutterFlowTheme.of(
+                        context,
+                      ).titleSmall.fontWeight,
+                      fontStyle: FlutterFlowTheme.of(
+                        context,
+                      ).titleSmall.fontStyle,
                     ),
-                elevation: 0.0,
-                borderRadius: BorderRadius.circular(24.0),
+                    color: Colors.white,
+                    letterSpacing: 0.0,
+                    fontWeight: FlutterFlowTheme.of(
+                      context,
+                    ).titleSmall.fontWeight,
+                    fontStyle: FlutterFlowTheme.of(
+                      context,
+                    ).titleSmall.fontStyle,
+                  ),
+                  elevation: 0.0,
+                  borderRadius: BorderRadius.circular(24.0),
+                ),
               ),
-            ),
-          ].divide(SizedBox(height: 12.0)),
+            ].divide(SizedBox(height: 12.0)),
+          ),
         ),
       ),
     );

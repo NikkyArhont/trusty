@@ -4,15 +4,39 @@ service cloud.firestore {
     match /user/{document} {
       allow create: if request.auth.uid == document;
       allow read: if request.auth.uid == document;
-      allow write: if request.auth.uid == document;
-      allow delete: if request.auth.uid == document;
+      allow update: if request.auth.uid == document
+        && resource.data.get('isBlocked', false) != true
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
+          'isBlocked', 'blockedAt', 'blockedReason', 'blockedReport'
+        ]);
+      allow delete: if request.auth.uid == document
+        && resource.data.get('isBlocked', false) != true;
+    }
+
+    match /publicMasterProfiles/{document} {
+      allow read: if request.auth != null;
+      allow write: if false;
     }
 
     match /service/{document} {
-      allow create: if true;
+      allow create: if isActiveUser()
+        && request.resource.data.owner == signedInUserRef()
+        && request.resource.data.status == 'onModerate';
       allow read: if true;
-      allow write: if false;
-      allow delete: if false;
+      allow update: if isActiveUser() && (
+        (
+          resource.data.owner == signedInUserRef()
+          && request.resource.data.owner == resource.data.owner
+          && request.resource.data.status == 'onModerate'
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'title', 'description', 'price', 'time', 'categoryKey', 'place',
+            'location', 'masterTitle', 'masterPhoto', 'image', 'status'
+          ])
+        )
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recommenderPhones', 'recommendations'])
+      );
+      allow delete: if isActiveUser()
+        && resource.data.owner == signedInUserRef();
     }
 
     match /category/{document} {
@@ -23,10 +47,138 @@ service cloud.firestore {
     }
 
     match /records/{document} {
-      allow create: if true;
+      allow create: if isActiveUser();
       allow read: if true;
-      allow write: if false;
+      allow update: if isActiveUser();
       allow delete: if false;
+    }
+
+    function signedInUserRef() {
+      return /databases/$(database)/documents/user/$(request.auth.uid);
+    }
+
+    function isActiveUser() {
+      return request.auth != null
+        && get(signedInUserRef()).data.get('isBlocked', false) != true;
+    }
+
+    function isChatParticipant(chatData) {
+      return request.auth != null
+        && (
+          (
+            chatData.participantIds is list
+            && request.auth.uid in chatData.participantIds
+          )
+          || (
+            chatData.participants is list
+            && signedInUserRef() in chatData.participants
+          )
+        );
+    }
+
+    function isOtherChatParticipant(chatData, userRef) {
+      return (
+          chatData.client == signedInUserRef()
+          && chatData.master == userRef
+        )
+        || (
+          chatData.master == signedInUserRef()
+          && chatData.client == userRef
+        );
+    }
+
+    function isChatOpen(chatData) {
+      return !('blockedByIds' in chatData) || chatData.blockedByIds.size() == 0;
+    }
+
+    match /chats/{document} {
+      allow create: if isActiveUser()
+        && isChatParticipant(request.resource.data);
+      // Chat lists query one of these required role fields directly. This also
+      // keeps older chats visible when they predate participantIds.
+      allow list: if isActiveUser()
+        && (
+          resource.data.client == signedInUserRef()
+          || resource.data.master == signedInUserRef()
+        );
+      allow get: if isActiveUser()
+        && isChatParticipant(resource.data);
+      allow update: if isActiveUser()
+        && isChatParticipant(resource.data)
+        && request.resource.data.get('blockedByIds', [])
+          .hasAll(resource.data.get('blockedByIds', []));
+      allow delete: if false;
+
+      match /messages/{message} {
+        allow create: if isActiveUser()
+          && isChatParticipant(
+            get(/databases/$(database)/documents/chats/$(document)).data
+          )
+          && isChatOpen(
+            get(/databases/$(database)/documents/chats/$(document)).data
+          )
+          && request.resource.data.sender == signedInUserRef();
+        allow read: if isActiveUser()
+          && isChatParticipant(
+          get(/databases/$(database)/documents/chats/$(document)).data
+        );
+        allow update: if isActiveUser()
+          && isChatParticipant(
+            get(/databases/$(database)/documents/chats/$(document)).data
+          )
+          && resource.data.sender != signedInUserRef()
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['read', 'read_time'])
+          && request.resource.data.read == true;
+        allow delete: if false;
+      }
+    }
+
+    match /notifications/{document} {
+      allow create: if isActiveUser();
+      allow read, update: if isActiveUser()
+        && resource.data.user == signedInUserRef();
+      allow delete: if false;
+    }
+
+    match /reports/{document} {
+      allow create: if isActiveUser()
+        && request.resource.data.reporter == signedInUserRef()
+        && request.resource.data.reportedUser != signedInUserRef()
+        && request.resource.data.status == 'pending'
+        && request.resource.data.reason is string
+        && request.resource.data.reason.size() > 0
+        && request.resource.data.reason.size() <= 200
+        && request.resource.data.details is string
+        && request.resource.data.details.size() <= 2000
+        && request.resource.data.keys().hasOnly([
+          'reporter', 'reportedUser', 'chat', 'reason', 'details', 'status',
+          'createdAt'
+        ])
+        && isChatParticipant(get(request.resource.data.chat).data)
+        && isOtherChatParticipant(
+          get(request.resource.data.chat).data,
+          request.resource.data.reportedUser
+        );
+      allow read: if request.auth != null
+        && resource.data.reporter == signedInUserRef();
+      allow update, delete: if false;
+    }
+
+    match /smsAuthChallenges/{document} {
+      allow read, write: if false;
+    }
+
+    match /smsAuthRateLimits/{document} {
+      allow read, write: if false;
+    }
+
+    match /telegramAuthChallenges/{document} {
+      allow read, write: if false;
+    }
+
+    match /telegramAuthRateLimits/{document} {
+      allow read, write: if false;
     }
   }
 }

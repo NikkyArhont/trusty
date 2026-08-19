@@ -17,10 +17,7 @@ import 'service_card_big_model.dart';
 export 'service_card_big_model.dart';
 
 class ServiceCardBigWidget extends StatefulWidget {
-  const ServiceCardBigWidget({
-    super.key,
-    required this.servDoc,
-  });
+  const ServiceCardBigWidget({super.key, required this.servDoc});
 
   final ServiceRecord? servDoc;
 
@@ -67,12 +64,9 @@ class _ServiceCardBigWidgetState extends State<ServiceCardBigWidget> {
               BoxShadow(
                 blurRadius: 2.0,
                 color: Color(0x1A000000),
-                offset: Offset(
-                  0.0,
-                  1.0,
-                ),
+                offset: Offset(0.0, 1.0),
                 spreadRadius: 0.0,
-              )
+              ),
             ],
             borderRadius: BorderRadius.circular(16.0),
           ),
@@ -101,9 +95,7 @@ class _ServiceCardBigWidgetState extends State<ServiceCardBigWidget> {
                     child: wrapWithModel(
                       model: _model.trustBadgeModel,
                       updateCallback: () => safeSetState(() {}),
-                      child: TrustBadgeWidget(
-                        score: '0',
-                      ),
+                      child: TrustBadgeWidget(score: '0'),
                     ),
                   ),
                 ],
@@ -131,61 +123,57 @@ class _ServiceCardBigWidgetState extends State<ServiceCardBigWidget> {
                                 Text(
                                   valueOrDefault<String>(
                                     widget!.servDoc?.title,
-                                    'noTitle',
+                                    'Без названия',
                                   ),
                                   maxLines: 1,
-                                  style: FlutterFlowTheme.of(context)
-                                      .titleLarge
+                                  style: FlutterFlowTheme.of(context).titleLarge
                                       .override(
                                         font: GoogleFonts.interTight(
-                                          fontWeight:
-                                              FlutterFlowTheme.of(context)
-                                                  .titleLarge
-                                                  .fontWeight,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .titleLarge
-                                                  .fontStyle,
+                                          fontWeight: FlutterFlowTheme.of(
+                                            context,
+                                          ).titleLarge.fontWeight,
+                                          fontStyle: FlutterFlowTheme.of(
+                                            context,
+                                          ).titleLarge.fontStyle,
                                         ),
-                                        color: FlutterFlowTheme.of(context)
-                                            .primaryText,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryText,
                                         letterSpacing: 0.0,
-                                        fontWeight: FlutterFlowTheme.of(context)
-                                            .titleLarge
-                                            .fontWeight,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .titleLarge
-                                            .fontStyle,
+                                        fontWeight: FlutterFlowTheme.of(
+                                          context,
+                                        ).titleLarge.fontWeight,
+                                        fontStyle: FlutterFlowTheme.of(
+                                          context,
+                                        ).titleLarge.fontStyle,
                                       ),
                                   overflow: TextOverflow.ellipsis,
                                 ),
                                 Text(
                                   valueOrDefault<String>(
                                     widget!.servDoc?.description,
-                                    'noDescription',
+                                    'Без описания',
                                   ),
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodyMedium
+                                  style: FlutterFlowTheme.of(context).bodyMedium
                                       .override(
                                         font: GoogleFonts.jetBrainsMono(
-                                          fontWeight:
-                                              FlutterFlowTheme.of(context)
-                                                  .bodyMedium
-                                                  .fontWeight,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .bodyMedium
-                                                  .fontStyle,
+                                          fontWeight: FlutterFlowTheme.of(
+                                            context,
+                                          ).bodyMedium.fontWeight,
+                                          fontStyle: FlutterFlowTheme.of(
+                                            context,
+                                          ).bodyMedium.fontStyle,
                                         ),
-                                        color: FlutterFlowTheme.of(context)
-                                            .secondaryText,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).secondaryText,
                                         letterSpacing: 0.0,
-                                        fontWeight: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontWeight,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodyMedium
-                                            .fontStyle,
+                                        fontWeight: FlutterFlowTheme.of(
+                                          context,
+                                        ).bodyMedium.fontWeight,
+                                        fontStyle: FlutterFlowTheme.of(
+                                          context,
+                                        ).bodyMedium.fontStyle,
                                       ),
                                 ),
                               ].divide(SizedBox(height: 4.0)),
@@ -198,25 +186,24 @@ class _ServiceCardBigWidgetState extends State<ServiceCardBigWidget> {
                               decimalType: DecimalType.automatic,
                               currency: '₽',
                             ),
-                            style: FlutterFlowTheme.of(context)
-                                .titleMedium
+                            style: FlutterFlowTheme.of(context).titleMedium
                                 .override(
                                   font: GoogleFonts.interTight(
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .titleMedium
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .titleMedium
-                                        .fontStyle,
+                                    fontWeight: FlutterFlowTheme.of(
+                                      context,
+                                    ).titleMedium.fontWeight,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).titleMedium.fontStyle,
                                   ),
                                   color: FlutterFlowTheme.of(context).primary,
                                   letterSpacing: 0.0,
-                                  fontWeight: FlutterFlowTheme.of(context)
-                                      .titleMedium
-                                      .fontWeight,
-                                  fontStyle: FlutterFlowTheme.of(context)
-                                      .titleMedium
-                                      .fontStyle,
+                                  fontWeight: FlutterFlowTheme.of(
+                                    context,
+                                  ).titleMedium.fontWeight,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).titleMedium.fontStyle,
                                 ),
                           ),
                         ],
@@ -226,7 +213,7 @@ class _ServiceCardBigWidgetState extends State<ServiceCardBigWidget> {
                         mainAxisAlignment: MainAxisAlignment.start,
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          if (widget!.servDoc?.hasTime() ?? true)
+                          if ((widget.servDoc?.time ?? 0) > 0)
                             Row(
                               mainAxisSize: MainAxisSize.max,
                               mainAxisAlignment: MainAxisAlignment.start,
@@ -234,78 +221,80 @@ class _ServiceCardBigWidgetState extends State<ServiceCardBigWidget> {
                               children: [
                                 Icon(
                                   Icons.schedule_rounded,
-                                  color: FlutterFlowTheme.of(context)
-                                      .secondaryText,
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).secondaryText,
                                   size: 16.0,
                                 ),
                                 Text(
-                                  valueOrDefault<String>(
-                                    widget!.servDoc?.time?.toString(),
-                                    'noTime',
-                                  ),
-                                  style: FlutterFlowTheme.of(context)
-                                      .bodySmall
+                                  widget.servDoc!.formattedDuration,
+                                  style: FlutterFlowTheme.of(context).bodySmall
                                       .override(
                                         font: GoogleFonts.jetBrainsMono(
-                                          fontWeight:
-                                              FlutterFlowTheme.of(context)
-                                                  .bodySmall
-                                                  .fontWeight,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .bodySmall
-                                                  .fontStyle,
+                                          fontWeight: FlutterFlowTheme.of(
+                                            context,
+                                          ).bodySmall.fontWeight,
+                                          fontStyle: FlutterFlowTheme.of(
+                                            context,
+                                          ).bodySmall.fontStyle,
                                         ),
-                                        color: FlutterFlowTheme.of(context)
-                                            .secondaryText,
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).secondaryText,
                                         letterSpacing: 0.0,
-                                        fontWeight: FlutterFlowTheme.of(context)
-                                            .bodySmall
-                                            .fontWeight,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodySmall
-                                            .fontStyle,
+                                        fontWeight: FlutterFlowTheme.of(
+                                          context,
+                                        ).bodySmall.fontWeight,
+                                        fontStyle: FlutterFlowTheme.of(
+                                          context,
+                                        ).bodySmall.fontStyle,
                                       ),
                                 ),
                               ].divide(SizedBox(width: 4.0)),
                             ),
                           Text(
                             valueOrDefault<String>(
-                              FFAppState()
-                                  .presetCategory
-                                  .where((e) =>
-                                      e.key == widget!.servDoc?.categoryKey)
+                              FFAppState().presetCategory
+                                  .where(
+                                    (e) =>
+                                        e.key == widget!.servDoc?.categoryKey,
+                                  )
                                   .toList()
                                   .firstOrNull
                                   ?.titleRU,
-                              'noCat',
+                              'Без категории',
                             ),
-                            style:
-                                FlutterFlowTheme.of(context).bodySmall.override(
-                                      font: GoogleFonts.jetBrainsMono(
-                                        fontWeight: FlutterFlowTheme.of(context)
-                                            .bodySmall
-                                            .fontWeight,
-                                        fontStyle: FlutterFlowTheme.of(context)
-                                            .bodySmall
-                                            .fontStyle,
-                                      ),
-                                      color: FlutterFlowTheme.of(context)
-                                          .secondaryText,
-                                      letterSpacing: 0.0,
-                                      fontWeight: FlutterFlowTheme.of(context)
-                                          .bodySmall
-                                          .fontWeight,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .bodySmall
-                                          .fontStyle,
-                                    ),
+                            style: FlutterFlowTheme.of(context).bodySmall
+                                .override(
+                                  font: GoogleFonts.jetBrainsMono(
+                                    fontWeight: FlutterFlowTheme.of(
+                                      context,
+                                    ).bodySmall.fontWeight,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).bodySmall.fontStyle,
+                                  ),
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).secondaryText,
+                                  letterSpacing: 0.0,
+                                  fontWeight: FlutterFlowTheme.of(
+                                    context,
+                                  ).bodySmall.fontWeight,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).bodySmall.fontStyle,
+                                ),
                           ),
                         ],
                       ),
                       Padding(
-                        padding:
-                            EdgeInsetsDirectional.fromSTEB(0.0, 8.0, 0.0, 8.0),
+                        padding: EdgeInsetsDirectional.fromSTEB(
+                          0.0,
+                          8.0,
+                          0.0,
+                          8.0,
+                        ),
                         child: Divider(
                           color: FlutterFlowTheme.of(context).divider,
                         ),
@@ -327,35 +316,33 @@ class _ServiceCardBigWidgetState extends State<ServiceCardBigWidget> {
                                 'egijd7bc' /* Recommended by 48 people */,
                               ),
                               maxLines: 1,
-                              style: FlutterFlowTheme.of(context)
-                                  .labelMedium
+                              style: FlutterFlowTheme.of(context).labelMedium
                                   .override(
                                     font: GoogleFonts.jetBrainsMono(
-                                      fontWeight: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .fontWeight,
-                                      fontStyle: FlutterFlowTheme.of(context)
-                                          .labelMedium
-                                          .fontStyle,
+                                      fontWeight: FlutterFlowTheme.of(
+                                        context,
+                                      ).labelMedium.fontWeight,
+                                      fontStyle: FlutterFlowTheme.of(
+                                        context,
+                                      ).labelMedium.fontStyle,
                                     ),
-                                    color: FlutterFlowTheme.of(context)
-                                        .primaryText,
+                                    color: FlutterFlowTheme.of(
+                                      context,
+                                    ).primaryText,
                                     letterSpacing: 0.0,
-                                    fontWeight: FlutterFlowTheme.of(context)
-                                        .labelMedium
-                                        .fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(context)
-                                        .labelMedium
-                                        .fontStyle,
+                                    fontWeight: FlutterFlowTheme.of(
+                                      context,
+                                    ).labelMedium.fontWeight,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).labelMedium.fontStyle,
                                   ),
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ].divide(SizedBox(width: 8.0)),
                       ),
-                      Container(
-                        height: 8.0,
-                      ),
+                      Container(height: 8.0),
                       Row(
                         mainAxisSize: MainAxisSize.max,
                         mainAxisAlignment: MainAxisAlignment.start,
@@ -381,8 +368,9 @@ class _ServiceCardBigWidgetState extends State<ServiceCardBigWidget> {
                                       children: [
                                         Icon(
                                           Icons.calendar_today_rounded,
-                                          color: FlutterFlowTheme.of(context)
-                                              .primaryBackground,
+                                          color: FlutterFlowTheme.of(
+                                            context,
+                                          ).primaryBackground,
                                           size: 16.0,
                                         ),
                                         Text(
@@ -395,39 +383,29 @@ class _ServiceCardBigWidgetState extends State<ServiceCardBigWidget> {
                                                 font: GoogleFonts.jetBrainsMono(
                                                   fontWeight:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .labelMedium
-                                                          .fontWeight,
+                                                        context,
+                                                      ).labelMedium.fontWeight,
                                                   fontStyle:
                                                       FlutterFlowTheme.of(
-                                                              context)
-                                                          .labelMedium
-                                                          .fontStyle,
+                                                        context,
+                                                      ).labelMedium.fontStyle,
                                                 ),
-                                                color:
-                                                    FlutterFlowTheme.of(context)
-                                                        .primaryBackground,
+                                                color: FlutterFlowTheme.of(
+                                                  context,
+                                                ).primaryBackground,
                                                 letterSpacing: 0.0,
-                                                fontWeight:
-                                                    FlutterFlowTheme.of(context)
-                                                        .labelMedium
-                                                        .fontWeight,
-                                                fontStyle:
-                                                    FlutterFlowTheme.of(context)
-                                                        .labelMedium
-                                                        .fontStyle,
+                                                fontWeight: FlutterFlowTheme.of(
+                                                  context,
+                                                ).labelMedium.fontWeight,
+                                                fontStyle: FlutterFlowTheme.of(
+                                                  context,
+                                                ).labelMedium.fontStyle,
                                               ),
                                         ),
-                                        Container(
-                                          width: 0.0,
-                                          height: 0.0,
-                                        ),
+                                        Container(width: 0.0, height: 0.0),
                                       ].divide(SizedBox(width: 8.0)),
                                     ),
-                                    Container(
-                                      width: 0.0,
-                                      height: 0.0,
-                                    ),
+                                    Container(width: 0.0, height: 0.0),
                                   ],
                                 ),
                               ),
@@ -440,13 +418,15 @@ class _ServiceCardBigWidgetState extends State<ServiceCardBigWidget> {
                               fillColor: FlutterFlowTheme.of(context).tertiary,
                               icon: Icon(
                                 Icons.favorite,
-                                color: (currentUserDocument?.favoriteServices
+                                color:
+                                    (currentUserDocument?.favoriteServices
                                                 ?.toList() ??
                                             [])
                                         .contains(widget!.servDoc?.reference)
                                     ? FlutterFlowTheme.of(context).error
-                                    : FlutterFlowTheme.of(context)
-                                        .secondaryText,
+                                    : FlutterFlowTheme.of(
+                                        context,
+                                      ).secondaryText,
                                 size: 24.0,
                               ),
                               showLoadingIndicator: true,
@@ -456,23 +436,20 @@ class _ServiceCardBigWidgetState extends State<ServiceCardBigWidget> {
                                         [])
                                     .contains(widget!.servDoc?.reference)) {
                                   await currentUserReference!.update({
-                                    ...mapToFirestore(
-                                      {
-                                        'favoriteServices':
-                                            FieldValue.arrayRemove(
-                                                [widget!.servDoc?.reference]),
-                                      },
-                                    ),
+                                    ...mapToFirestore({
+                                      'favoriteServices':
+                                          FieldValue.arrayRemove([
+                                            widget!.servDoc?.reference,
+                                          ]),
+                                    }),
                                   });
                                 } else {
                                   await currentUserReference!.update({
-                                    ...mapToFirestore(
-                                      {
-                                        'favoriteServices':
-                                            FieldValue.arrayUnion(
-                                                [widget!.servDoc?.reference]),
-                                      },
-                                    ),
+                                    ...mapToFirestore({
+                                      'favoriteServices': FieldValue.arrayUnion(
+                                        [widget!.servDoc?.reference],
+                                      ),
+                                    }),
                                   });
                                 }
 

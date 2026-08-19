@@ -8,6 +8,7 @@ import '../base_auth_user_provider.dart';
 import '../../flutter_flow/flutter_flow_util.dart';
 
 import '/backend/backend.dart';
+import '/backend/push_notifications/push_notifications_util.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:stream_transform/stream_transform.dart';
 import 'anonymous_auth.dart';
@@ -59,7 +60,9 @@ class FirebaseAuthManager extends AuthManager
   FirebasePhoneAuthManager phoneAuthManager = FirebasePhoneAuthManager();
 
   @override
-  Future signOut() {
+  Future signOut() async {
+    await removeCurrentUserFcmToken();
+    resetPushNotificationsState();
     return FirebaseAuth.instance.signOut();
   }
 
@@ -77,7 +80,7 @@ class FirebaseAuthManager extends AuthManager
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(
-                  'Too long since most recent sign in. Sign in again before deleting your account.')),
+                  'С момента последнего входа прошло слишком много времени. Войдите снова перед удалением аккаунта.')),
         );
       }
     }
@@ -101,7 +104,7 @@ class FirebaseAuthManager extends AuthManager
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
               content: Text(
-                  'Too long since most recent sign in. Sign in again before updating your email.')),
+                  'С момента последнего входа прошло слишком много времени. Войдите снова перед изменением почты.')),
         );
       }
     }
@@ -122,7 +125,7 @@ class FirebaseAuthManager extends AuthManager
       if (e.code == 'requires-recent-login') {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.message!}')),
+          SnackBar(content: Text('Ошибка: ${e.message!}')),
         );
       }
     }
@@ -138,12 +141,12 @@ class FirebaseAuthManager extends AuthManager
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.message!}')),
+        SnackBar(content: Text('Ошибка: ${e.message!}')),
       );
       return null;
     }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Password reset email sent')),
+      SnackBar(content: Text('Письмо для сброса пароля отправлено')),
     );
   }
 
@@ -209,7 +212,7 @@ class FirebaseAuthManager extends AuthManager
       } else if (phoneAuthManager.phoneAuthError != null) {
         final e = phoneAuthManager.phoneAuthError!;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Error: ${e.message!}'),
+          content: Text('Ошибка: ${e.message!}'),
         ));
         phoneAuthManager.update(() => phoneAuthManager.phoneAuthError = null);
       }
@@ -316,10 +319,10 @@ class FirebaseAuthManager extends AuthManager
     } on FirebaseAuthException catch (e) {
       final errorMsg = switch (e.code) {
         'email-already-in-use' =>
-          'Error: The email is already in use by a different account',
+          'Ошибка: эта почта уже используется другим аккаунтом',
         'INVALID_LOGIN_CREDENTIALS' =>
-          'Error: The supplied auth credential is incorrect, malformed or has expired',
-        _ => 'Error: ${e.message!}',
+          'Ошибка: данные для входа неверны или устарели',
+        _ => 'Ошибка: ${e.message!}',
       };
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(

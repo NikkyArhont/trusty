@@ -31,6 +31,7 @@ export 'package:cloud_firestore/cloud_firestore.dart'
 export 'package:page_transition/page_transition.dart';
 export 'internationalization.dart' show FFLocalizations;
 export 'nav/nav.dart';
+export 'text_normalization.dart';
 
 T valueOrDefault<T>(T? value, T defaultValue) =>
     (value is String && value.isEmpty) || value == null ? defaultValue : value;
@@ -67,8 +68,9 @@ Theme wrapInMaterialDatePickerTheme(
   required double iconSize,
 }) {
   final baseTheme = Theme.of(context);
-  final dateTimeMaterialStateForegroundColor =
-      WidgetStateProperty.resolveWith((states) {
+  final dateTimeMaterialStateForegroundColor = WidgetStateProperty.resolveWith((
+    states,
+  ) {
     if (states.contains(WidgetState.disabled)) {
       return pickerForegroundColor.applyAlpha(0.60);
     }
@@ -81,8 +83,9 @@ Theme wrapInMaterialDatePickerTheme(
     return null;
   });
 
-  final dateTimeMaterialStateBackgroundColor =
-      WidgetStateProperty.resolveWith((states) {
+  final dateTimeMaterialStateBackgroundColor = WidgetStateProperty.resolveWith((
+    states,
+  ) {
     if (states.contains(WidgetState.selected)) {
       return selectedDateTimeBackgroundColor;
     }
@@ -92,6 +95,9 @@ Theme wrapInMaterialDatePickerTheme(
   return Theme(
     data: baseTheme.copyWith(
       colorScheme: baseTheme.colorScheme.copyWith(
+        primary: selectedDateTimeBackgroundColor,
+        onPrimary: selectedDateTimeForegroundColor,
+        surface: pickerBackgroundColor,
         onSurface: pickerForegroundColor,
       ),
       disabledColor: pickerForegroundColor.applyAlpha(0.3),
@@ -99,24 +105,21 @@ Theme wrapInMaterialDatePickerTheme(
         headlineSmall: headerTextStyle,
         headlineMedium: headerTextStyle,
       ),
-      iconTheme: baseTheme.iconTheme.copyWith(
-        size: iconSize,
-      ),
+      iconTheme: baseTheme.iconTheme.copyWith(size: iconSize),
       textButtonTheme: TextButtonThemeData(
         style: ButtonStyle(
-            foregroundColor: WidgetStatePropertyAll(
-              actionButtonForegroundColor,
-            ),
-            overlayColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.hovered)) {
-                return actionButtonForegroundColor.applyAlpha(0.04);
-              }
-              if (states.contains(WidgetState.focused) ||
-                  states.contains(WidgetState.pressed)) {
-                return actionButtonForegroundColor.applyAlpha(0.12);
-              }
-              return null;
-            })),
+          foregroundColor: WidgetStatePropertyAll(actionButtonForegroundColor),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return actionButtonForegroundColor.applyAlpha(0.04);
+            }
+            if (states.contains(WidgetState.focused) ||
+                states.contains(WidgetState.pressed)) {
+              return actionButtonForegroundColor.applyAlpha(0.12);
+            }
+            return null;
+          }),
+        ),
       ),
       datePickerTheme: DatePickerThemeData(
         backgroundColor: pickerBackgroundColor,
@@ -153,45 +156,54 @@ Theme wrapInMaterialTimePickerTheme(
   final baseTheme = Theme.of(context);
   return Theme(
     data: baseTheme.copyWith(
-      iconTheme: baseTheme.iconTheme.copyWith(
-        size: iconSize,
+      colorScheme: baseTheme.colorScheme.copyWith(
+        primary: selectedDateTimeBackgroundColor,
+        onPrimary: selectedDateTimeForegroundColor,
+        surface: pickerBackgroundColor,
+        onSurface: pickerForegroundColor,
       ),
+      iconTheme: baseTheme.iconTheme.copyWith(size: iconSize),
       textButtonTheme: TextButtonThemeData(
         style: ButtonStyle(
-            foregroundColor: WidgetStatePropertyAll(
-              actionButtonForegroundColor,
-            ),
-            overlayColor: WidgetStateProperty.resolveWith((states) {
-              if (states.contains(WidgetState.hovered)) {
-                return actionButtonForegroundColor.applyAlpha(0.04);
-              }
-              if (states.contains(WidgetState.focused) ||
-                  states.contains(WidgetState.pressed)) {
-                return actionButtonForegroundColor.applyAlpha(0.12);
-              }
-              return null;
-            })),
+          foregroundColor: WidgetStatePropertyAll(actionButtonForegroundColor),
+          overlayColor: WidgetStateProperty.resolveWith((states) {
+            if (states.contains(WidgetState.hovered)) {
+              return actionButtonForegroundColor.applyAlpha(0.04);
+            }
+            if (states.contains(WidgetState.focused) ||
+                states.contains(WidgetState.pressed)) {
+              return actionButtonForegroundColor.applyAlpha(0.12);
+            }
+            return null;
+          }),
+        ),
       ),
       timePickerTheme: baseTheme.timePickerTheme.copyWith(
         backgroundColor: pickerBackgroundColor,
         hourMinuteTextColor: pickerForegroundColor,
-        dialHandColor: selectedDateTimeBackgroundColor,
-        dialTextColor: WidgetStateColor.resolveWith((states) =>
-            states.contains(WidgetState.selected)
-                ? selectedDateTimeForegroundColor
-                : pickerForegroundColor),
-        dayPeriodBorderSide: BorderSide(
-          color: pickerForegroundColor,
+        hourMinuteColor: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? selectedDateTimeBackgroundColor
+              : selectedDateTimeBackgroundColor.applyAlpha(0.10),
         ),
-        dayPeriodTextColor: WidgetStateColor.resolveWith((states) =>
-            states.contains(WidgetState.selected)
-                ? selectedDateTimeForegroundColor
-                : pickerForegroundColor),
-        dayPeriodColor: WidgetStateColor.resolveWith((states) =>
-            states.contains(WidgetState.selected)
-                ? selectedDateTimeBackgroundColor
-                : Colors.transparent),
-        entryModeIconColor: pickerForegroundColor,
+        dialHandColor: selectedDateTimeBackgroundColor,
+        dialTextColor: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? selectedDateTimeForegroundColor
+              : pickerForegroundColor,
+        ),
+        dayPeriodBorderSide: BorderSide(color: selectedDateTimeBackgroundColor),
+        dayPeriodTextColor: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? selectedDateTimeForegroundColor
+              : pickerForegroundColor,
+        ),
+        dayPeriodColor: WidgetStateColor.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? selectedDateTimeBackgroundColor
+              : Colors.transparent,
+        ),
+        entryModeIconColor: selectedDateTimeBackgroundColor,
       ),
     ),
     child: child,
@@ -203,7 +215,7 @@ Future launchURL(String url) async {
   try {
     await launchUrl(uri);
   } catch (e) {
-    throw 'Could not launch $uri: $e';
+    throw 'Не удалось открыть $uri: $e';
   }
 }
 
@@ -214,20 +226,9 @@ Color colorFromCssString(String color, {Color? defaultColor}) {
   return defaultColor ?? Colors.black;
 }
 
-enum FormatType {
-  decimal,
-  percent,
-  scientific,
-  compact,
-  compactLong,
-  custom,
-}
+enum FormatType { decimal, percent, scientific, compact, compactLong, custom }
 
-enum DecimalType {
-  automatic,
-  periodDecimal,
-  commaDecimal,
-}
+enum DecimalType { automatic, periodDecimal, commaDecimal }
 
 String formatNumber(
   num? value, {
@@ -281,8 +282,10 @@ String formatNumber(
       break;
     case FormatType.custom:
       final hasLocale = locale != null && locale.isNotEmpty;
-      formattedValue =
-          NumberFormat(format, hasLocale ? locale : null).format(value);
+      formattedValue = NumberFormat(
+        format,
+        hasLocale ? locale : null,
+      ).format(value);
   }
 
   if (formattedValue.isEmpty) {
@@ -402,39 +405,44 @@ const kTextValidatorWebsiteRegex =
     r'(https?:\/\/)?(www\.)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,10}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)|(https?:\/\/)?(www\.)?(?!ww)[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,10}\b([-a-zA-Z0-9@:%_\+.~#?&//=]*)';
 
 LatLng? cachedUserLocation;
-Future<LatLng> getCurrentUserLocation(
-    {required LatLng defaultLocation, bool cached = false}) async {
+Future<LatLng> getCurrentUserLocation({
+  required LatLng defaultLocation,
+  bool cached = false,
+}) async {
   if (cached && cachedUserLocation != null) {
     return cachedUserLocation!;
   }
-  return queryCurrentUserLocation().then((loc) {
-    if (loc != null) {
-      cachedUserLocation = loc;
-    }
-    return loc ?? defaultLocation;
-  }).onError((error, _) {
-    print("Error querying user location: $error");
-    return defaultLocation;
-  });
+  return queryCurrentUserLocation()
+      .then((loc) {
+        if (loc != null) {
+          cachedUserLocation = loc;
+        }
+        return loc ?? defaultLocation;
+      })
+      .onError((error, _) {
+        print("Error querying user location: $error");
+        return defaultLocation;
+      });
 }
 
 Future<LatLng?> queryCurrentUserLocation() async {
   final serviceEnabled = await Geolocator.isLocationServiceEnabled();
   if (!serviceEnabled) {
-    return Future.error('Location services are disabled.');
+    return Future.error('Службы геолокации отключены.');
   }
 
   var permission = await Geolocator.checkPermission();
   if (permission == LocationPermission.denied) {
     permission = await Geolocator.requestPermission();
     if (permission == LocationPermission.denied) {
-      return Future.error('Location permissions are denied');
+      return Future.error('Доступ к геолокации запрещён');
     }
   }
 
   if (permission == LocationPermission.deniedForever) {
     return Future.error(
-        'Location permissions are permanently denied, we cannot request permissions.');
+      'Доступ к геолокации запрещён навсегда. Запросить разрешение повторно невозможно.',
+    );
   }
 
   final position = await Geolocator.getCurrentPosition();
@@ -449,8 +457,10 @@ extension FFTextEditingControllerExt on TextEditingController? {
 }
 
 extension IterableExt<T> on Iterable<T> {
-  List<T> sortedList<S extends Comparable>(
-      {S Function(T)? keyOf, bool desc = false}) {
+  List<T> sortedList<S extends Comparable>({
+    S Function(T)? keyOf,
+    bool desc = false,
+  }) {
     final sortedAscending = toList()
       ..sort(keyOf == null ? null : ((a, b) => keyOf(a).compareTo(keyOf(b))));
     if (desc) {
@@ -493,9 +503,7 @@ void showSnackbar(
               child: Container(
                 height: 20,
                 width: 20,
-                child: const CircularProgressIndicator(
-                  color: Colors.white,
-                ),
+                child: const CircularProgressIndicator(color: Colors.white),
               ),
             ),
           Text(message),
@@ -509,8 +517,8 @@ void showSnackbar(
 extension FFStringExt on String {
   String maybeHandleOverflow({int? maxChars, String replacement = ''}) =>
       maxChars != null && length > maxChars
-          ? replaceRange(maxChars, null, replacement)
-          : this;
+      ? replaceRange(maxChars, null, replacement)
+      : this;
 
   String toCapitalization(TextCapitalization textCapitalization) {
     switch (textCapitalization) {
@@ -532,10 +540,10 @@ extension ListFilterExt<T> on Iterable<T?> {
 
 extension MapFilterExtensions<T> on Map<String, T?> {
   Map<String, T> get withoutNulls => Map.fromEntries(
-        entries
-            .where((e) => e.value != null)
-            .map((e) => MapEntry(e.key, e.value as T)),
-      );
+    entries
+        .where((e) => e.value != null)
+        .map((e) => MapEntry(e.key, e.value as T)),
+  );
 }
 
 extension MapListContainsExt on List<dynamic> {
@@ -550,10 +558,10 @@ extension ListDivideExt<T extends Widget> on Iterable<T> {
   List<Widget> divide(Widget t, {bool Function(int)? filterFn}) => isEmpty
       ? []
       : (enumerate
-          .map((e) => [e.value, if (filterFn == null || filterFn(e.key)) t])
-          .expand((i) => i)
-          .toList()
-        ..removeLast());
+            .map((e) => [e.value, if (filterFn == null || filterFn(e.key)) t])
+            .expand((i) => i)
+            .toList()
+          ..removeLast());
 
   List<Widget> around(Widget t) => addToStart(t).addToEnd(t);
 
@@ -563,9 +571,12 @@ extension ListDivideExt<T extends Widget> on Iterable<T> {
   List<Widget> addToEnd(Widget t) =>
       enumerate.map((e) => e.value).toList()..add(t);
 
-  List<Padding> paddingTopEach(double val) =>
-      map((w) => Padding(padding: EdgeInsets.only(top: val), child: w))
-          .toList();
+  List<Padding> paddingTopEach(double val) => map(
+    (w) => Padding(
+      padding: EdgeInsets.only(top: val),
+      child: w,
+    ),
+  ).toList();
 }
 
 extension StatefulWidgetExtensions on State<StatefulWidget> {

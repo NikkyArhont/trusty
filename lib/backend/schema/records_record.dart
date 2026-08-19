@@ -10,10 +10,8 @@ import 'index.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 
 class RecordsRecord extends FirestoreRecord {
-  RecordsRecord._(
-    DocumentReference reference,
-    Map<String, dynamic> data,
-  ) : super(reference, data) {
+  RecordsRecord._(DocumentReference reference, Map<String, dynamic> data)
+    : super(reference, data) {
     _initializeFields();
   }
 
@@ -42,6 +40,36 @@ class RecordsRecord extends FirestoreRecord {
   RecordStatus? get status => _status;
   bool hasStatus() => _status != null;
 
+  // "clientName" field.
+  String? _clientName;
+  String get clientName => _clientName ?? '';
+  bool hasClientName() => _clientName != null;
+
+  // "clientPhoto" field.
+  String? _clientPhoto;
+  String get clientPhoto => _clientPhoto ?? '';
+  bool hasClientPhoto() => _clientPhoto != null;
+
+  // "clientPhone" field.
+  String? _clientPhone;
+  String get clientPhone => _clientPhone ?? '';
+  bool hasClientPhone() => _clientPhone != null;
+
+  // "completed_time" field.
+  DateTime? _completedTime;
+  DateTime? get completedTime => _completedTime;
+  bool hasCompletedTime() => _completedTime != null;
+
+  // "completed_by" field.
+  DocumentReference? _completedBy;
+  DocumentReference? get completedBy => _completedBy;
+  bool hasCompletedBy() => _completedBy != null;
+
+  // "completion_method" field.
+  String? _completionMethod;
+  String get completionMethod => _completionMethod ?? '';
+  bool hasCompletionMethod() => _completionMethod != null;
+
   void _initializeFields() {
     _master = snapshotData['master'] as DocumentReference?;
     _client = snapshotData['client'] as DocumentReference?;
@@ -50,6 +78,12 @@ class RecordsRecord extends FirestoreRecord {
     _status = snapshotData['status'] is RecordStatus
         ? snapshotData['status']
         : deserializeEnum<RecordStatus>(snapshotData['status']);
+    _clientName = snapshotData['clientName'] as String?;
+    _clientPhoto = snapshotData['clientPhoto'] as String?;
+    _clientPhone = snapshotData['clientPhone'] as String?;
+    _completedTime = snapshotData['completed_time'] as DateTime?;
+    _completedBy = snapshotData['completed_by'] as DocumentReference?;
+    _completionMethod = snapshotData['completion_method'] as String?;
   }
 
   static CollectionReference get collection =>
@@ -70,8 +104,7 @@ class RecordsRecord extends FirestoreRecord {
   static RecordsRecord getDocumentFromData(
     Map<String, dynamic> data,
     DocumentReference reference,
-  ) =>
-      RecordsRecord._(reference, mapFromFirestore(data));
+  ) => RecordsRecord._(reference, mapFromFirestore(data));
 
   @override
   String toString() =>
@@ -92,6 +125,12 @@ Map<String, dynamic> createRecordsRecordData({
   DocumentReference? service,
   DateTime? date,
   RecordStatus? status,
+  String? clientName,
+  String? clientPhoto,
+  String? clientPhone,
+  DateTime? completedTime,
+  DocumentReference? completedBy,
+  String? completionMethod,
 }) {
   final firestoreData = mapToFirestore(
     <String, dynamic>{
@@ -100,6 +139,12 @@ Map<String, dynamic> createRecordsRecordData({
       'service': service,
       'date': date,
       'status': status,
+      'clientName': clientName,
+      'clientPhoto': clientPhoto,
+      'clientPhone': clientPhone,
+      'completed_time': completedTime,
+      'completed_by': completedBy,
+      'completion_method': completionMethod,
     }.withoutNulls,
   );
 
@@ -115,12 +160,29 @@ class RecordsRecordDocumentEquality implements Equality<RecordsRecord> {
         e1?.client == e2?.client &&
         e1?.service == e2?.service &&
         e1?.date == e2?.date &&
-        e1?.status == e2?.status;
+        e1?.status == e2?.status &&
+        e1?.clientName == e2?.clientName &&
+        e1?.clientPhoto == e2?.clientPhoto &&
+        e1?.clientPhone == e2?.clientPhone &&
+        e1?.completedTime == e2?.completedTime &&
+        e1?.completedBy == e2?.completedBy &&
+        e1?.completionMethod == e2?.completionMethod;
   }
 
   @override
-  int hash(RecordsRecord? e) => const ListEquality()
-      .hash([e?.master, e?.client, e?.service, e?.date, e?.status]);
+  int hash(RecordsRecord? e) => const ListEquality().hash([
+    e?.master,
+    e?.client,
+    e?.service,
+    e?.date,
+    e?.status,
+    e?.clientName,
+    e?.clientPhoto,
+    e?.clientPhone,
+    e?.completedTime,
+    e?.completedBy,
+    e?.completionMethod,
+  ]);
 
   @override
   bool isValidKey(Object? o) => o is RecordsRecord;

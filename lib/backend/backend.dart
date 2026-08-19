@@ -9,6 +9,7 @@ import 'schema/user_record.dart';
 import 'schema/service_record.dart';
 import 'schema/category_record.dart';
 import 'schema/records_record.dart';
+import 'schema/notification_record.dart';
 
 export 'dart:async' show StreamSubscription;
 export 'package:cloud_firestore/cloud_firestore.dart' hide Order;
@@ -21,154 +22,167 @@ export 'schema/user_record.dart';
 export 'schema/service_record.dart';
 export 'schema/category_record.dart';
 export 'schema/records_record.dart';
+export 'schema/notification_record.dart';
 
 /// Functions to query UserRecords (as a Stream and as a Future).
 Future<int> queryUserRecordCount({
   Query Function(Query)? queryBuilder,
   int limit = -1,
-}) =>
-    queryCollectionCount(
-      UserRecord.collection,
-      queryBuilder: queryBuilder,
-      limit: limit,
-    );
+}) => queryCollectionCount(
+  UserRecord.collection,
+  queryBuilder: queryBuilder,
+  limit: limit,
+);
 
 Stream<List<UserRecord>> queryUserRecord({
   Query Function(Query)? queryBuilder,
   int limit = -1,
   bool singleRecord = false,
-}) =>
-    queryCollection(
-      UserRecord.collection,
-      UserRecord.fromSnapshot,
-      queryBuilder: queryBuilder,
-      limit: limit,
-      singleRecord: singleRecord,
-    );
+}) => queryCollection(
+  UserRecord.collection,
+  UserRecord.fromSnapshot,
+  queryBuilder: queryBuilder,
+  limit: limit,
+  singleRecord: singleRecord,
+);
 
 Future<List<UserRecord>> queryUserRecordOnce({
   Query Function(Query)? queryBuilder,
   int limit = -1,
   bool singleRecord = false,
-}) =>
-    queryCollectionOnce(
-      UserRecord.collection,
-      UserRecord.fromSnapshot,
-      queryBuilder: queryBuilder,
-      limit: limit,
-      singleRecord: singleRecord,
-    );
+}) => queryCollectionOnce(
+  UserRecord.collection,
+  UserRecord.fromSnapshot,
+  queryBuilder: queryBuilder,
+  limit: limit,
+  singleRecord: singleRecord,
+);
 
 /// Functions to query ServiceRecords (as a Stream and as a Future).
 Future<int> queryServiceRecordCount({
   Query Function(Query)? queryBuilder,
   int limit = -1,
-}) =>
-    queryCollectionCount(
-      ServiceRecord.collection,
-      queryBuilder: queryBuilder,
-      limit: limit,
-    );
+}) => queryCollectionCount(
+  ServiceRecord.collection,
+  queryBuilder: queryBuilder,
+  limit: limit,
+);
 
 Stream<List<ServiceRecord>> queryServiceRecord({
   Query Function(Query)? queryBuilder,
   int limit = -1,
   bool singleRecord = false,
-}) =>
-    queryCollection(
-      ServiceRecord.collection,
-      ServiceRecord.fromSnapshot,
-      queryBuilder: queryBuilder,
-      limit: limit,
-      singleRecord: singleRecord,
-    );
+}) => queryCollection(
+  ServiceRecord.collection,
+  ServiceRecord.fromSnapshot,
+  queryBuilder: queryBuilder,
+  limit: limit,
+  singleRecord: singleRecord,
+);
 
 Future<List<ServiceRecord>> queryServiceRecordOnce({
   Query Function(Query)? queryBuilder,
   int limit = -1,
   bool singleRecord = false,
-}) =>
-    queryCollectionOnce(
-      ServiceRecord.collection,
-      ServiceRecord.fromSnapshot,
-      queryBuilder: queryBuilder,
-      limit: limit,
-      singleRecord: singleRecord,
-    );
+}) => queryCollectionOnce(
+  ServiceRecord.collection,
+  ServiceRecord.fromSnapshot,
+  queryBuilder: queryBuilder,
+  limit: limit,
+  singleRecord: singleRecord,
+);
 
 /// Functions to query CategoryRecords (as a Stream and as a Future).
 Future<int> queryCategoryRecordCount({
   Query Function(Query)? queryBuilder,
   int limit = -1,
-}) =>
-    queryCollectionCount(
-      CategoryRecord.collection,
-      queryBuilder: queryBuilder,
-      limit: limit,
-    );
+}) => queryCollectionCount(
+  CategoryRecord.collection,
+  queryBuilder: queryBuilder,
+  limit: limit,
+);
 
 Stream<List<CategoryRecord>> queryCategoryRecord({
   Query Function(Query)? queryBuilder,
   int limit = -1,
   bool singleRecord = false,
-}) =>
-    queryCollection(
-      CategoryRecord.collection,
-      CategoryRecord.fromSnapshot,
-      queryBuilder: queryBuilder,
-      limit: limit,
-      singleRecord: singleRecord,
-    );
+}) => queryCollection(
+  CategoryRecord.collection,
+  CategoryRecord.fromSnapshot,
+  queryBuilder: queryBuilder,
+  limit: limit,
+  singleRecord: singleRecord,
+);
 
 Future<List<CategoryRecord>> queryCategoryRecordOnce({
   Query Function(Query)? queryBuilder,
   int limit = -1,
   bool singleRecord = false,
-}) =>
-    queryCollectionOnce(
-      CategoryRecord.collection,
-      CategoryRecord.fromSnapshot,
-      queryBuilder: queryBuilder,
-      limit: limit,
-      singleRecord: singleRecord,
-    );
+}) => queryCollectionOnce(
+  CategoryRecord.collection,
+  CategoryRecord.fromSnapshot,
+  queryBuilder: queryBuilder,
+  limit: limit,
+  singleRecord: singleRecord,
+);
 
 /// Functions to query RecordsRecords (as a Stream and as a Future).
 Future<int> queryRecordsRecordCount({
   Query Function(Query)? queryBuilder,
   int limit = -1,
-}) =>
-    queryCollectionCount(
-      RecordsRecord.collection,
-      queryBuilder: queryBuilder,
-      limit: limit,
-    );
+}) => queryCollectionCount(
+  RecordsRecord.collection,
+  queryBuilder: queryBuilder,
+  limit: limit,
+);
 
 Stream<List<RecordsRecord>> queryRecordsRecord({
   Query Function(Query)? queryBuilder,
   int limit = -1,
   bool singleRecord = false,
-}) =>
-    queryCollection(
-      RecordsRecord.collection,
-      RecordsRecord.fromSnapshot,
-      queryBuilder: queryBuilder,
-      limit: limit,
-      singleRecord: singleRecord,
-    );
+}) => queryCollection(
+  RecordsRecord.collection,
+  RecordsRecord.fromSnapshot,
+  queryBuilder: queryBuilder,
+  limit: limit,
+  singleRecord: singleRecord,
+);
 
 Future<List<RecordsRecord>> queryRecordsRecordOnce({
   Query Function(Query)? queryBuilder,
   int limit = -1,
   bool singleRecord = false,
-}) =>
-    queryCollectionOnce(
-      RecordsRecord.collection,
-      RecordsRecord.fromSnapshot,
-      queryBuilder: queryBuilder,
-      limit: limit,
-      singleRecord: singleRecord,
-    );
+}) => queryCollectionOnce(
+  RecordsRecord.collection,
+  RecordsRecord.fromSnapshot,
+  queryBuilder: queryBuilder,
+  limit: limit,
+  singleRecord: singleRecord,
+);
+
+Stream<List<NotificationRecord>> queryNotificationRecord({
+  Query Function(Query)? queryBuilder,
+  int limit = -1,
+  bool singleRecord = false,
+}) => queryCollection(
+  NotificationRecord.collection,
+  NotificationRecord.fromSnapshot,
+  queryBuilder: queryBuilder,
+  limit: limit,
+  singleRecord: singleRecord,
+);
+
+Future<List<NotificationRecord>> queryNotificationRecordOnce({
+  Query Function(Query)? queryBuilder,
+  int limit = -1,
+  bool singleRecord = false,
+}) => queryCollectionOnce(
+  NotificationRecord.collection,
+  NotificationRecord.fromSnapshot,
+  queryBuilder: queryBuilder,
+  limit: limit,
+  singleRecord: singleRecord,
+);
 
 Future<int> queryCollectionCount(
   Query collection, {
@@ -181,9 +195,13 @@ Future<int> queryCollectionCount(
     query = query.limit(limit);
   }
 
-  return query.count().get().catchError((err) {
-    print('Error querying $collection: $err');
-  }).then((value) => value.count!);
+  return query
+      .count()
+      .get()
+      .catchError((err) {
+        print('Error querying $collection: $err');
+      })
+      .then((value) => value.count!);
 }
 
 Stream<List<T>> queryCollection<T>(
@@ -198,18 +216,23 @@ Stream<List<T>> queryCollection<T>(
   if (limit > 0 || singleRecord) {
     query = query.limit(singleRecord ? 1 : limit);
   }
-  return query.snapshots().handleError((err) {
-    print('Error querying $collection: $err');
-  }).map((s) => s.docs
+  return query
+      .snapshots()
+      .handleError((err) {
+        print('Error querying $collection: $err');
+      })
       .map(
-        (d) => safeGet(
-          () => recordBuilder(d),
-          (e) => print('Error serializing doc ${d.reference.path}:\n$e'),
-        ),
-      )
-      .where((d) => d != null)
-      .map((d) => d!)
-      .toList());
+        (s) => s.docs
+            .map(
+              (d) => safeGet(
+                () => recordBuilder(d),
+                (e) => print('Error serializing doc ${d.reference.path}:\n$e'),
+              ),
+            )
+            .where((d) => d != null)
+            .map((d) => d!)
+            .toList(),
+      );
 }
 
 Future<List<T>> queryCollectionOnce<T>(
@@ -224,16 +247,18 @@ Future<List<T>> queryCollectionOnce<T>(
   if (limit > 0 || singleRecord) {
     query = query.limit(singleRecord ? 1 : limit);
   }
-  return query.get().then((s) => s.docs
-      .map(
-        (d) => safeGet(
-          () => recordBuilder(d),
-          (e) => print('Error serializing doc ${d.reference.path}:\n$e'),
-        ),
-      )
-      .where((d) => d != null)
-      .map((d) => d!)
-      .toList());
+  return query.get().then(
+    (s) => s.docs
+        .map(
+          (d) => safeGet(
+            () => recordBuilder(d),
+            (e) => print('Error serializing doc ${d.reference.path}:\n$e'),
+          ),
+        )
+        .where((d) => d != null)
+        .map((d) => d!)
+        .toList(),
+  );
 }
 
 Filter filterIn(String field, List? list) => (list?.isEmpty ?? true)
@@ -242,8 +267,8 @@ Filter filterIn(String field, List? list) => (list?.isEmpty ?? true)
 
 Filter filterArrayContainsAny(String field, List? list) =>
     (list?.isEmpty ?? true)
-        ? Filter(field, arrayContainsAny: null)
-        : Filter(field, arrayContainsAny: list);
+    ? Filter(field, arrayContainsAny: null)
+    : Filter(field, arrayContainsAny: list);
 
 extension QueryExtension on Query {
   Query whereIn(String field, List? list) => (list?.isEmpty ?? true)
@@ -256,8 +281,8 @@ extension QueryExtension on Query {
 
   Query whereArrayContainsAny(String field, List? list) =>
       (list?.isEmpty ?? true)
-          ? where(field, arrayContainsAny: null)
-          : where(field, arrayContainsAny: list);
+      ? where(field, arrayContainsAny: null)
+      : where(field, arrayContainsAny: list);
 }
 
 class FFFirestorePage<T> {
@@ -308,14 +333,15 @@ Future<FFFirestorePage<T>> queryCollectionPage<T>(
 // Creates a Firestore document representing the logged in user if it doesn't yet exist
 Future maybeCreateUser(User user) async {
   final userRecord = UserRecord.collection.doc(user.uid);
-  final userExists = await userRecord.get().then((u) => u.exists);
-  if (userExists) {
-    currentUserDocument = await UserRecord.getDocumentOnce(userRecord);
+  final userSnapshot = await userRecord.get();
+  if (userSnapshot.exists) {
+    currentUserDocument = UserRecord.fromSnapshot(userSnapshot);
     return;
   }
 
   final userData = createUserRecordData(
-    email: user.email ??
+    email:
+        user.email ??
         FirebaseAuth.instance.currentUser?.email ??
         user.providerData.firstOrNull?.email,
     displayName:
@@ -331,6 +357,7 @@ Future maybeCreateUser(User user) async {
 }
 
 Future updateUserDocument({String? email}) async {
-  await currentUserDocument?.reference
-      .update(createUserRecordData(email: email));
+  await currentUserDocument?.reference.update(
+    createUserRecordData(email: email),
+  );
 }

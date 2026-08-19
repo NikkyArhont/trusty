@@ -71,7 +71,7 @@ class _ContactRecommendationWidgetState
                   Text(
                     valueOrDefault<String>(
                       widget!.name,
-                      'Alex Miller',
+                      'Алексей Миллер',
                     ),
                     style: FlutterFlowTheme.of(context).bodyMedium.override(
                           font: GoogleFonts.inter(
@@ -92,7 +92,7 @@ class _ContactRecommendationWidgetState
                   Text(
                     valueOrDefault<String>(
                       widget!.comment,
-                      'Best deep tissue work I\'ve had in the city. Highly recommend for athletes.',
+                      'Лучший глубокий массаж в городе. Особенно рекомендую спортсменам.',
                     ),
                     maxLines: 2,
                     style: FlutterFlowTheme.of(context).bodySmall.override(
