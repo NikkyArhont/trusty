@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '/auth/firebase_auth/auth_util.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/nav/nav.dart';
+import '/master/client_invite_guide_dialog.dart';
 
 const String sharePromptLandingUrl = 'https://trusty-kzh1sb.web.app/';
 const Duration _sharePromptInterval = Duration(days: 4);
@@ -13,6 +14,93 @@ const Duration _sharePromptInterval = Duration(days: 4);
 bool _sharePromptCheckInProgress = false;
 bool _sharePromptDialogVisible = false;
 final Set<String> _sharePromptHandledUsers = <String>{};
+const String _clientInviteGuideAnnouncementVersion = '1.4.2';
+
+Future<bool> showClientInviteGuideAnnouncementIfNeeded() async {
+  if (currentUserIsAnonymous) return false;
+  final userRef = currentUserReference;
+  final userId = currentUserUid;
+  if (userRef == null ||
+      userId.isEmpty ||
+      _sharePromptCheckInProgress ||
+      _sharePromptDialogVisible) {
+    return false;
+  }
+
+  _sharePromptCheckInProgress = true;
+  try {
+    final shouldShow = await FirebaseFirestore.instance.runTransaction<bool>((
+      transaction,
+    ) async {
+      final snapshot = await transaction.get(userRef);
+      if (!snapshot.exists) return false;
+      final data = snapshot.data() as Map<String, dynamic>? ?? const {};
+      if (data['clientInviteGuideAnnouncementVersion'] ==
+          _clientInviteGuideAnnouncementVersion) {
+        return false;
+      }
+      transaction.set(userRef, {
+        'clientInviteGuideAnnouncementVersion':
+            _clientInviteGuideAnnouncementVersion,
+        'clientInviteGuideAnnouncementShownAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      return true;
+    });
+    if (!shouldShow) return false;
+
+    BuildContext? context;
+    for (var attempt = 0; attempt < 20; attempt++) {
+      context = appNavigatorKey.currentContext;
+      if (context != null && context.mounted) break;
+      await Future<void>.delayed(const Duration(milliseconds: 100));
+    }
+    if (context == null || !context.mounted) return false;
+
+    _sharePromptDialogVisible = true;
+    final showGuide = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        final theme = FlutterFlowTheme.of(dialogContext);
+        return AlertDialog(
+          icon: Icon(
+            Icons.auto_awesome_rounded,
+            color: theme.primary,
+            size: 40,
+          ),
+          title: const Text(
+            'Нововведение — как мастерам быстро собрать рекомендации от старых клиентов',
+            textAlign: TextAlign.center,
+          ),
+          content: const Text(
+            'Мы подготовили короткую инструкцию — покажем весь процесс по шагам.',
+            textAlign: TextAlign.center,
+          ),
+          actionsAlignment: MainAxisAlignment.center,
+          actions: [
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('Покажите как!'),
+            ),
+          ],
+        );
+      },
+    );
+    _sharePromptDialogVisible = false;
+    if (showGuide == true && context.mounted) {
+      await showClientInviteGuideDialog(context);
+    }
+    return true;
+  } catch (error) {
+    if (kDebugMode) {
+      print('Client invite guide announcement error: $error');
+    }
+    return false;
+  } finally {
+    _sharePromptCheckInProgress = false;
+    _sharePromptDialogVisible = false;
+  }
+}
 
 DateTime? _dateFromFirestore(Object? value) {
   if (value is Timestamp) return value.toDate();
@@ -21,6 +109,8 @@ DateTime? _dateFromFirestore(Object? value) {
 }
 
 Future<void> showSharePromptIfEligible({bool force = false}) async {
+  if (currentUserIsAnonymous) return;
+  if (!force && await showClientInviteGuideAnnouncementIfNeeded()) return;
   final userRef = currentUserReference;
   final userId = currentUserUid;
   if (userRef == null ||
@@ -158,19 +248,7 @@ Future<void> showFirstServiceInviteDialog() async {
     }
     if (context == null || !context.mounted) return;
 
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => _SharePromptDialog(
-        userRef: userRef,
-        title: 'Пригласите своих клиентов',
-        body:
-            'Расскажите постоянным клиентам, что теперь к вам можно записаться через Сарафан. После оказанной услуги они смогут оставить рекомендацию — и новые клиенты сразу увидят доверие к вам от реальных людей.',
-        shareText:
-            'Теперь ко мне можно записаться через Сарафан. После визита вы сможете оставить рекомендацию — это поможет другим людям найти проверенного мастера.\n\n$sharePromptLandingUrl',
-        icon: Icons.group_add_rounded,
-      ),
-    );
+    await showClientInviteGuideDialog(context);
   } catch (error) {
     if (kDebugMode) print('First service invite error: $error');
   } finally {

@@ -32,6 +32,14 @@ function messageBody(message) {
   return text ? text.substring(0, 180) : "Новое сообщение";
 }
 
+function chatNotificationTag(chatId) {
+  return `trusty_chat_${String(chatId || "").trim()}`;
+}
+
+function isPushEnabled(user) {
+  return !user || user.pushNotificationsEnabled !== false;
+}
+
 async function dispatchChatMessagePush({admin, snapshot, params}) {
   if (!snapshot || !snapshot.exists) return null;
 
@@ -62,6 +70,10 @@ async function dispatchChatMessagePush({admin, snapshot, params}) {
   }
 
   const recipient = recipientSnapshot.data() || {};
+  if (!isPushEnabled(recipient)) {
+    console.log("Chat push skipped: recipient disabled notifications", {chatId});
+    return null;
+  }
   const tokens = Array.isArray(recipient.fcmTokens)
     ? [...new Set(recipient.fcmTokens.filter(
       (token) => typeof token === "string" && token.trim(),
@@ -91,6 +103,7 @@ async function dispatchChatMessagePush({admin, snapshot, params}) {
       notification: {
         channelId: "trusty_messages",
         sound: "default",
+        tag: chatNotificationTag(chatId),
       },
     },
     apns: {
@@ -118,6 +131,24 @@ async function dispatchChatMessagePush({admin, snapshot, params}) {
     }
   });
 
+  if (response.successCount > 0) {
+    const deliveredAt = admin.firestore.FieldValue.serverTimestamp();
+    await admin.firestore().runTransaction(async (transaction) => {
+      const latestChat = await transaction.get(chatSnapshot.ref);
+      transaction.update(snapshot.ref, {
+        delivered: true,
+        delivered_time: deliveredAt,
+      });
+      if (latestChat.data()?.last_message_id === snapshot.id) {
+        transaction.update(chatSnapshot.ref, {
+          last_message_status: "delivered",
+          last_message_delivered: true,
+          last_message_read: false,
+        });
+      }
+    });
+  }
+
   if (invalidTokens.length > 0) {
     await resolved.recipient.update({
       fcmTokens: admin.firestore.FieldValue.arrayRemove(...invalidTokens),
@@ -135,7 +166,9 @@ async function dispatchChatMessagePush({admin, snapshot, params}) {
 }
 
 module.exports = {
+  chatNotificationTag,
   dispatchChatMessagePush,
+  isPushEnabled,
   messageBody,
   resolveRecipient,
 };

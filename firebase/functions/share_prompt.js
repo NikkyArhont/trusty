@@ -15,6 +15,7 @@ function timestampMillis(value) {
 }
 
 function validTokens(user) {
+  if (user.pushNotificationsEnabled === false) return [];
   if (!Array.isArray(user.fcmTokens)) return [];
   return [...new Set(user.fcmTokens.filter(nonEmpty))];
 }
@@ -62,7 +63,9 @@ function hasEngagementPushToday(user, now) {
 }
 
 function shouldPlanSharePrompt(user, nowMillis) {
-  return !user.sharePromptDueAt &&
+  return user.isGuest !== true &&
+    !user.migratedToUid &&
+    !user.sharePromptDueAt &&
     validTokens(user).length > 0 &&
     sharePromptEligible(user, nowMillis) &&
     !hasEngagementPushToday(user, new Date(nowMillis));

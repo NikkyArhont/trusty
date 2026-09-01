@@ -140,6 +140,7 @@ function createFixture({
   phone = "+79181234567",
   generatedCode = 1234,
   smsFailure = false,
+  migrateGuest = async () => false,
 } = {}) {
   let nowMillis = 1_800_000_000_000;
   let nextId = 1;
@@ -192,6 +193,7 @@ function createFixture({
     randomInt: () => generatedCode,
     verificationIdFactory: () => `verification-${nextId++}`,
     logger,
+    migrateGuest,
   });
 
   return {
@@ -224,6 +226,27 @@ test("test number +79183633636 accepts 3636 without sending SMS", async () => {
   });
   assert.match(result.token, /^token:/);
   assert.equal(fixture.sentMessages.length, 0);
+});
+
+test("moves the anonymous guest profile before issuing an SMS auth token", async () => {
+  const migrations = [];
+  const fixture = createFixture({
+    phone: "+79183633636",
+    migrateGuest: async (migration) => migrations.push(migration),
+  });
+  const challenge = await fixture.service.requestCode(fixture.phone);
+
+  await fixture.service.verifyCode({
+    rawPhone: fixture.phone,
+    verificationId: challenge.verificationId,
+    code: "3636",
+    guestUid: "anonymous-user",
+  });
+
+  assert.deepEqual(migrations, [{
+    guestUid: "anonymous-user",
+    targetUid: "phone_79183633636",
+  }]);
 });
 
 test("test number +79183633636 is not blocked by production send limits", async () => {

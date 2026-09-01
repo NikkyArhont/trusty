@@ -32,6 +32,16 @@ class _CommunicationPreview {
 
 const _previews = <_CommunicationPreview>[
   _CommunicationPreview(
+    kind: _PreviewKind.push,
+    name: 'Новая версия приложения',
+    title: 'Доступна новая версия',
+    body: 'Обновите Сарафан в магазине приложений.',
+    audience: 'Все пользователи с включёнными push-уведомлениями',
+    condition: 'Администратор подтверждает рассылку после выхода версии.',
+    schedule: 'Один раз после публикации новой версии в магазинах.',
+    icon: Icons.system_update_rounded,
+  ),
+  _CommunicationPreview(
     kind: _PreviewKind.dialog,
     name: 'Обязательное обновление',
     title: 'Доступна новая версия',
@@ -70,16 +80,29 @@ const _previews = <_CommunicationPreview>[
   ),
   _CommunicationPreview(
     kind: _PreviewKind.dialog,
-    name: 'Первая услуга',
-    title: 'Пригласите своих клиентов',
+    name: 'Нововведение 1.4.2',
+    title:
+        'Нововведение — как мастерам быстро собрать рекомендации от старых клиентов',
     body:
-        'Расскажите постоянным клиентам, что теперь к вам можно записаться через Сарафан. После услуги они смогут оставить рекомендацию, которую увидят новые клиенты.',
+        'Короткая инструкция показывает, как подготовить креатив, поделиться им и подсветить свои услуги для приглашённых клиентов.',
+    audience: 'Все пользователи версии 1.4.2',
+    condition: 'После первого входа в обновлённое приложение.',
+    schedule: 'Один раз для аккаунта.',
+    primaryAction: 'Покажите как!',
+    icon: Icons.auto_awesome_rounded,
+  ),
+  _CommunicationPreview(
+    kind: _PreviewKind.dialog,
+    name: 'Первая услуга',
+    title: 'Как получить первые рекомендации',
+    body:
+        'Пошаговый туториал: выбрать услугу, создать креатив, поделиться им в сторис и пригласить старых клиентов.',
     audience: 'Мастер',
     condition: 'Сразу после успешного создания самой первой услуги.',
     schedule: 'Один раз для аккаунта.',
-    primaryAction: 'Поделиться',
-    secondaryAction: 'Не сейчас',
-    icon: Icons.group_add_rounded,
+    primaryAction: 'Далее',
+    secondaryAction: 'Закрыть',
+    icon: Icons.school_rounded,
   ),
   _CommunicationPreview(
     kind: _PreviewKind.banner,

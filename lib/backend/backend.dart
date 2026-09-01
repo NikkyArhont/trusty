@@ -332,27 +332,62 @@ Future<FFFirestorePage<T>> queryCollectionPage<T>(
 
 // Creates a Firestore document representing the logged in user if it doesn't yet exist
 Future maybeCreateUser(User user) async {
-  final userRecord = UserRecord.collection.doc(user.uid);
+  try {
+    await user.reload();
+  } catch (_) {}
+  final refreshedUser = FirebaseAuth.instance.currentUser ?? user;
+  final userRecord = UserRecord.collection.doc(refreshedUser.uid);
   final userSnapshot = await userRecord.get();
   if (userSnapshot.exists) {
+    final snapshotData = userSnapshot.data();
+    final existing = snapshotData is Map<String, dynamic>
+        ? snapshotData
+        : const <String, dynamic>{};
+    final updates = <String, dynamic>{};
+    if ((existing['uid'] as String? ?? '').trim().isEmpty) {
+      updates['uid'] = refreshedUser.uid;
+    }
+    final authPhone = refreshedUser.phoneNumber?.trim() ?? '';
+    if ((existing['phone_number'] as String? ?? '').trim().isEmpty &&
+        authPhone.isNotEmpty) {
+      updates['phone_number'] = authPhone;
+    }
+    if (existing['created_time'] == null) {
+      updates['created_time'] = getCurrentTimestamp;
+    }
+    final authEmail = refreshedUser.email?.trim() ?? '';
+    if ((existing['email'] as String? ?? '').trim().isEmpty &&
+        authEmail.isNotEmpty) {
+      updates['email'] = authEmail;
+    }
+    if (updates.isNotEmpty) {
+      await userRecord.set(updates, SetOptions(merge: true));
+      final repairedSnapshot = await userRecord.get();
+      currentUserDocument = UserRecord.fromSnapshot(repairedSnapshot);
+      return;
+    }
     currentUserDocument = UserRecord.fromSnapshot(userSnapshot);
     return;
   }
 
   final userData = createUserRecordData(
     email:
-        user.email ??
+        refreshedUser.email ??
         FirebaseAuth.instance.currentUser?.email ??
-        user.providerData.firstOrNull?.email,
+        refreshedUser.providerData.firstOrNull?.email,
     displayName:
-        user.displayName ?? FirebaseAuth.instance.currentUser?.displayName,
-    photoUrl: user.photoURL,
-    uid: user.uid,
-    phoneNumber: user.phoneNumber,
+        refreshedUser.displayName ??
+        FirebaseAuth.instance.currentUser?.displayName,
+    photoUrl: refreshedUser.photoURL,
+    uid: refreshedUser.uid,
+    phoneNumber: refreshedUser.phoneNumber,
     createdTime: getCurrentTimestamp,
+    isGuest: refreshedUser.isAnonymous,
   );
 
-  await userRecord.set(userData);
+  // Push token registration can create this document concurrently. Merge the
+  // identity fields so neither write can erase the other.
+  await userRecord.set(userData, SetOptions(merge: true));
   currentUserDocument = UserRecord.getDocumentFromData(userData, userRecord);
 }
 

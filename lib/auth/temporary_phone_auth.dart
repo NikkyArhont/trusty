@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
 const int phoneAuthCodeLength = 4;
@@ -158,12 +159,13 @@ Future<Map<String, dynamic>> _postJson({
   final httpClient = client ?? http.Client();
   final shouldCloseClient = client == null;
   try {
+    final firebaseToken = await FirebaseAuth.instance.currentUser?.getIdToken();
+    final headers = <String, String>{'Content-Type': 'application/json'};
+    if (firebaseToken?.isNotEmpty == true) {
+      headers['Authorization'] = 'Bearer $firebaseToken';
+    }
     final response = await httpClient
-        .post(
-          Uri.parse(url),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(body),
-        )
+        .post(Uri.parse(url), headers: headers, body: jsonEncode(body))
         .timeout(phoneAuthRequestTimeout);
 
     Map<String, dynamic> data;

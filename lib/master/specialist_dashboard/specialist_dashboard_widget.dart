@@ -13,6 +13,7 @@ import '/global_comp/menu/menu_widget.dart';
 import '/master/no_service/no_service_widget.dart';
 import '/master/notifications/master_notifications_widget.dart';
 import '/master/specialist_service_card/specialist_service_card_widget.dart';
+import '/init/sync_contacts.dart';
 import 'dart:ui';
 import '/index.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -216,32 +217,56 @@ class _SpecialistDashboardWidgetState extends State<SpecialistDashboardWidget> {
                                 const MasterNotificationsBell(),
                                 const SizedBox(width: 8.0),
                                 AuthUserStreamWidget(
-                                  builder: (context) => Container(
-                                    width: 48.0,
-                                    height: 48.0,
-                                    clipBehavior: Clip.antiAlias,
-                                    decoration: const BoxDecoration(
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: CachedNetworkImage(
-                                      fadeInDuration: Duration(milliseconds: 0),
-                                      fadeOutDuration: Duration(
-                                        milliseconds: 0,
+                                  builder: (context) => InkWell(
+                                    onTap: () {
+                                      final masterDoc = currentUserDocument;
+                                      if (masterDoc == null) return;
+                                      context.pushNamed(
+                                        MasterPageWidget.routeName,
+                                        queryParameters: {
+                                          'masterDoc': serializeParam(
+                                            masterDoc,
+                                            ParamType.Document,
+                                          ),
+                                        }.withoutNulls,
+                                        extra: <String, dynamic>{
+                                          'masterDoc': masterDoc,
+                                        },
+                                      );
+                                    },
+                                    customBorder: const CircleBorder(),
+                                    child: Container(
+                                      width: 48.0,
+                                      height: 48.0,
+                                      clipBehavior: Clip.antiAlias,
+                                      decoration: const BoxDecoration(
+                                        shape: BoxShape.circle,
                                       ),
-                                      imageUrl: currentUserDocument!
-                                          .masterData
-                                          .mainPhoto,
-                                      fit: BoxFit.cover,
-                                      memCacheWidth: 144,
-                                      memCacheHeight: 144,
-                                      maxWidthDiskCache: 288,
-                                      maxHeightDiskCache: 288,
-                                      errorWidget:
-                                          (context, error, stackTrace) =>
-                                              Image.asset(
-                                                'assets/images/error_image.png',
-                                                fit: BoxFit.cover,
-                                              ),
+                                      child: CachedNetworkImage(
+                                        fadeInDuration: Duration(
+                                          milliseconds: 0,
+                                        ),
+                                        fadeOutDuration: Duration(
+                                          milliseconds: 0,
+                                        ),
+                                        imageUrl: currentUserDocument!
+                                            .masterData
+                                            .mainPhoto,
+                                        fit: BoxFit.cover,
+                                        memCacheWidth: 144,
+                                        memCacheHeight: 144,
+                                        maxWidthDiskCache: 288,
+                                        maxHeightDiskCache: 288,
+                                        errorWidget:
+                                            (
+                                              context,
+                                              error,
+                                              stackTrace,
+                                            ) => Image.asset(
+                                              'assets/images/error_image.png',
+                                              fit: BoxFit.cover,
+                                            ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -398,26 +423,33 @@ class _SpecialistDashboardWidgetState extends State<SpecialistDashboardWidget> {
                                 .toDouble();
 
                             final Set<String> filteredRecommenders = {};
-                            final Set<String> structPhones = {};
+                            final Set<String> structHashes = {};
                             for (var serviceRec in servicesList) {
                               for (var rec in serviceRec.recommendations) {
-                                if (rec.phone.isNotEmpty) {
-                                  structPhones.add(rec.phone);
+                                final normalized = normalizePhone(rec.phone);
+                                final identity = rec.phoneHash.trim().isNotEmpty
+                                    ? rec.phoneHash.trim().toLowerCase()
+                                    : normalized.isEmpty
+                                    ? ''
+                                    : phoneHash(normalized);
+                                if (identity.isNotEmpty) {
+                                  structHashes.add(identity);
                                   if (filterStartDate != null &&
                                       rec.date != null) {
                                     if (rec.date!.isAfter(filterStartDate)) {
-                                      filteredRecommenders.add(rec.phone);
+                                      filteredRecommenders.add(identity);
                                     }
                                   } else {
-                                    filteredRecommenders.add(rec.phone);
+                                    filteredRecommenders.add(identity);
                                   }
                                 }
                               }
-                              // Fallback for legacy recommenderPhones that are not in recommendations list
-                              for (var phone in serviceRec.recommenderPhones) {
-                                if (phone.isNotEmpty &&
-                                    !structPhones.contains(phone)) {
-                                  filteredRecommenders.add(phone);
+                              for (final identity
+                                  in recommendationPhoneHashesForService(
+                                    serviceRec,
+                                  )) {
+                                if (!structHashes.contains(identity)) {
+                                  filteredRecommenders.add(identity);
                                 }
                               }
                             }

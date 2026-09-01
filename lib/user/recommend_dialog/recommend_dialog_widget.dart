@@ -146,19 +146,21 @@ class _RecommendDialogWidgetState extends State<RecommendDialogWidget> {
                                   : (currentUserDocument?.phoneNumber ?? '');
                               final normalizedPhone = normalizePhone(rawPhone);
                               if (normalizedPhone.isNotEmpty) {
+                                final recommenderHash = phoneHash(
+                                  normalizedPhone,
+                                );
                                 final commentText = normalizeUserText(
                                   _model.commentController?.text ?? '',
                                 );
                                 final recommendationData = {
-                                  'phone': normalizedPhone,
+                                  'phoneHash': recommenderHash,
                                   'comment': commentText,
                                   'date': DateTime.now(),
                                 };
 
                                 await widget.serviceDoc.reference.update({
-                                  'recommenderPhones': FieldValue.arrayUnion([
-                                    normalizedPhone,
-                                  ]),
+                                  'recommenderPhoneHashes':
+                                      FieldValue.arrayUnion([recommenderHash]),
                                   'recommendations': FieldValue.arrayUnion([
                                     recommendationData,
                                   ]),

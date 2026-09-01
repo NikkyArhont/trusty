@@ -3,6 +3,10 @@
 const crypto = require("crypto");
 
 const {SmsAeroClient} = require("./sms_aero_client");
+const {
+  authenticatedAnonymousUid,
+  migrateGuestProfile,
+} = require("./guest_profile");
 
 const TEST_PHONE_NUMBERS = new Set([
   "+79183633636",
@@ -284,6 +288,7 @@ class PhoneAuthService {
     randomInt = crypto.randomInt,
     verificationIdFactory = crypto.randomUUID,
     logger = console,
+    migrateGuest = async () => false,
   }) {
     this.store = store;
     this.smsClient = smsClient;
@@ -293,6 +298,7 @@ class PhoneAuthService {
     this.randomInt = randomInt;
     this.verificationIdFactory = verificationIdFactory;
     this.logger = logger;
+    this.migrateGuest = migrateGuest;
   }
 
   async requestCode(rawPhone) {
@@ -360,7 +366,7 @@ class PhoneAuthService {
     };
   }
 
-  async verifyCode({rawPhone, verificationId, code}) {
+  async verifyCode({rawPhone, verificationId, code, guestUid}) {
     const phone = normalizeRussianPhone(rawPhone);
     if (
       !phone ||
@@ -415,6 +421,10 @@ class PhoneAuthService {
       }
     }
 
+    if (guestUid && guestUid !== userRecord.uid) {
+      await this.migrateGuest({guestUid, targetUid: userRecord.uid});
+    }
+
     const token = await this.authClient.createCustomToken(userRecord.uid, {
       phoneAuth: true,
     });
@@ -427,7 +437,7 @@ class PhoneAuthService {
 
 function setCors(response) {
   response.set("Access-Control-Allow-Origin", "*");
-  response.set("Access-Control-Allow-Headers", "Content-Type");
+  response.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
   response.set("Access-Control-Allow-Methods", "POST, OPTIONS");
 }
 
@@ -458,6 +468,11 @@ function createPhoneAuthHandlers({admin, logger = console}) {
       authClient: admin.auth(),
       hmacSecret: process.env.SMS_AUTH_HMAC_SECRET,
       logger,
+      migrateGuest: ({guestUid, targetUid}) => migrateGuestProfile({
+        admin,
+        guestUid,
+        targetUid,
+      }),
     });
   }
 
@@ -494,10 +509,12 @@ function createPhoneAuthHandlers({admin, logger = console}) {
     }
 
     try {
+      const guestUid = await authenticatedAnonymousUid({admin, request});
       const result = await createService().verifyCode({
         rawPhone: request.body && request.body.phone,
         verificationId: request.body && request.body.verificationId,
         code: request.body && request.body.code,
+        guestUid,
       });
       response.json(result);
     } catch (error) {

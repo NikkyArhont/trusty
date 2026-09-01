@@ -5,6 +5,7 @@ import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
+import '/global_comp/app_page_header/app_page_header.dart';
 import '/global_comp/nav_back/nav_back_widget.dart';
 import '/user/service_card_client/service_card_client_widget.dart';
 import '/user/specialist_service_card_map/specialist_service_card_map_widget.dart';
@@ -22,9 +23,14 @@ import 'search_result_model.dart';
 export 'search_result_model.dart';
 
 class SearchResultWidget extends StatefulWidget {
-  const SearchResultWidget({super.key, required this.listResult});
+  const SearchResultWidget({
+    super.key,
+    required this.listResult,
+    this.showCategories = false,
+  });
 
   final List<ServiceRecord>? listResult;
+  final bool showCategories;
 
   static String routeName = 'SearchResult';
   static String routePath = '/searchResult';
@@ -51,10 +57,161 @@ class _SearchResultWidgetState extends State<SearchResultWidget> {
         const LatLng(55.7558, 37.6173);
   }
 
-  List<ServiceRecord> get _visibleServices =>
-      (widget.listResult ?? const <ServiceRecord>[])
-          .where((service) => service.status == ServiceStatus.show)
-          .toList();
+  List<ServiceRecord> get _visibleServices {
+    final services = (widget.listResult ?? const <ServiceRecord>[]).where(
+      (service) => service.status == ServiceStatus.show,
+    );
+    if (!widget.showCategories || FFAppState().globalFilter.catKey.isEmpty) {
+      return services.toList();
+    }
+    return services
+        .where(
+          (service) => service.categoryKey == FFAppState().globalFilter.catKey,
+        )
+        .toList();
+  }
+
+  Widget _buildCategoryChip({
+    required BuildContext context,
+    required String label,
+    required String categoryKey,
+  }) {
+    final selected = FFAppState().globalFilter.catKey == categoryKey;
+    return InkWell(
+      onTap: () {
+        FFAppState().updateGlobalFilterStruct(
+          (filter) => filter..catKey = categoryKey,
+        );
+        safeSetState(() => _model.choosenServ = null);
+      },
+      borderRadius: BorderRadius.circular(100.0),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
+        decoration: BoxDecoration(
+          color: selected
+              ? FlutterFlowTheme.of(context).primary
+              : FlutterFlowTheme.of(context).secondaryBackground,
+          borderRadius: BorderRadius.circular(100.0),
+          border: Border.all(
+            color: selected
+                ? FlutterFlowTheme.of(context).primary
+                : FlutterFlowTheme.of(context).divider,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: selected
+                ? Colors.white
+                : FlutterFlowTheme.of(context).secondaryText,
+            fontSize: 13.0,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
+
+  double _categoryChipWidth(BuildContext context, String label) {
+    final painter = TextPainter(
+      text: TextSpan(
+        text: label,
+        style: const TextStyle(fontSize: 13.0, fontWeight: FontWeight.w500),
+      ),
+      maxLines: 1,
+      textDirection: Directionality.of(context),
+    )..layout();
+    return painter.width + 30.0;
+  }
+
+  int _categoryWrapRowCount(
+    List<double> itemWidths,
+    double maxWidth, {
+    double spacing = 8.0,
+  }) {
+    var rows = 1;
+    var usedWidth = 0.0;
+    for (final itemWidth in itemWidths) {
+      if (usedWidth == 0.0) {
+        usedWidth = itemWidth;
+      } else if (usedWidth + spacing + itemWidth <= maxWidth) {
+        usedWidth += spacing + itemWidth;
+      } else {
+        rows += 1;
+        usedWidth = itemWidth;
+      }
+    }
+    return rows;
+  }
+
+  double _twoRowCategoryWrapWidth(
+    BuildContext context,
+    List<String> labels,
+    double viewportWidth,
+  ) {
+    final itemWidths = labels
+        .map((label) => _categoryChipWidth(context, label))
+        .toList();
+    final totalWidth =
+        itemWidths.fold<double>(0.0, (total, width) => total + width) +
+        (itemWidths.length - 1) * 8.0;
+    var lowerBound = viewportWidth;
+    var upperBound = totalWidth > viewportWidth ? totalWidth : viewportWidth;
+    for (var iteration = 0; iteration < 16; iteration++) {
+      final candidate = (lowerBound + upperBound) / 2;
+      if (_categoryWrapRowCount(itemWidths, candidate) <= 2) {
+        upperBound = candidate;
+      } else {
+        lowerBound = candidate;
+      }
+    }
+    return upperBound.ceilToDouble() + 32.0;
+  }
+
+  Widget _buildCategoryMenu(BuildContext context) {
+    final categories = FFAppState().presetCategory.toList()
+      ..sort((first, second) {
+        String sortKey(String value) =>
+            value.toLowerCase().replaceAll('ё', 'е');
+        return sortKey(first.titleRU).compareTo(sortKey(second.titleRU));
+      });
+    final labels = <String>[
+      'Все',
+      ...categories.map((category) => category.titleRU),
+    ];
+    final chips = <Widget>[
+      _buildCategoryChip(context: context, label: 'Все', categoryKey: ''),
+      ...categories.map(
+        (category) => _buildCategoryChip(
+          context: context,
+          label: category.titleRU,
+          categoryKey: category.key,
+        ),
+      ),
+    ];
+    return Container(
+      color: FlutterFlowTheme.of(context).primaryBackground,
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final viewportWidth = constraints.maxWidth - 32.0;
+          final wrapWidth = _twoRowCategoryWrapWidth(
+            context,
+            labels,
+            viewportWidth,
+          );
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: SizedBox(
+              width: wrapWidth,
+              child: Wrap(spacing: 8.0, runSpacing: 8.0, children: chips),
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   @override
   void initState() {
@@ -228,148 +385,180 @@ class _SearchResultWidgetState extends State<SearchResultWidget> {
                     final mapServices = _visibleServices
                         .where((service) => service.location != null)
                         .toList();
-                    return Stack(
+                    return Column(
                       children: [
-                        FlutterFlowGoogleMap(
-                          controller: _model.googleMapsController,
-                          onCameraIdle: (latLng) =>
-                              _model.googleMapsCenter = latLng,
-                          initialLocation: _model.googleMapsCenter ??=
-                              _model.setLoc ?? _initialMapLocation,
-                          markers: mapServices
-                              .map(
-                                (marker) => FlutterFlowMarker(
-                                  marker.reference.path,
-                                  marker.location!,
-                                  () async {
-                                    _model.choosenServ = marker;
-                                    safeSetState(() {});
-                                  },
-                                ),
-                              )
-                              .toList(),
-                          markerColor: GoogleMarkerColor.blue,
-                          markerColorValue: FlutterFlowTheme.of(
-                            context,
-                          ).primary,
-                          mapType: MapType.normal,
-                          style: GoogleMapStyle.standard,
-                          initialZoom: 14.0,
-                          allowInteraction: true,
-                          allowZoom: true,
-                          showZoomControls: false,
-                          showLocation: true,
-                          showCompass: false,
-                          showMapToolbar: false,
-                          showTraffic: false,
-                          centerMapOnMarkerTap: true,
-                          mapTakesGesturePreference: false,
-                        ),
-                        Positioned(
-                          top: 16.0,
-                          left: 16.0,
-                          child: PointerInterceptor(
-                            intercepting: isWeb,
-                            child: wrapWithModel(
-                              model: _model.navBackModel2,
-                              updateCallback: () => safeSetState(() {}),
-                              child: NavBackWidget(),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          right: 16.0,
-                          bottom: _model.choosenServ == null ? 16.0 : 140.0,
-                          child: PointerInterceptor(
-                            intercepting: isWeb,
-                            child: FlutterFlowIconButton(
-                              borderColor: FlutterFlowTheme.of(
-                                context,
-                              ).secondaryBackground,
-                              borderRadius: 12.0,
-                              buttonSize: 44.0,
-                              fillColor: FlutterFlowTheme.of(context).primary,
-                              icon: Icon(
-                                Icons.my_location,
-                                color: FlutterFlowTheme.of(context).info,
-                                size: 22.0,
-                              ),
-                              onPressed: () async {
-                                await requestPermission(locationPermission);
-                                final location = await getCurrentUserLocation(
-                                  defaultLocation: _initialMapLocation,
-                                );
-                                currentUserLocationValue = location;
-                                _model.setLoc = location;
-                                _model.googleMapsCenter = location;
-                                safeSetState(() {});
-                                final controller =
-                                    await _model.googleMapsController.future;
-                                await controller.animateCamera(
-                                  CameraUpdate.newLatLngZoom(
-                                    location.toGoogleMaps(),
-                                    14.0,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        if (mapServices.isEmpty)
-                          Positioned(
-                            left: 24.0,
-                            right: 24.0,
-                            top: 88.0,
-                            child: PointerInterceptor(
-                              intercepting: isWeb,
-                              child: Container(
-                                padding: const EdgeInsets.all(16.0),
-                                decoration: BoxDecoration(
-                                  color: FlutterFlowTheme.of(
-                                    context,
-                                  ).primaryBackground,
-                                  borderRadius: BorderRadius.circular(12.0),
-                                ),
-                                child: const Text(
-                                  'У найденных услуг пока нет адресов на карте.',
-                                  textAlign: TextAlign.center,
-                                ),
+                        AppPageHeader(
+                          title: 'Карта',
+                          showBack: true,
+                          trailing: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 150),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              alignment: Alignment.centerRight,
+                              child: Text(
+                                FFAppState().globalFilter.place.title.isEmpty
+                                    ? 'Город не выбран'
+                                    : FFAppState().globalFilter.place.title,
+                                maxLines: 1,
+                                style: FlutterFlowTheme.of(context).titleSmall
+                                    .override(
+                                      color: FlutterFlowTheme.of(
+                                        context,
+                                      ).secondaryText,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                               ),
                             ),
                           ),
-                        if (_model.choosenServ != null)
-                          Positioned(
-                            left: 16.0,
-                            right: 16.0,
-                            bottom: 16.0,
-                            child: PointerInterceptor(
-                              intercepting: isWeb,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(12.0),
-                                onTap: () async {
-                                  context.pushNamed(
-                                    ServiceDetailWidget.routeName,
-                                    queryParameters: {
-                                      'serviceDoc': serializeParam(
-                                        _model.choosenServ,
-                                        ParamType.Document,
+                        ),
+                        if (widget.showCategories) _buildCategoryMenu(context),
+                        Expanded(
+                          child: Stack(
+                            children: [
+                              FlutterFlowGoogleMap(
+                                controller: _model.googleMapsController,
+                                onCameraIdle: (latLng) =>
+                                    _model.googleMapsCenter = latLng,
+                                initialLocation: _model.googleMapsCenter ??=
+                                    _model.setLoc ?? _initialMapLocation,
+                                markers: mapServices
+                                    .map(
+                                      (marker) => FlutterFlowMarker(
+                                        marker.reference.path,
+                                        marker.location!,
+                                        () async {
+                                          _model.choosenServ = marker;
+                                          safeSetState(() {});
+                                        },
                                       ),
-                                    }.withoutNulls,
-                                    extra: <String, dynamic>{
-                                      'serviceDoc': _model.choosenServ,
+                                    )
+                                    .toList(),
+                                markerColor: GoogleMarkerColor.blue,
+                                markerColorValue: FlutterFlowTheme.of(
+                                  context,
+                                ).primary,
+                                mapType: MapType.normal,
+                                style: GoogleMapStyle.standard,
+                                initialZoom: 14.0,
+                                allowInteraction: true,
+                                allowZoom: true,
+                                showZoomControls: false,
+                                showLocation: true,
+                                showCompass: false,
+                                showMapToolbar: false,
+                                showTraffic: false,
+                                centerMapOnMarkerTap: true,
+                                mapTakesGesturePreference: false,
+                              ),
+                              Positioned(
+                                right: 16.0,
+                                bottom: _model.choosenServ == null
+                                    ? 16.0
+                                    : 140.0,
+                                child: PointerInterceptor(
+                                  intercepting: isWeb,
+                                  child: FlutterFlowIconButton(
+                                    borderColor: FlutterFlowTheme.of(
+                                      context,
+                                    ).secondaryBackground,
+                                    borderRadius: 12.0,
+                                    buttonSize: 44.0,
+                                    fillColor: FlutterFlowTheme.of(
+                                      context,
+                                    ).primary,
+                                    icon: Icon(
+                                      Icons.my_location,
+                                      color: FlutterFlowTheme.of(context).info,
+                                      size: 22.0,
+                                    ),
+                                    onPressed: () async {
+                                      await requestPermission(
+                                        locationPermission,
+                                      );
+                                      final location =
+                                          await getCurrentUserLocation(
+                                            defaultLocation:
+                                                _initialMapLocation,
+                                          );
+                                      currentUserLocationValue = location;
+                                      _model.setLoc = location;
+                                      _model.googleMapsCenter = location;
+                                      safeSetState(() {});
+                                      final controller = await _model
+                                          .googleMapsController
+                                          .future;
+                                      await controller.animateCamera(
+                                        CameraUpdate.newLatLngZoom(
+                                          location.toGoogleMaps(),
+                                          14.0,
+                                        ),
+                                      );
                                     },
-                                  );
-                                },
-                                child: wrapWithModel(
-                                  model: _model.specialistServiceCardMapModel,
-                                  updateCallback: () => safeSetState(() {}),
-                                  child: SpecialistServiceCardMapWidget(
-                                    servDoc: _model.choosenServ!,
                                   ),
                                 ),
                               ),
-                            ),
+                              if (mapServices.isEmpty)
+                                Positioned(
+                                  left: 24.0,
+                                  right: 24.0,
+                                  top: 88.0,
+                                  child: PointerInterceptor(
+                                    intercepting: isWeb,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(16.0),
+                                      decoration: BoxDecoration(
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primaryBackground,
+                                        borderRadius: BorderRadius.circular(
+                                          12.0,
+                                        ),
+                                      ),
+                                      child: const Text(
+                                        'У найденных услуг пока нет адресов на карте.',
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              if (_model.choosenServ != null)
+                                Positioned(
+                                  left: 16.0,
+                                  right: 16.0,
+                                  bottom: 16.0,
+                                  child: PointerInterceptor(
+                                    intercepting: isWeb,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(12.0),
+                                      onTap: () async {
+                                        context.pushNamed(
+                                          ServiceDetailWidget.routeName,
+                                          queryParameters: {
+                                            'serviceDoc': serializeParam(
+                                              _model.choosenServ,
+                                              ParamType.Document,
+                                            ),
+                                          }.withoutNulls,
+                                          extra: <String, dynamic>{
+                                            'serviceDoc': _model.choosenServ,
+                                          },
+                                        );
+                                      },
+                                      child: wrapWithModel(
+                                        model: _model
+                                            .specialistServiceCardMapModel,
+                                        updateCallback: () =>
+                                            safeSetState(() {}),
+                                        child: SpecialistServiceCardMapWidget(
+                                          servDoc: _model.choosenServ!,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
+                        ),
                       ],
                     );
                   }

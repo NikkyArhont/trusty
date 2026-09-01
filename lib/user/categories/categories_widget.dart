@@ -1,6 +1,7 @@
 import '/backend/schema/enums/enums.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/global_comp/app_page_header/app_page_header.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/global_comp/menu/menu_widget.dart';
 import 'dart:ui';
@@ -54,7 +55,7 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
             Container(
               decoration: BoxDecoration(),
               child: Padding(
-                padding: EdgeInsets.all(24.0),
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 24.0),
                 child: SingleChildScrollView(
                   primary: false,
                   child: Column(
@@ -62,91 +63,32 @@ class _CategoriesWidgetState extends State<CategoriesWidget> {
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              mainAxisAlignment: MainAxisAlignment.start,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  FFLocalizations.of(
-                                    context,
-                                  ).getText('ie0h3he9' /* Categories */),
-                                  style: FlutterFlowTheme.of(context)
-                                      .headlineMedium
-                                      .override(
-                                        font: GoogleFonts.inter(
-                                          fontWeight: FontWeight.w800,
-                                          fontStyle: FlutterFlowTheme.of(
-                                            context,
-                                          ).headlineMedium.fontStyle,
-                                        ),
-                                        color: FlutterFlowTheme.of(
-                                          context,
-                                        ).primaryText,
-                                        fontSize: 26.0,
-                                        letterSpacing: 0.0,
-                                        fontWeight: FontWeight.w800,
-                                        fontStyle: FlutterFlowTheme.of(
-                                          context,
-                                        ).headlineMedium.fontStyle,
-                                        lineHeight: 1.25,
-                                      ),
-                                ),
-                                Text(
-                                  FFLocalizations.of(context).getText(
-                                    'u9f422n4' /* Find trusted experts by catego... */,
-                                  ),
-                                  style: FlutterFlowTheme.of(context).bodyMedium
-                                      .override(
-                                        font: GoogleFonts.inter(
-                                          fontWeight: FontWeight.normal,
-                                          fontStyle: FlutterFlowTheme.of(
-                                            context,
-                                          ).bodyMedium.fontStyle,
-                                        ),
-                                        color: FlutterFlowTheme.of(
-                                          context,
-                                        ).secondaryText,
-                                        fontSize: 14.0,
-                                        letterSpacing: 0.0,
-                                        fontWeight: FontWeight.normal,
-                                        fontStyle: FlutterFlowTheme.of(
-                                          context,
-                                        ).bodyMedium.fontStyle,
-                                        lineHeight: 1.5,
-                                      ),
-                                ),
-                              ].divide(SizedBox(height: 4.0)),
-                            ),
-                          ),
-                          const SizedBox(width: 12.0),
-                          Container(
-                            width: 44.0,
-                            height: 44.0,
-                            decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(
-                                context,
-                              ).secondaryBackground,
-                              borderRadius: BorderRadius.circular(9999.0),
-                              border: Border.all(
-                                color: FlutterFlowTheme.of(context).divider,
-                                width: 1.0,
-                              ),
-                            ),
-                            alignment: AlignmentDirectional(0.0, 0.0),
-                            child: Icon(
-                              Icons.search_rounded,
-                              color: FlutterFlowTheme.of(context).primaryText,
-                              size: 22.0,
-                            ),
+                      AppPageHeader(
+                        title: 'Категории',
+                        padding: EdgeInsets.zero,
+                        actions: [
+                          Icon(
+                            Icons.search_rounded,
+                            color: FlutterFlowTheme.of(context).primaryText,
+                            size: 22.0,
                           ),
                         ],
+                      ),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          FFLocalizations.of(context).getText(
+                            'u9f422n4' /* Find trusted experts by catego... */,
+                          ),
+                          style: FlutterFlowTheme.of(context).bodyMedium
+                              .override(
+                                color: FlutterFlowTheme.of(
+                                  context,
+                                ).secondaryText,
+                                fontSize: 14.0,
+                                lineHeight: 1.5,
+                              ),
+                        ),
                       ),
                       GridView(
                         padding: EdgeInsets.zero,

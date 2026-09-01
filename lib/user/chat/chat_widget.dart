@@ -3,6 +3,8 @@ import '/auth/firebase_auth/auth_util.dart';
 import '/backend/backend.dart';
 import '/backend/firebase_storage/storage.dart';
 import '/backend/chat/chat_profile_sync.dart';
+import '/backend/push_notifications/push_notifications_util.dart';
+import '/backend/support/support_chat_service.dart';
 import '/backend/schema/enums/enums.dart';
 import '/flutter_flow/flutter_flow_expanded_image_view.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
@@ -62,6 +64,7 @@ class _ChatWidgetState extends State<ChatWidget> {
 
     _model.textController ??= TextEditingController();
     _model.textFieldFocusNode ??= FocusNode();
+    unawaited(clearChatNotification(widget.chatId));
     _syncClientPhone();
     syncCurrentUserChatProfile(chatId: widget.chatId);
 
@@ -144,6 +147,7 @@ class _ChatHeader extends StatelessWidget {
       builder: (context, snapshot) {
         final data = snapshot.data?.data();
         final currentRef = currentUserReference;
+        final isSupport = data?['context'] == 'support';
         final clientRef = data?['client'] as DocumentReference?;
         final masterRef = data?['master'] as DocumentReference?;
         final isClient = currentRef != null && clientRef == currentRef;
@@ -155,10 +159,14 @@ class _ChatHeader extends StatelessWidget {
             : (data?['clientPhoto'] as String? ?? '');
 
         return _ChatHeaderContent(
-          name: name.trim().isNotEmpty ? name.trim() : 'Собеседник',
+          name: isSupport && isClient
+              ? supportAccountName
+              : (name.trim().isNotEmpty ? name.trim() : 'Собеседник'),
           photo: photo.trim(),
           chatRef: FirebaseFirestore.instance.collection('chats').doc(chatId),
           reportedUser: isClient ? masterRef : clientRef,
+          isSupport: isSupport,
+          showSupportIdentity: isSupport && isClient,
         );
       },
     );
@@ -171,12 +179,16 @@ class _ChatHeaderContent extends StatelessWidget {
     required this.photo,
     this.chatRef,
     this.reportedUser,
+    this.isSupport = false,
+    this.showSupportIdentity = false,
   });
 
   final String name;
   final String photo;
   final DocumentReference? chatRef;
   final DocumentReference? reportedUser;
+  final bool isSupport;
+  final bool showSupportIdentity;
 
   Future<void> _showReportDialog(BuildContext context) async {
     final reporter = currentUserReference;
@@ -603,7 +615,14 @@ class _ChatHeaderContent extends StatelessWidget {
                 color: FlutterFlowTheme.of(context).secondaryBackground,
                 shape: BoxShape.circle,
               ),
-              child: photo.isNotEmpty
+              child: showSupportIdentity
+                  ? Padding(
+                      padding: const EdgeInsets.all(4.0),
+                      child: ClipOval(
+                        child: Image.asset(supportLogoAsset, fit: BoxFit.cover),
+                      ),
+                    )
+                  : photo.isNotEmpty
                   ? CachedNetworkImage(
                       fadeInDuration: Duration(milliseconds: 0),
                       fadeOutDuration: Duration(milliseconds: 0),
@@ -642,19 +661,20 @@ class _ChatHeaderContent extends StatelessWidget {
                 ],
               ),
             ),
-            FlutterFlowIconButton(
-              borderRadius: 12.0,
-              buttonSize: 44.0,
-              icon: Icon(
-                Icons.flag_outlined,
-                color: FlutterFlowTheme.of(context).error,
-                size: 23.0,
+            if (!isSupport)
+              FlutterFlowIconButton(
+                borderRadius: 12.0,
+                buttonSize: 44.0,
+                icon: Icon(
+                  Icons.flag_outlined,
+                  color: FlutterFlowTheme.of(context).error,
+                  size: 23.0,
+                ),
+                onPressed: () async {
+                  await _showReportDialog(context);
+                },
               ),
-              onPressed: () async {
-                await _showReportDialog(context);
-              },
-            ),
-            if (chatRef != null)
+            if (chatRef != null && !isSupport)
               FlutterFlowIconButton(
                 borderRadius: 12.0,
                 buttonSize: 44.0,
@@ -735,18 +755,27 @@ class _MessageInputState extends State<_MessageInput> {
       final chatRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(chatId);
-      await chatRef.collection('messages').add({
+      final messageRef = chatRef.collection('messages').doc();
+      final batch = FirebaseFirestore.instance.batch();
+      batch.set(messageRef, {
         'sender': currentUserReference,
         'type': 'text',
         'text': text,
         'created_time': FieldValue.serverTimestamp(),
         'read': false,
+        'delivered': false,
       });
-      await chatRef.update({
+      batch.update(chatRef, {
         'last_message': text,
         'last_message_type': 'text',
+        'last_message_id': messageRef.id,
+        'last_message_sender': currentUserReference,
+        'last_message_status': 'sent',
+        'last_message_delivered': false,
+        'last_message_read': false,
         'updated_time': FieldValue.serverTimestamp(),
       });
+      await batch.commit();
       model.textController?.clear();
     } catch (error) {
       if (mounted) {
@@ -797,7 +826,9 @@ class _MessageInputState extends State<_MessageInput> {
       final chatRef = FirebaseFirestore.instance
           .collection('chats')
           .doc(chatId);
-      await chatRef.collection('messages').add({
+      final messageRef = chatRef.collection('messages').doc();
+      final batch = FirebaseFirestore.instance.batch();
+      batch.set(messageRef, {
         'sender': currentUserReference,
         'type': 'image',
         'image': imageUrl,
@@ -805,12 +836,19 @@ class _MessageInputState extends State<_MessageInput> {
         'height': file.dimensions?.height,
         'created_time': FieldValue.serverTimestamp(),
         'read': false,
+        'delivered': false,
       });
-      await chatRef.update({
+      batch.update(chatRef, {
         'last_message': 'Фото',
         'last_message_type': 'image',
+        'last_message_id': messageRef.id,
+        'last_message_sender': currentUserReference,
+        'last_message_status': 'sent',
+        'last_message_delivered': false,
+        'last_message_read': false,
         'updated_time': FieldValue.serverTimestamp(),
       });
+      await batch.commit();
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -1053,7 +1091,7 @@ class _ChatServiceContext extends StatelessWidget {
                 final service = serviceSnapshot.data!;
                 final imageUrl = service.image.firstOrNull ?? '';
                 final priceLabel = service.price > 0
-                    ? '${formatNumber(service.price, formatType: FormatType.decimal, decimalType: DecimalType.automatic)} ₽'
+                    ? formatPrice(service.price)
                     : 'Цена не указана';
 
                 Future<void> openService() async {
@@ -1571,7 +1609,9 @@ class _ChatServiceContext extends StatelessWidget {
                                                 : 'услугу';
                                             final selectedPriceLabel =
                                                 selectedService.price > 0
-                                                ? '${formatNumber(selectedService.price, formatType: FormatType.decimal, decimalType: DecimalType.automatic)} ₽'
+                                                ? formatPrice(
+                                                    selectedService.price,
+                                                  )
                                                 : 'Цена не указана';
                                             final recordDateLabel =
                                                 dateTimeFormat(
@@ -1622,33 +1662,46 @@ class _ChatServiceContext extends StatelessWidget {
                                               );
                                             }
 
-                                            await chatRef
+                                            final messageRef = chatRef
                                                 .collection('messages')
-                                                .add({
-                                                  ...mapToFirestore(
-                                                    {
-                                                      'sender':
-                                                          currentMasterRef,
-                                                      'type': 'text',
-                                                      'text': messageText,
-                                                      'record': recordRef,
-                                                      'created_time':
-                                                          FieldValue.serverTimestamp(),
-                                                      'read': false,
-                                                    }.withoutNulls,
-                                                  ),
-                                                });
+                                                .doc();
+                                            final messageBatch =
+                                                FirebaseFirestore.instance
+                                                    .batch();
+                                            messageBatch.set(messageRef, {
+                                              ...mapToFirestore(
+                                                {
+                                                  'sender': currentMasterRef,
+                                                  'type': 'text',
+                                                  'text': messageText,
+                                                  'record': recordRef,
+                                                  'created_time':
+                                                      FieldValue.serverTimestamp(),
+                                                  'read': false,
+                                                  'delivered': false,
+                                                }.withoutNulls,
+                                              ),
+                                            });
 
-                                            await chatRef.update(
+                                            messageBatch.update(
+                                              chatRef,
                                               mapToFirestore({
                                                 'last_message': messageText,
                                                 'last_message_type': 'text',
+                                                'last_message_id':
+                                                    messageRef.id,
+                                                'last_message_sender':
+                                                    currentMasterRef,
+                                                'last_message_status': 'sent',
+                                                'last_message_delivered': false,
+                                                'last_message_read': false,
                                                 'service':
                                                     selectedService.reference,
                                                 'updated_time':
                                                     FieldValue.serverTimestamp(),
                                               }),
                                             );
+                                            await messageBatch.commit();
 
                                             await FirebaseFirestore.instance
                                                 .collection('notifications')
@@ -2092,6 +2145,23 @@ Future<void> _markIncomingMessagesAsRead(
       });
     }
     await batch.commit();
+
+    final latestIncoming = messages.firstOrNull;
+    if (latestIncoming != null &&
+        unreadMessages.any((message) => message.id == latestIncoming.id)) {
+      final chatRef = FirebaseFirestore.instance
+          .collection('chats')
+          .doc(chatId);
+      await FirebaseFirestore.instance.runTransaction((transaction) async {
+        final chat = await transaction.get(chatRef);
+        if (chat.data()?['last_message_id'] != latestIncoming.id) return;
+        transaction.update(chatRef, {
+          'last_message_status': 'read',
+          'last_message_delivered': true,
+          'last_message_read': true,
+        });
+      });
+    }
   } catch (error) {
     debugPrint('Failed to mark chat messages as read: $error');
   } finally {
@@ -2171,7 +2241,8 @@ class _MessageList extends StatelessWidget {
             final bubble = _MessageBubble(
               data: data,
               isMine: isMine,
-              delivered: !messages[index].metadata.hasPendingWrites,
+              sent: !messages[index].metadata.hasPendingWrites,
+              delivered: data['delivered'] == true,
               read: data['read'] == true,
             );
             if (!showDateDivider) return bubble;
@@ -2247,12 +2318,14 @@ class _MessageBubble extends StatelessWidget {
   const _MessageBubble({
     required this.data,
     required this.isMine,
+    required this.sent,
     required this.delivered,
     required this.read,
   });
 
   final Map<String, dynamic> data;
   final bool isMine;
+  final bool sent;
   final bool delivered;
   final bool read;
 
@@ -2416,6 +2489,8 @@ class _MessageBubble extends StatelessWidget {
                           read
                               ? Icons.done_all_rounded
                               : delivered
+                              ? Icons.done_all_rounded
+                              : sent
                               ? Icons.done_rounded
                               : Icons.schedule_rounded,
                           color: Colors.white.withValues(

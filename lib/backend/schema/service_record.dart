@@ -117,6 +117,13 @@ class ServiceRecord extends FirestoreRecord {
   List<String> get recommenderPhones => _recommenderPhones ?? const [];
   bool hasRecommenderPhones() => _recommenderPhones != null;
 
+  // SHA-256 phone hashes used by current clients. Raw recommenderPhones are
+  // read only for compatibility until the server migration is completed.
+  List<String>? _recommenderPhoneHashes;
+  List<String> get recommenderPhoneHashes =>
+      _recommenderPhoneHashes ?? const [];
+  bool hasRecommenderPhoneHashes() => _recommenderPhoneHashes != null;
+
   // "recommendations" field.
   List<RecommendationStruct>? _recommendations;
   List<RecommendationStruct> get recommendations =>
@@ -146,6 +153,9 @@ class ServiceRecord extends FirestoreRecord {
     _masterTitle = snapshotData['masterTitle'] as String?;
     _masterPhoto = snapshotData['masterPhoto'] as String?;
     _recommenderPhones = getDataList(snapshotData['recommenderPhones']);
+    _recommenderPhoneHashes = getDataList(
+      snapshotData['recommenderPhoneHashes'],
+    );
     _recommendations = getStructList(
       snapshotData['recommendations'],
       RecommendationStruct.fromMap,
@@ -250,6 +260,10 @@ class ServiceRecordDocumentEquality implements Equality<ServiceRecord> {
         e1?.masterTitle == e2?.masterTitle &&
         e1?.masterPhoto == e2?.masterPhoto &&
         listEquality.equals(e1?.recommenderPhones, e2?.recommenderPhones) &&
+        listEquality.equals(
+          e1?.recommenderPhoneHashes,
+          e2?.recommenderPhoneHashes,
+        ) &&
         e1?.moderationReason == e2?.moderationReason;
   }
 
@@ -269,6 +283,7 @@ class ServiceRecordDocumentEquality implements Equality<ServiceRecord> {
     e?.masterTitle,
     e?.masterPhoto,
     e?.recommenderPhones,
+    e?.recommenderPhoneHashes,
     e?.moderationReason,
   ]);
 

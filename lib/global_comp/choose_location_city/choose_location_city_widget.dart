@@ -1,3 +1,4 @@
+import '/auth/firebase_auth/auth_util.dart';
 import '/backend/backend.dart';
 import '/backend/api_requests/api_calls.dart';
 import '/backend/schema/structs/index.dart';
@@ -254,52 +255,65 @@ class _ChooseLocationCityWidgetState extends State<ChooseLocationCityWidget> {
   @override
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
+    final requiresInitialCity = !widget.addressMode && widget.edit != true;
 
-    return Scaffold(
-      key: scaffoldKey,
-      resizeToAvoidBottomInset: false,
-      backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-      body: GestureDetector(
-        behavior: HitTestBehavior.translucent,
-        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
-        child: SafeArea(
-          top: true,
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Container(
-                child: Padding(
-                  padding: EdgeInsets.all(24.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          wrapWithModel(
-                            model: _model.navBackModel,
-                            updateCallback: () => safeSetState(() {}),
-                            child: NavBackWidget(),
-                          ),
-                          const Spacer(),
-                        ],
-                      ),
-                      Container(height: 16.0),
-                      Text(
-                        widget.addressMode
-                            ? 'Выберите адрес'
-                            : FFLocalizations.of(
-                                context,
-                              ).getText('c4xq9wb4' /* Выберите свой город */),
-                        style: FlutterFlowTheme.of(context).headlineMedium
-                            .override(
-                              font: GoogleFonts.interTight(
+    return PopScope(
+      canPop: !requiresInitialCity,
+      child: Scaffold(
+        key: scaffoldKey,
+        resizeToAvoidBottomInset: false,
+        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+        body: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+          child: SafeArea(
+            top: true,
+            child: Column(
+              mainAxisSize: MainAxisSize.max,
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Container(
+                  child: Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.max,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            if (!requiresInitialCity)
+                              wrapWithModel(
+                                model: _model.navBackModel,
+                                updateCallback: () => safeSetState(() {}),
+                                child: NavBackWidget(),
+                              ),
+                            const Spacer(),
+                          ],
+                        ),
+                        Container(height: 16.0),
+                        Text(
+                          widget.addressMode
+                              ? 'Выберите адрес'
+                              : FFLocalizations.of(
+                                  context,
+                                ).getText('c4xq9wb4' /* Выберите свой город */),
+                          style: FlutterFlowTheme.of(context).headlineMedium
+                              .override(
+                                font: GoogleFonts.interTight(
+                                  fontWeight: FlutterFlowTheme.of(
+                                    context,
+                                  ).headlineMedium.fontWeight,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).headlineMedium.fontStyle,
+                                ),
+                                color: FlutterFlowTheme.of(context).primaryText,
+                                letterSpacing: 0.0,
                                 fontWeight: FlutterFlowTheme.of(
                                   context,
                                 ).headlineMedium.fontWeight,
@@ -307,109 +321,117 @@ class _ChooseLocationCityWidgetState extends State<ChooseLocationCityWidget> {
                                   context,
                                 ).headlineMedium.fontStyle,
                               ),
-                              color: FlutterFlowTheme.of(context).primaryText,
-                              letterSpacing: 0.0,
-                              fontWeight: FlutterFlowTheme.of(
-                                context,
-                              ).headlineMedium.fontWeight,
-                              fontStyle: FlutterFlowTheme.of(
-                                context,
-                              ).headlineMedium.fontStyle,
-                            ),
-                      ),
-                      Text(
-                        widget.addressMode
-                            ? 'Начните вводить улицу и выберите подходящий адрес'
-                            : FFLocalizations.of(context).getText(
-                                'ie17ultr' /* Чтобы найти услуги и клиентов ... */,
-                              ),
-                        style: FlutterFlowTheme.of(context).bodyMedium.override(
-                          font: GoogleFonts.jetBrainsMono(
-                            fontWeight: FlutterFlowTheme.of(
-                              context,
-                            ).bodyMedium.fontWeight,
-                            fontStyle: FlutterFlowTheme.of(
-                              context,
-                            ).bodyMedium.fontStyle,
-                          ),
-                          color: FlutterFlowTheme.of(context).secondaryText,
-                          letterSpacing: 0.0,
-                          fontWeight: FlutterFlowTheme.of(
-                            context,
-                          ).bodyMedium.fontWeight,
-                          fontStyle: FlutterFlowTheme.of(
-                            context,
-                          ).bodyMedium.fontStyle,
                         ),
-                      ),
-                      if (widget.addressMode)
-                        Container(
-                          width: double.infinity,
-                          margin: const EdgeInsets.only(top: 12.0),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14.0,
-                            vertical: 12.0,
-                          ),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12.0),
-                            border: Border.all(
-                              color: FlutterFlowTheme.of(context).divider,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.location_city_rounded,
-                                color: FlutterFlowTheme.of(context).primary,
-                                size: 22.0,
-                              ),
-                              const SizedBox(width: 10.0),
-                              Expanded(
-                                child: Text(
-                                  _addressSearchCity() == null
-                                      ? 'Город оказания услуг не выбран'
-                                      : 'Поиск адреса в городе: ${_addressSearchCity()!.title}',
-                                  style: FlutterFlowTheme.of(context).bodyMedium
-                                      .override(
-                                        fontWeight: FontWeight.w600,
-                                        letterSpacing: 0.0,
-                                      ),
+                        Text(
+                          widget.addressMode
+                              ? 'Начните вводить улицу и выберите подходящий адрес'
+                              : FFLocalizations.of(context).getText(
+                                  'ie17ultr' /* Чтобы найти услуги и клиентов ... */,
                                 ),
+                          style: FlutterFlowTheme.of(context).bodyMedium
+                              .override(
+                                font: GoogleFonts.jetBrainsMono(
+                                  fontWeight: FlutterFlowTheme.of(
+                                    context,
+                                  ).bodyMedium.fontWeight,
+                                  fontStyle: FlutterFlowTheme.of(
+                                    context,
+                                  ).bodyMedium.fontStyle,
+                                ),
+                                color: FlutterFlowTheme.of(
+                                  context,
+                                ).secondaryText,
+                                letterSpacing: 0.0,
+                                fontWeight: FlutterFlowTheme.of(
+                                  context,
+                                ).bodyMedium.fontWeight,
+                                fontStyle: FlutterFlowTheme.of(
+                                  context,
+                                ).bodyMedium.fontStyle,
                               ),
-                            ],
-                          ),
                         ),
-                    ].divide(SizedBox(height: 4.0)),
+                        if (widget.addressMode)
+                          Container(
+                            width: double.infinity,
+                            margin: const EdgeInsets.only(top: 12.0),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14.0,
+                              vertical: 12.0,
+                            ),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(12.0),
+                              border: Border.all(
+                                color: FlutterFlowTheme.of(context).divider,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.location_city_rounded,
+                                  color: FlutterFlowTheme.of(context).primary,
+                                  size: 22.0,
+                                ),
+                                const SizedBox(width: 10.0),
+                                Expanded(
+                                  child: Text(
+                                    _addressSearchCity() == null
+                                        ? 'Город оказания услуг не выбран'
+                                        : 'Поиск адреса в городе: ${_addressSearchCity()!.title}',
+                                    style: FlutterFlowTheme.of(context)
+                                        .bodyMedium
+                                        .override(
+                                          fontWeight: FontWeight.w600,
+                                          letterSpacing: 0.0,
+                                        ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ].divide(SizedBox(height: 4.0)),
+                    ),
                   ),
                 ),
-              ),
-              Container(
-                child: Padding(
-                  padding: EdgeInsetsDirectional.fromSTEB(24.0, 0.0, 24.0, 0.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      IntrinsicHeight(
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _model.textController,
-                                textCapitalization:
-                                    TextCapitalization.sentences,
-                                focusNode: _model.textFieldFocusNode,
-                                autofocus: false,
-                                enabled: true,
-                                obscureText: false,
-                                decoration: InputDecoration(
-                                  isDense: false,
-                                  labelStyle: FlutterFlowTheme.of(context)
-                                      .labelMedium
-                                      .override(
-                                        font: GoogleFonts.jetBrainsMono(
+                Container(
+                  child: Padding(
+                    padding: EdgeInsetsDirectional.fromSTEB(
+                      24.0,
+                      0.0,
+                      24.0,
+                      0.0,
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(
+                                child: TextFormField(
+                                  controller: _model.textController,
+                                  textCapitalization:
+                                      TextCapitalization.sentences,
+                                  focusNode: _model.textFieldFocusNode,
+                                  autofocus: false,
+                                  enabled: true,
+                                  obscureText: false,
+                                  decoration: InputDecoration(
+                                    isDense: false,
+                                    labelStyle: FlutterFlowTheme.of(context)
+                                        .labelMedium
+                                        .override(
+                                          font: GoogleFonts.jetBrainsMono(
+                                            fontWeight: FlutterFlowTheme.of(
+                                              context,
+                                            ).labelMedium.fontWeight,
+                                            fontStyle: FlutterFlowTheme.of(
+                                              context,
+                                            ).labelMedium.fontStyle,
+                                          ),
+                                          letterSpacing: 0.0,
                                           fontWeight: FlutterFlowTheme.of(
                                             context,
                                           ).labelMedium.fontWeight,
@@ -417,23 +439,23 @@ class _ChooseLocationCityWidgetState extends State<ChooseLocationCityWidget> {
                                             context,
                                           ).labelMedium.fontStyle,
                                         ),
-                                        letterSpacing: 0.0,
-                                        fontWeight: FlutterFlowTheme.of(
-                                          context,
-                                        ).labelMedium.fontWeight,
-                                        fontStyle: FlutterFlowTheme.of(
-                                          context,
-                                        ).labelMedium.fontStyle,
-                                      ),
-                                  hintText: widget.addressMode
-                                      ? 'Введите улицу и дом'
-                                      : FFLocalizations.of(context).getText(
-                                          'xamu0jwy' /* Введите название */,
-                                        ),
-                                  hintStyle: FlutterFlowTheme.of(context)
-                                      .labelMedium
-                                      .override(
-                                        font: GoogleFonts.jetBrainsMono(
+                                    hintText: widget.addressMode
+                                        ? 'Введите улицу и дом'
+                                        : FFLocalizations.of(context).getText(
+                                            'xamu0jwy' /* Введите название */,
+                                          ),
+                                    hintStyle: FlutterFlowTheme.of(context)
+                                        .labelMedium
+                                        .override(
+                                          font: GoogleFonts.jetBrainsMono(
+                                            fontWeight: FlutterFlowTheme.of(
+                                              context,
+                                            ).labelMedium.fontWeight,
+                                            fontStyle: FlutterFlowTheme.of(
+                                              context,
+                                            ).labelMedium.fontStyle,
+                                          ),
+                                          letterSpacing: 0.0,
                                           fontWeight: FlutterFlowTheme.of(
                                             context,
                                           ).labelMedium.fontWeight,
@@ -441,54 +463,58 @@ class _ChooseLocationCityWidgetState extends State<ChooseLocationCityWidget> {
                                             context,
                                           ).labelMedium.fontStyle,
                                         ),
-                                        letterSpacing: 0.0,
-                                        fontWeight: FlutterFlowTheme.of(
+                                    enabledBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: FlutterFlowTheme.of(
                                           context,
-                                        ).labelMedium.fontWeight,
-                                        fontStyle: FlutterFlowTheme.of(
-                                          context,
-                                        ).labelMedium.fontStyle,
+                                        ).secondary,
+                                        width: 1.0,
                                       ),
-                                  enabledBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: FlutterFlowTheme.of(
-                                        context,
-                                      ).secondary,
-                                      width: 1.0,
+                                      borderRadius: BorderRadius.circular(8.0),
                                     ),
-                                    borderRadius: BorderRadius.circular(8.0),
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: FlutterFlowTheme.of(
-                                        context,
-                                      ).primary,
-                                      width: 1.0,
+                                    focusedBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).primary,
+                                        width: 1.0,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8.0),
                                     ),
-                                    borderRadius: BorderRadius.circular(8.0),
-                                  ),
-                                  errorBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: FlutterFlowTheme.of(context).error,
-                                      width: 1.0,
+                                    errorBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).error,
+                                        width: 1.0,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8.0),
                                     ),
-                                    borderRadius: BorderRadius.circular(8.0),
-                                  ),
-                                  focusedErrorBorder: OutlineInputBorder(
-                                    borderSide: BorderSide(
-                                      color: FlutterFlowTheme.of(context).error,
-                                      width: 1.0,
+                                    focusedErrorBorder: OutlineInputBorder(
+                                      borderSide: BorderSide(
+                                        color: FlutterFlowTheme.of(
+                                          context,
+                                        ).error,
+                                        width: 1.0,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8.0),
                                     ),
-                                    borderRadius: BorderRadius.circular(8.0),
+                                    filled: true,
+                                    fillColor: FlutterFlowTheme.of(
+                                      context,
+                                    ).secondaryBackground,
                                   ),
-                                  filled: true,
-                                  fillColor: FlutterFlowTheme.of(
-                                    context,
-                                  ).secondaryBackground,
-                                ),
-                                style: FlutterFlowTheme.of(context).bodyMedium
-                                    .override(
-                                      font: GoogleFonts.jetBrainsMono(
+                                  style: FlutterFlowTheme.of(context).bodyMedium
+                                      .override(
+                                        font: GoogleFonts.jetBrainsMono(
+                                          fontWeight: FlutterFlowTheme.of(
+                                            context,
+                                          ).bodyMedium.fontWeight,
+                                          fontStyle: FlutterFlowTheme.of(
+                                            context,
+                                          ).bodyMedium.fontStyle,
+                                        ),
+                                        letterSpacing: 0.0,
                                         fontWeight: FlutterFlowTheme.of(
                                           context,
                                         ).bodyMedium.fontWeight,
@@ -496,78 +522,81 @@ class _ChooseLocationCityWidgetState extends State<ChooseLocationCityWidget> {
                                           context,
                                         ).bodyMedium.fontStyle,
                                       ),
-                                      letterSpacing: 0.0,
-                                      fontWeight: FlutterFlowTheme.of(
-                                        context,
-                                      ).bodyMedium.fontWeight,
-                                      fontStyle: FlutterFlowTheme.of(
-                                        context,
-                                      ).bodyMedium.fontStyle,
-                                    ),
-                                cursorColor: FlutterFlowTheme.of(
-                                  context,
-                                ).primaryText,
-                                onTapOutside: (_) => FocusManager
-                                    .instance
-                                    .primaryFocus
-                                    ?.unfocus(),
-                                enableInteractiveSelection: true,
-                                validator: _model.textControllerValidator
-                                    .asValidator(context),
-                              ),
-                            ),
-                            const SizedBox(width: 8.0),
-                            FilledButton.icon(
-                              onPressed:
-                                  widget.addressMode &&
-                                      _addressSearchCity() == null
-                                  ? null
-                                  : () async {
-                                      FocusManager.instance.primaryFocus
-                                          ?.unfocus();
-                                      await _searchPlaces(
-                                        _model.textController.text,
-                                      );
-                                    },
-                              icon: const Icon(
-                                Icons.search_rounded,
-                                size: 20.0,
-                              ),
-                              label: const Text('Поиск'),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: FlutterFlowTheme.of(
-                                  context,
-                                ).primary,
-                                foregroundColor: FlutterFlowTheme.of(
-                                  context,
-                                ).info,
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 14.0,
-                                ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8.0),
+                                  cursorColor: FlutterFlowTheme.of(
+                                    context,
+                                  ).primaryText,
+                                  onTapOutside: (_) => FocusManager
+                                      .instance
+                                      .primaryFocus
+                                      ?.unfocus(),
+                                  enableInteractiveSelection: true,
+                                  validator: _model.textControllerValidator
+                                      .asValidator(context),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (_model.choosenPlace != null)
-                        wrapWithModel(
-                          model: _model.cityItemModel1,
-                          updateCallback: () => safeSetState(() {}),
-                          child: CityItemWidget(
-                            selected: true,
-                            name: _model.choosenPlace?.title,
-                            region: _model.choosenPlace?.description,
+                              const SizedBox(width: 8.0),
+                              FilledButton.icon(
+                                onPressed:
+                                    widget.addressMode &&
+                                        _addressSearchCity() == null
+                                    ? null
+                                    : () async {
+                                        FocusManager.instance.primaryFocus
+                                            ?.unfocus();
+                                        await _searchPlaces(
+                                          _model.textController.text,
+                                        );
+                                      },
+                                icon: const Icon(
+                                  Icons.search_rounded,
+                                  size: 20.0,
+                                ),
+                                label: const Text('Поиск'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: FlutterFlowTheme.of(
+                                    context,
+                                  ).primary,
+                                  foregroundColor: FlutterFlowTheme.of(
+                                    context,
+                                  ).info,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 14.0,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8.0),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      if (_model.isSearching)
-                        Text(
-                          'Ищем...',
-                          style: FlutterFlowTheme.of(context).bodyMedium
-                              .override(
-                                font: GoogleFonts.jetBrainsMono(
+                        if (_model.choosenPlace != null)
+                          wrapWithModel(
+                            model: _model.cityItemModel1,
+                            updateCallback: () => safeSetState(() {}),
+                            child: CityItemWidget(
+                              selected: true,
+                              name: _model.choosenPlace?.title,
+                              region: _model.choosenPlace?.description,
+                            ),
+                          ),
+                        if (_model.isSearching)
+                          Text(
+                            'Ищем...',
+                            style: FlutterFlowTheme.of(context).bodyMedium
+                                .override(
+                                  font: GoogleFonts.jetBrainsMono(
+                                    fontWeight: FlutterFlowTheme.of(
+                                      context,
+                                    ).bodyMedium.fontWeight,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).bodyMedium.fontStyle,
+                                  ),
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).secondaryText,
+                                  letterSpacing: 0.0,
                                   fontWeight: FlutterFlowTheme.of(
                                     context,
                                   ).bodyMedium.fontWeight,
@@ -575,27 +604,27 @@ class _ChooseLocationCityWidgetState extends State<ChooseLocationCityWidget> {
                                     context,
                                   ).bodyMedium.fontStyle,
                                 ),
-                                color: FlutterFlowTheme.of(
-                                  context,
-                                ).secondaryText,
-                                letterSpacing: 0.0,
-                                fontWeight: FlutterFlowTheme.of(
-                                  context,
-                                ).bodyMedium.fontWeight,
-                                fontStyle: FlutterFlowTheme.of(
-                                  context,
-                                ).bodyMedium.fontStyle,
-                              ),
-                        ),
-                      if (!_model.isSearching &&
-                          _model.searchCompleted &&
-                          _model.searchResult.isEmpty &&
-                          _model.choosenPlace == null)
-                        Text(
-                          'Ничего не найдено',
-                          style: FlutterFlowTheme.of(context).bodyMedium
-                              .override(
-                                font: GoogleFonts.jetBrainsMono(
+                          ),
+                        if (!_model.isSearching &&
+                            _model.searchCompleted &&
+                            _model.searchResult.isEmpty &&
+                            _model.choosenPlace == null)
+                          Text(
+                            'Ничего не найдено',
+                            style: FlutterFlowTheme.of(context).bodyMedium
+                                .override(
+                                  font: GoogleFonts.jetBrainsMono(
+                                    fontWeight: FlutterFlowTheme.of(
+                                      context,
+                                    ).bodyMedium.fontWeight,
+                                    fontStyle: FlutterFlowTheme.of(
+                                      context,
+                                    ).bodyMedium.fontStyle,
+                                  ),
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).secondaryText,
+                                  letterSpacing: 0.0,
                                   fontWeight: FlutterFlowTheme.of(
                                     context,
                                   ).bodyMedium.fontWeight,
@@ -603,222 +632,232 @@ class _ChooseLocationCityWidgetState extends State<ChooseLocationCityWidget> {
                                     context,
                                   ).bodyMedium.fontStyle,
                                 ),
-                                color: FlutterFlowTheme.of(
-                                  context,
-                                ).secondaryText,
-                                letterSpacing: 0.0,
-                                fontWeight: FlutterFlowTheme.of(
-                                  context,
-                                ).bodyMedium.fontWeight,
-                                fontStyle: FlutterFlowTheme.of(
-                                  context,
-                                ).bodyMedium.fontStyle,
-                              ),
-                        ),
-                    ].divide(SizedBox(height: 16.0)),
+                          ),
+                      ].divide(SizedBox(height: 16.0)),
+                    ),
                   ),
                 ),
-              ),
-              Expanded(
-                flex: 1,
-                child: Container(
-                  child: Visibility(
-                    visible: _model.searchResult.isNotEmpty,
-                    child: Padding(
-                      padding: EdgeInsetsDirectional.fromSTEB(
-                        24.0,
-                        0.0,
-                        24.0,
-                        0.0,
-                      ),
-                      child: Builder(
-                        builder: (context) {
-                          final searchREsult = _model.searchResult.toList();
+                Expanded(
+                  flex: 1,
+                  child: Container(
+                    child: Visibility(
+                      visible: _model.searchResult.isNotEmpty,
+                      child: Padding(
+                        padding: EdgeInsetsDirectional.fromSTEB(
+                          24.0,
+                          0.0,
+                          24.0,
+                          0.0,
+                        ),
+                        child: Builder(
+                          builder: (context) {
+                            final searchREsult = _model.searchResult.toList();
 
-                          return ListView.builder(
-                            padding: EdgeInsets.fromLTRB(0, 12.0, 0, 0),
-                            shrinkWrap: true,
-                            scrollDirection: Axis.vertical,
-                            itemCount: searchREsult.length,
-                            itemBuilder: (context, searchREsultIndex) {
-                              final searchREsultItem =
-                                  searchREsult[searchREsultIndex];
-                              return InkWell(
-                                splashColor: Colors.transparent,
-                                focusColor: Colors.transparent,
-                                hoverColor: Colors.transparent,
-                                highlightColor: Colors.transparent,
-                                onTap: () async {
-                                  if (widget.addressMode) {
-                                    _model.addressDetailsResult =
-                                        await IdToGeoCall.call(
-                                          placeId: searchREsultItem.id,
-                                        );
-                                    final geocodeResult = await GeocodeCall.call(
-                                      adress:
-                                          '${searchREsultItem.title}, ${searchREsultItem.description}',
-                                    );
-                                    final ruFormattedAddress =
-                                        GeocodeCall.adressTitle(
-                                          geocodeResult.jsonBody,
-                                        );
-                                    final geocodeLat = GeocodeCall.lat(
-                                      geocodeResult.jsonBody,
-                                    );
-                                    final geocodeLng = GeocodeCall.lng(
-                                      geocodeResult.jsonBody,
-                                    );
-                                    final detailsLat = IdToGeoCall.lat(
-                                      _model.addressDetailsResult?.jsonBody,
-                                    );
-                                    final detailsLng = IdToGeoCall.lng(
-                                      _model.addressDetailsResult?.jsonBody,
-                                    );
-                                    final latitude =
-                                        detailsLat ??
-                                        geocodeLat ??
-                                        searchREsultItem.location?.latitude;
-                                    final longitude =
-                                        detailsLng ??
-                                        geocodeLng ??
-                                        searchREsultItem.location?.longitude;
-                                    if (latitude == null || longitude == null) {
-                                      if (context.mounted) {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).showSnackBar(
-                                          const SnackBar(
-                                            content: Text(
-                                              'Не удалось определить координаты адреса. Выберите другой вариант.',
+                            return ListView.builder(
+                              padding: EdgeInsets.fromLTRB(0, 12.0, 0, 0),
+                              shrinkWrap: true,
+                              scrollDirection: Axis.vertical,
+                              itemCount: searchREsult.length,
+                              itemBuilder: (context, searchREsultIndex) {
+                                final searchREsultItem =
+                                    searchREsult[searchREsultIndex];
+                                return InkWell(
+                                  splashColor: Colors.transparent,
+                                  focusColor: Colors.transparent,
+                                  hoverColor: Colors.transparent,
+                                  highlightColor: Colors.transparent,
+                                  onTap: () async {
+                                    if (widget.addressMode) {
+                                      _model.addressDetailsResult =
+                                          await IdToGeoCall.call(
+                                            placeId: searchREsultItem.id,
+                                          );
+                                      final geocodeResult = await GeocodeCall.call(
+                                        adress:
+                                            '${searchREsultItem.title}, ${searchREsultItem.description}',
+                                      );
+                                      final ruFormattedAddress =
+                                          GeocodeCall.adressTitle(
+                                            geocodeResult.jsonBody,
+                                          );
+                                      final geocodeLat = GeocodeCall.lat(
+                                        geocodeResult.jsonBody,
+                                      );
+                                      final geocodeLng = GeocodeCall.lng(
+                                        geocodeResult.jsonBody,
+                                      );
+                                      final detailsLat = IdToGeoCall.lat(
+                                        _model.addressDetailsResult?.jsonBody,
+                                      );
+                                      final detailsLng = IdToGeoCall.lng(
+                                        _model.addressDetailsResult?.jsonBody,
+                                      );
+                                      final latitude =
+                                          detailsLat ??
+                                          geocodeLat ??
+                                          searchREsultItem.location?.latitude;
+                                      final longitude =
+                                          detailsLng ??
+                                          geocodeLng ??
+                                          searchREsultItem.location?.longitude;
+                                      if (latitude == null ||
+                                          longitude == null) {
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(
+                                            context,
+                                          ).showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Не удалось определить координаты адреса. Выберите другой вариант.',
+                                              ),
                                             ),
-                                          ),
-                                        );
+                                          );
+                                        }
+                                        return;
                                       }
-                                      return;
+                                      _model.choosenPlace = PlaceStruct(
+                                        title:
+                                            (geocodeResult.succeeded
+                                                        ? ruFormattedAddress
+                                                        : null)
+                                                    ?.trim()
+                                                    .isNotEmpty ==
+                                                true
+                                            ? _shortAddressTitle(
+                                                ruFormattedAddress!.trim(),
+                                              )
+                                            : searchREsultItem.description
+                                                  .trim()
+                                                  .isNotEmpty
+                                            ? _shortAddressTitle(
+                                                '${searchREsultItem.title}, ${searchREsultItem.description}',
+                                              )
+                                            : searchREsultItem.title,
+                                        description:
+                                            searchREsultItem.description,
+                                        id: searchREsultItem.id,
+                                        cityId:
+                                            _addressSearchCity()?.cityId ??
+                                            searchREsultItem.cityId,
+                                        location: LatLng(latitude, longitude),
+                                      );
+                                    } else {
+                                      _model.choosenPlace = searchREsultItem;
                                     }
-                                    _model.choosenPlace = PlaceStruct(
-                                      title:
-                                          (geocodeResult.succeeded
-                                                      ? ruFormattedAddress
-                                                      : null)
-                                                  ?.trim()
-                                                  .isNotEmpty ==
-                                              true
-                                          ? _shortAddressTitle(
-                                              ruFormattedAddress!.trim(),
-                                            )
-                                          : searchREsultItem.description
-                                                .trim()
-                                                .isNotEmpty
-                                          ? _shortAddressTitle(
-                                              '${searchREsultItem.title}, ${searchREsultItem.description}',
-                                            )
-                                          : searchREsultItem.title,
-                                      description: searchREsultItem.description,
-                                      id: searchREsultItem.id,
-                                      cityId:
-                                          _addressSearchCity()?.cityId ??
-                                          searchREsultItem.cityId,
-                                      location: LatLng(latitude, longitude),
-                                    );
-                                  } else {
-                                    _model.choosenPlace = searchREsultItem;
-                                  }
-                                  if (!widget.addressMode) {
-                                    _model.searchResult = [];
-                                  }
-                                  _model.isSearching = false;
-                                  _model.searchCompleted = false;
-                                  safeSetState(() {});
-                                  if (!widget.addressMode) {
-                                    safeSetState(() {
-                                      _model.textController?.clear();
-                                    });
-                                  }
-                                },
-                                child: CityItemWidget(
-                                  key: Key(
-                                    'Keyw3i_${searchREsultIndex}_of_${searchREsult.length}',
+                                    if (!widget.addressMode) {
+                                      _model.searchResult = [];
+                                    }
+                                    _model.isSearching = false;
+                                    _model.searchCompleted = false;
+                                    safeSetState(() {});
+                                    if (!widget.addressMode) {
+                                      safeSetState(() {
+                                        _model.textController?.clear();
+                                      });
+                                    }
+                                  },
+                                  child: CityItemWidget(
+                                    key: Key(
+                                      'Keyw3i_${searchREsultIndex}_of_${searchREsult.length}',
+                                    ),
+                                    selected: false,
+                                    name: searchREsultItem.title,
+                                    region: searchREsultItem.description,
                                   ),
-                                  selected: false,
-                                  name: searchREsultItem.title,
-                                  region: searchREsultItem.description,
-                                ),
-                              );
-                            },
-                          );
-                        },
+                                );
+                              },
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              Container(
-                decoration: BoxDecoration(
-                  color: FlutterFlowTheme.of(context).primaryBackground,
-                  border: Border.all(
-                    color: FlutterFlowTheme.of(context).divider,
-                    width: 1.0,
+                Container(
+                  decoration: BoxDecoration(
+                    color: FlutterFlowTheme.of(context).primaryBackground,
+                    border: Border.all(
+                      color: FlutterFlowTheme.of(context).divider,
+                      width: 1.0,
+                    ),
                   ),
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(24.0),
-                  child: FFButtonWidget(
-                    onPressed:
-                        (_model.choosenPlace == null ||
-                            (widget.addressMode &&
-                                _model.choosenPlace?.location == null))
-                        ? null
-                        : () async {
-                            if (widget.addressMode) {
-                              FFAppState().tempServiceAddress =
-                                  _model.choosenPlace;
-                              context.safePop();
-                            } else {
-                              FFAppState().updateGlobalFilterStruct(
-                                (e) => e..place = _model.choosenPlace,
-                              );
-                              FFAppState().firstTime = false;
-                              safeSetState(() {});
-                              if (widget!.edit!) {
+                  child: Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: FFButtonWidget(
+                      onPressed:
+                          (_model.choosenPlace == null ||
+                              (widget.addressMode &&
+                                  _model.choosenPlace?.location == null))
+                          ? null
+                          : () async {
+                              if (widget.addressMode) {
+                                FFAppState().tempServiceAddress =
+                                    _model.choosenPlace;
                                 context.safePop();
                               } else {
-                                context.goNamed(MainWidget.routeName);
+                                FFAppState().updateGlobalFilterStruct(
+                                  (e) => e..place = _model.choosenPlace,
+                                );
+                                final userReference = currentUserReference;
+                                if (userReference != null) {
+                                  await userReference.update(
+                                    createUserRecordData(
+                                      mainLoc: _model.choosenPlace,
+                                    ),
+                                  );
+                                }
+                                if (!context.mounted) return;
+                                FFAppState().firstTime = false;
+                                safeSetState(() {});
+                                if (widget.edit!) {
+                                  context.safePop();
+                                } else {
+                                  final user = currentUserDocument;
+                                  if (user != null &&
+                                      user.referralOnboardingRequired &&
+                                      !user.referralOnboardingCompleted) {
+                                    context.goNamed(
+                                      ReferralOnboardingWidget.routeName,
+                                    );
+                                  } else {
+                                    context.goNamed(MainWidget.routeName);
+                                  }
+                                }
                               }
-                            }
-                          },
-                    text: FFLocalizations.of(
-                      context,
-                    ).getText('hfwzvn2l' /* Подтвердить */),
-                    options: FFButtonOptions(
-                      width: double.infinity,
-                      height: 56.0,
-                      padding: EdgeInsetsDirectional.fromSTEB(
-                        20.0,
-                        0.0,
-                        20.0,
-                        0.0,
+                            },
+                      text: FFLocalizations.of(
+                        context,
+                      ).getText('hfwzvn2l' /* Подтвердить */),
+                      options: FFButtonOptions(
+                        width: double.infinity,
+                        height: 56.0,
+                        padding: EdgeInsetsDirectional.fromSTEB(
+                          20.0,
+                          0.0,
+                          20.0,
+                          0.0,
+                        ),
+                        iconPadding: EdgeInsetsDirectional.fromSTEB(
+                          0.0,
+                          0.0,
+                          0.0,
+                          0.0,
+                        ),
+                        color: FlutterFlowTheme.of(context).primary,
+                        textStyle: GoogleFonts.jetBrainsMono(
+                          color: FlutterFlowTheme.of(context).primaryBackground,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15.0,
+                        ),
+                        elevation: 0.0,
+                        borderRadius: BorderRadius.circular(22.0),
+                        disabledColor: FlutterFlowTheme.of(context).tertiary,
                       ),
-                      iconPadding: EdgeInsetsDirectional.fromSTEB(
-                        0.0,
-                        0.0,
-                        0.0,
-                        0.0,
-                      ),
-                      color: FlutterFlowTheme.of(context).primary,
-                      textStyle: GoogleFonts.jetBrainsMono(
-                        color: FlutterFlowTheme.of(context).primaryBackground,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15.0,
-                      ),
-                      elevation: 0.0,
-                      borderRadius: BorderRadius.circular(22.0),
-                      disabledColor: FlutterFlowTheme.of(context).tertiary,
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -4,6 +4,8 @@ import '/backend/schema/enums/enums.dart';
 import '/backend/chat/chat_profile_sync.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/global_comp/app_page_header/app_page_header.dart';
+import '/global_comp/chat_message_status_indicator/chat_message_status_indicator.dart';
 import '/global_comp/menu/menu_widget.dart';
 import '/user/chat/chat_widget.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -118,26 +120,14 @@ class _MasterChatsWidgetState extends State<MasterChatsWidget> {
         child: Stack(
           children: [
             Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(16.0, 24.0, 16.0, 120.0),
+              padding: EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 120.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Чаты',
-                          style: FlutterFlowTheme.of(context).headlineMedium
-                              .override(
-                                font: GoogleFonts.interTight(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                                color: FlutterFlowTheme.of(context).primaryText,
-                                letterSpacing: 0.0,
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                      ),
+                  AppPageHeader(
+                    title: 'Чаты',
+                    padding: EdgeInsets.zero,
+                    actions: [
                       if (_selectionMode) ...[
                         TextButton.icon(
                           onPressed: _selectedChatIds.isEmpty
@@ -282,7 +272,8 @@ class _ChatListState extends State<_ChatList> {
                     !isHidden &&
                     (otherUser == null ||
                         !(currentUserDocument?.blockedUserIds ?? const [])
-                            .contains(otherUser.id));
+                            .contains(otherUser.id)) &&
+                    data['context'] != 'support';
               }).toList()..sort((a, b) {
                 final aTime = a.data()['updated_time'];
                 final bTime = b.data()['updated_time'];
@@ -361,6 +352,7 @@ class _ChatListTile extends StatelessWidget {
         : ((data['last_message_type'] as String?) == 'image'
               ? 'Фото'
               : 'Нет сообщений');
+    final messageStatus = outgoingLastMessageStatus(data, currentRef);
     final updatedTimeLabel = _formatChatTimestamp(
       context,
       data['updated_time'],
@@ -443,15 +435,26 @@ class _ChatListTile extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    Text(
-                      lastMessageLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: FlutterFlowTheme.of(context).bodyMedium.override(
-                        font: GoogleFonts.inter(),
-                        color: FlutterFlowTheme.of(context).secondaryText,
-                        letterSpacing: 0.0,
-                      ),
+                    Row(
+                      children: [
+                        if (messageStatus != null)
+                          ChatMessageStatusIndicator(status: messageStatus),
+                        Expanded(
+                          child: Text(
+                            lastMessageLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: FlutterFlowTheme.of(context).bodyMedium
+                                .override(
+                                  font: GoogleFonts.inter(),
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).secondaryText,
+                                  letterSpacing: 0.0,
+                                ),
+                          ),
+                        ),
+                      ].divide(const SizedBox(width: 4.0)),
                     ),
                     if (updatedTimeLabel.isNotEmpty)
                       Text(

@@ -1,4 +1,5 @@
 import '/backend/backend.dart';
+import '/backend/referral/your_master_highlight.dart';
 import '/backend/schema/enums/enums.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -27,25 +28,18 @@ class _SpecialistServiceCardMapWidgetState
 
   late SpecialistServiceCardMapModel _model;
 
-  Set<String> get _serviceRecommenderPhones {
-    final phones = <String>{};
+  Set<String> get _serviceRecommenderHashes {
     final service = widget.servDoc;
-    if (service == null) return phones;
-    for (final phone in service.recommenderPhones) {
-      final normalized = normalizePhone(phone);
-      if (normalized.isNotEmpty) phones.add(normalized);
-    }
-    for (final recommendation in service.recommendations) {
-      final normalized = normalizePhone(recommendation.phone);
-      if (normalized.isNotEmpty) phones.add(normalized);
-    }
-    return phones;
+    return service == null
+        ? <String>{}
+        : recommendationPhoneHashesForService(service);
   }
 
-  int get _serviceRecommendationsCount => _serviceRecommenderPhones.length;
+  int get _serviceRecommendationsCount => _serviceRecommenderHashes.length;
 
-  int get _contactRecommendationsCount =>
-      _serviceRecommenderPhones.where(globalContactsMap.containsKey).length;
+  int get _contactRecommendationsCount => _serviceRecommenderHashes
+      .where((hash) => contactNameForPhoneHash(hash) != null)
+      .length;
 
   @override
   void setState(VoidCallback callback) {
@@ -127,7 +121,7 @@ class _SpecialistServiceCardMapWidgetState
         .round()
         .clamp(176, 528);
 
-    return SizedBox(
+    final card = SizedBox(
       height: _cardHeight,
       child: Material(
         color: Colors.transparent,
@@ -209,12 +203,7 @@ class _SpecialistServiceCardMapWidgetState
                         const SizedBox(width: 4.0),
                         Flexible(
                           child: Text(
-                            formatNumber(
-                              service?.price,
-                              formatType: FormatType.decimal,
-                              decimalType: DecimalType.automatic,
-                              currency: '₽',
-                            ),
+                            formatPrice(service?.price),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: GoogleFonts.jetBrainsMono(
@@ -276,6 +265,11 @@ class _SpecialistServiceCardMapWidgetState
           ),
         ),
       ),
+    );
+    return YourMasterServiceFrame(
+      service: service!,
+      borderRadius: 16.0,
+      child: card,
     );
   }
 }

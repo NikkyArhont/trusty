@@ -28,6 +28,13 @@ export '/master/master_onboarding/master_onboarding_widget.dart'
 export '/global_comp/choose_location_city/choose_location_city_widget.dart'
     show ChooseLocationCityWidget;
 export '/user/edit_profile/edit_profile_widget.dart' show EditProfileWidget;
+export '/admin/admin_stats_widget.dart' show AdminStatsWidget;
+export '/admin/admin_support_chats_widget.dart' show AdminSupportChatsWidget;
+export '/admin/admin_users_widget.dart' show AdminUsersWidget;
+export '/admin/admin_user_detail_widget.dart' show AdminUserDetailWidget;
+export '/admin/admin_meme_builder_widget.dart' show AdminMemeBuilderWidget;
+export '/init/referral_onboarding/referral_onboarding_widget.dart'
+    show ReferralOnboardingWidget;
 export '/init/initpage/initpage_widget.dart' show InitpageWidget;
 export '/user/search_result/search_result_widget.dart' show SearchResultWidget;
 export '/master/edit_profile_master/edit_profile_master_widget.dart'

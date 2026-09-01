@@ -302,6 +302,18 @@ String formatNumber(
   return formattedValue;
 }
 
+/// Formats service prices consistently for the Russian UI: `33 333 ₽`.
+String formatPrice(num? value) {
+  if (value == null) {
+    return '';
+  }
+  final formattedValue = NumberFormat(
+    '#,##0',
+    'ru_RU',
+  ).format(value).replaceAll('\u00A0', ' ').replaceAll('\u202F', ' ');
+  return '$formattedValue ₽';
+}
+
 DateTime get getCurrentTimestamp => DateTime.now();
 DateTime dateTimeFromSecondsSinceEpoch(int seconds) {
   return DateTime.fromMillisecondsSinceEpoch(seconds * 1000);

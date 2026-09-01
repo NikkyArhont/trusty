@@ -9,15 +9,17 @@ class TrustyFirebaseUser extends BaseAuthUser {
   TrustyFirebaseUser(this.user);
   User? user;
   bool get loggedIn => user != null;
+  @override
+  bool get isAnonymous => user?.isAnonymous ?? false;
 
   @override
   AuthUserInfo get authUserInfo => AuthUserInfo(
-        uid: user?.uid,
-        email: user?.email,
-        displayName: user?.displayName,
-        photoUrl: user?.photoURL,
-        phoneNumber: user?.phoneNumber,
-      );
+    uid: user?.uid,
+    email: user?.email,
+    displayName: user?.displayName,
+    photoUrl: user?.photoURL,
+    phoneNumber: user?.phoneNumber,
+  );
 
   @override
   Future? delete() => user?.delete();
@@ -51,9 +53,9 @@ class TrustyFirebaseUser extends BaseAuthUser {
 
   @override
   Future refreshUser() async {
-    await FirebaseAuth.instance.currentUser
-        ?.reload()
-        .then((_) => user = FirebaseAuth.instance.currentUser);
+    await FirebaseAuth.instance.currentUser?.reload().then(
+      (_) => user = FirebaseAuth.instance.currentUser,
+    );
   }
 
   static BaseAuthUser fromUserCredential(UserCredential userCredential) =>
@@ -62,13 +64,13 @@ class TrustyFirebaseUser extends BaseAuthUser {
 }
 
 Stream<BaseAuthUser> trustyFirebaseUserStream() => FirebaseAuth.instance
-        .authStateChanges()
-        .debounce((user) => user == null && !loggedIn
-            ? TimerStream(true, const Duration(seconds: 1))
-            : Stream.value(user))
-        .map<BaseAuthUser>(
-      (user) {
-        currentUser = TrustyFirebaseUser(user);
-        return currentUser!;
-      },
-    );
+    .authStateChanges()
+    .debounce(
+      (user) => user == null && !loggedIn
+          ? TimerStream(true, const Duration(seconds: 1))
+          : Stream.value(user),
+    )
+    .map<BaseAuthUser>((user) {
+      currentUser = TrustyFirebaseUser(user);
+      return currentUser!;
+    });

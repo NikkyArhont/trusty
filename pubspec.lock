@@ -257,14 +257,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "7.0.1"
-  file_picker:
-    dependency: "direct main"
-    description:
-      name: file_picker
-      sha256: "77f8e81d22d2a07d0dee2c62e1dda71dc1da73bf43bb2d45af09727406167964"
-      url: "https://pub.dev"
-    source: hosted
-    version: "10.1.9"
   file_selector_linux:
     dependency: transitive
     description:
@@ -297,6 +289,30 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.9.3+5"
+  firebase_analytics:
+    dependency: "direct main"
+    description:
+      name: firebase_analytics
+      sha256: b2f312c3b3bb4ebdfb7947ef5cd263d8feeb26bdefe2d639e266f2f3f13a5da1
+      url: "https://pub.dev"
+    source: hosted
+    version: "11.5.1"
+  firebase_analytics_platform_interface:
+    dependency: transitive
+    description:
+      name: firebase_analytics_platform_interface
+      sha256: f670edd9046657930085b7fe7eab42fe86a6f9876f9ebf54987ebc9be79b4874
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.4.1"
+  firebase_analytics_web:
+    dependency: transitive
+    description:
+      name: firebase_analytics_web
+      sha256: "75633782de3e21ed86a6cfb326b3a201eded4f5d64f34dc2abfeb7c864b934c8"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.5.10+14"
   firebase_auth:
     dependency: "direct main"
     description:
@@ -1033,10 +1049,10 @@ packages:
     dependency: transitive
     description:
       name: mime
-      sha256: e4ff8e8564c03f255408decd16e7899da1733852a9110a58fe6d1b817684a63e
+      sha256: "801fd0b26f14a4a58ccb09d5892c3fbdeff209594300a542492cf13fba9d247a"
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.4"
+    version: "1.0.6"
   mime_type:
     dependency: "direct main"
     description:
@@ -1317,6 +1333,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.0"
+  saver_gallery:
+    dependency: "direct main"
+    description:
+      name: saver_gallery
+      sha256: "5f4123ec1cd5ed9fcd93198ab30ffe0c7746afcbf6846445432de93240fa7b4e"
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.0.6"
   share_plus:
     dependency: "direct main"
     description:

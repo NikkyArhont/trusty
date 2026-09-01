@@ -12,10 +12,12 @@ import '/flutter_flow/flutter_flow_util.dart';
 class RecommendationStruct extends FFFirebaseStruct {
   RecommendationStruct({
     String? phone,
+    String? phoneHash,
     String? comment,
     DateTime? date,
     FirestoreUtilData firestoreUtilData = const FirestoreUtilData(),
   }) : _phone = phone,
+       _phoneHash = phoneHash,
        _comment = comment,
        _date = date,
        super(firestoreUtilData);
@@ -26,6 +28,14 @@ class RecommendationStruct extends FFFirebaseStruct {
   set phone(String? val) => _phone = val;
 
   bool hasPhone() => _phone != null;
+
+  // "phoneHash" field. New recommendations store only SHA-256 rather than a
+  // readable phone number. "phone" remains temporarily for legacy records.
+  String? _phoneHash;
+  String get phoneHash => _phoneHash ?? '';
+  set phoneHash(String? val) => _phoneHash = val;
+
+  bool hasPhoneHash() => _phoneHash != null;
 
   // "comment" field.
   String? _comment;
@@ -44,6 +54,7 @@ class RecommendationStruct extends FFFirebaseStruct {
   static RecommendationStruct fromMap(Map<String, dynamic> data) =>
       RecommendationStruct(
         phone: data['phone'] as String?,
+        phoneHash: data['phoneHash'] as String?,
         comment: data['comment'] as String?,
         date: data['date'] as DateTime?,
       );
@@ -52,12 +63,17 @@ class RecommendationStruct extends FFFirebaseStruct {
       ? RecommendationStruct.fromMap(data.cast<String, dynamic>())
       : null;
 
-  Map<String, dynamic> toMap() =>
-      {'phone': _phone, 'comment': _comment, 'date': _date}.withoutNulls;
+  Map<String, dynamic> toMap() => {
+    'phone': _phone,
+    'phoneHash': _phoneHash,
+    'comment': _comment,
+    'date': _date,
+  }.withoutNulls;
 
   @override
   Map<String, dynamic> toSerializableMap() => {
     'phone': serializeParam(_phone, ParamType.String),
+    'phoneHash': serializeParam(_phoneHash, ParamType.String),
     'comment': serializeParam(_comment, ParamType.String),
     'date': serializeParam(_date, ParamType.DateTime),
   }.withoutNulls;
@@ -65,6 +81,7 @@ class RecommendationStruct extends FFFirebaseStruct {
   static RecommendationStruct fromSerializableMap(Map<String, dynamic> data) =>
       RecommendationStruct(
         phone: deserializeParam(data['phone'], ParamType.String, false),
+        phoneHash: deserializeParam(data['phoneHash'], ParamType.String, false),
         comment: deserializeParam(data['comment'], ParamType.String, false),
         date: deserializeParam(data['date'], ParamType.DateTime, false),
       );
@@ -76,16 +93,19 @@ class RecommendationStruct extends FFFirebaseStruct {
   bool operator ==(Object other) {
     return other is RecommendationStruct &&
         phone == other.phone &&
+        phoneHash == other.phoneHash &&
         comment == other.comment &&
         date == other.date;
   }
 
   @override
-  int get hashCode => const ListEquality().hash([phone, comment, date]);
+  int get hashCode =>
+      const ListEquality().hash([phone, phoneHash, comment, date]);
 }
 
 RecommendationStruct createRecommendationStruct({
   String? phone,
+  String? phoneHash,
   String? comment,
   DateTime? date,
   Map<String, dynamic> fieldValues = const {},
@@ -94,6 +114,7 @@ RecommendationStruct createRecommendationStruct({
   bool delete = false,
 }) => RecommendationStruct(
   phone: phone,
+  phoneHash: phoneHash,
   comment: comment == null ? null : normalizeUserText(comment),
   date: date,
   firestoreUtilData: FirestoreUtilData(

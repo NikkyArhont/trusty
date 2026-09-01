@@ -75,6 +75,30 @@ class UserRecord extends FirestoreRecord {
   bool get clientProfileCompleted => _clientProfileCompleted ?? false;
   bool hasClientProfileCompleted() => _clientProfileCompleted != null;
 
+  // "pushNotificationsEnabled" field. Older accounts default to enabled.
+  bool? _pushNotificationsEnabled;
+  bool get pushNotificationsEnabled => _pushNotificationsEnabled ?? true;
+  bool hasPushNotificationsEnabled() => _pushNotificationsEnabled != null;
+
+  // "isGuest" field. Anonymous Firebase sessions are deliberately separated
+  // from accounts that have confirmed a phone number.
+  bool? _isGuest;
+  bool get isGuest => _isGuest ?? false;
+  bool hasIsGuest() => _isGuest != null;
+
+  bool? _referralOnboardingRequired;
+  bool get referralOnboardingRequired => _referralOnboardingRequired ?? false;
+
+  bool? _referralOnboardingCompleted;
+  bool get referralOnboardingCompleted => _referralOnboardingCompleted ?? false;
+
+  DocumentReference? _invitedBy;
+  DocumentReference? get invitedBy => _invitedBy;
+  bool hasInvitedBy() => _invitedBy != null;
+
+  String? _invitedByUid;
+  String get invitedByUid => _invitedByUid ?? '';
+
   // "blockedUserIds" field.
   List<String>? _blockedUserIds;
   List<String> get blockedUserIds => _blockedUserIds ?? const [];
@@ -100,6 +124,15 @@ class UserRecord extends FirestoreRecord {
         : PlaceStruct.maybeFromMap(snapshotData['mainLoc']);
     _masterMode = snapshotData['masterMode'] as bool?;
     _clientProfileCompleted = snapshotData['clientProfileCompleted'] as bool?;
+    _pushNotificationsEnabled =
+        snapshotData['pushNotificationsEnabled'] as bool?;
+    _isGuest = snapshotData['isGuest'] as bool?;
+    _referralOnboardingRequired =
+        snapshotData['referralOnboardingRequired'] as bool?;
+    _referralOnboardingCompleted =
+        snapshotData['referralOnboardingCompleted'] as bool?;
+    _invitedBy = snapshotData['invitedBy'] as DocumentReference?;
+    _invitedByUid = snapshotData['invitedByUid'] as String?;
     _blockedUserIds = getDataList(snapshotData['blockedUserIds']);
     _masterData = snapshotData['masterData'] is MasterDataStruct
         ? snapshotData['masterData']
@@ -149,6 +182,10 @@ Map<String, dynamic> createUserRecordData({
   PlaceStruct? mainLoc,
   bool? masterMode,
   bool? clientProfileCompleted,
+  bool? pushNotificationsEnabled,
+  bool? isGuest,
+  bool? referralOnboardingRequired,
+  bool? referralOnboardingCompleted,
   List<String>? blockedUserIds,
   MasterDataStruct? masterData,
 }) {
@@ -166,6 +203,10 @@ Map<String, dynamic> createUserRecordData({
       'mainLoc': PlaceStruct().toMap(),
       'masterMode': masterMode,
       'clientProfileCompleted': clientProfileCompleted,
+      'pushNotificationsEnabled': pushNotificationsEnabled,
+      'isGuest': isGuest,
+      'referralOnboardingRequired': referralOnboardingRequired,
+      'referralOnboardingCompleted': referralOnboardingCompleted,
       'blockedUserIds': blockedUserIds,
       'masterData': MasterDataStruct().toMap(),
     }.withoutNulls,
@@ -198,6 +239,12 @@ class UserRecordDocumentEquality implements Equality<UserRecord> {
         e1?.mainLoc == e2?.mainLoc &&
         e1?.masterMode == e2?.masterMode &&
         e1?.clientProfileCompleted == e2?.clientProfileCompleted &&
+        e1?.pushNotificationsEnabled == e2?.pushNotificationsEnabled &&
+        e1?.isGuest == e2?.isGuest &&
+        e1?.referralOnboardingRequired == e2?.referralOnboardingRequired &&
+        e1?.referralOnboardingCompleted == e2?.referralOnboardingCompleted &&
+        e1?.invitedBy == e2?.invitedBy &&
+        e1?.invitedByUid == e2?.invitedByUid &&
         listEquality.equals(e1?.blockedUserIds, e2?.blockedUserIds) &&
         e1?.masterData == e2?.masterData;
   }
@@ -216,6 +263,12 @@ class UserRecordDocumentEquality implements Equality<UserRecord> {
     e?.mainLoc,
     e?.masterMode,
     e?.clientProfileCompleted,
+    e?.pushNotificationsEnabled,
+    e?.isGuest,
+    e?.referralOnboardingRequired,
+    e?.referralOnboardingCompleted,
+    e?.invitedBy,
+    e?.invitedByUid,
     e?.blockedUserIds,
     e?.masterData,
   ]);

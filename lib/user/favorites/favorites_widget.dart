@@ -3,6 +3,7 @@ import '/backend/backend.dart';
 import '/backend/schema/enums/enums.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/global_comp/app_page_header/app_page_header.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/global_comp/menu/menu_widget.dart';
 import '/global_comp/no_favorite/no_favorite_widget.dart';
@@ -66,67 +67,7 @@ class _FavoritesWidgetState extends State<FavoritesWidget> {
                     mainAxisAlignment: MainAxisAlignment.start,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Container(
-                        child: Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(
-                            24.0,
-                            24.0,
-                            24.0,
-                            16.0,
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.max,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              IconButton(
-                                tooltip: 'Назад',
-                                style: IconButton.styleFrom(
-                                  minimumSize: const Size.square(44.0),
-                                  padding: EdgeInsets.zero,
-                                ),
-                                icon: Icon(
-                                  Icons.arrow_back_ios_new_rounded,
-                                  color: FlutterFlowTheme.of(
-                                    context,
-                                  ).primaryText,
-                                  size: 22.0,
-                                ),
-                                onPressed: context.safePop,
-                              ),
-                              SizedBox(width: 8.0),
-                              Expanded(
-                                child: Text(
-                                  FFLocalizations.of(
-                                    context,
-                                  ).getText('auge734r' /* Избранное */),
-                                  style: FlutterFlowTheme.of(context)
-                                      .headlineMedium
-                                      .override(
-                                        font: GoogleFonts.interTight(
-                                          fontWeight: FlutterFlowTheme.of(
-                                            context,
-                                          ).headlineMedium.fontWeight,
-                                          fontStyle: FlutterFlowTheme.of(
-                                            context,
-                                          ).headlineMedium.fontStyle,
-                                        ),
-                                        color: FlutterFlowTheme.of(
-                                          context,
-                                        ).primaryText,
-                                        letterSpacing: 0.0,
-                                        fontWeight: FlutterFlowTheme.of(
-                                          context,
-                                        ).headlineMedium.fontWeight,
-                                        fontStyle: FlutterFlowTheme.of(
-                                          context,
-                                        ).headlineMedium.fontStyle,
-                                      ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      const AppPageHeader(title: 'Избранное', showBack: true),
                       Container(
                         child: Padding(
                           padding: EdgeInsetsDirectional.fromSTEB(

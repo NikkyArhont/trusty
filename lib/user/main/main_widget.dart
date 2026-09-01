@@ -1,3 +1,4 @@
+import '/auth/firebase_auth/auth_util.dart';
 import '/backend/backend.dart';
 import '/backend/schema/enums/enums.dart';
 import '/backend/schema/structs/index.dart';
@@ -12,7 +13,6 @@ import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import '/backend/push_notifications/push_notifications_util.dart';
 import '/backend/share_prompt/share_prompt_service.dart';
@@ -34,31 +34,23 @@ class _MainWidgetState extends State<MainWidget> {
 
   late MainModel _model;
   int _visibleServicesCount = _servicesPageSize;
+  int _servicesShuffleSeed = DateTime.now().microsecondsSinceEpoch;
   late Stream<List<ServiceRecord>> _servicesStream;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
-  Stream<List<ServiceRecord>> _createServicesStream(String categoryKey) {
-    return queryServiceRecord(
-      queryBuilder: (serviceRecord) => serviceRecord.where(
-        'categoryKey',
-        isEqualTo: categoryKey.isNotEmpty ? categoryKey : null,
-      ),
-    );
-  }
+  Stream<List<ServiceRecord>> _createServicesStream() => queryServiceRecord();
 
   Future<void> _refreshServices() async {
     try {
-      final categoryKey = FFAppState().globalFilter.catKey;
-      Query query = ServiceRecord.collection;
-      if (categoryKey.isNotEmpty) {
-        query = query.where('categoryKey', isEqualTo: categoryKey);
-      }
-      await query.get(const GetOptions(source: Source.server));
+      await ServiceRecord.collection.get(
+        const GetOptions(source: Source.server),
+      );
       if (!mounted) return;
       safeSetState(() {
         _visibleServicesCount = _servicesPageSize;
-        _servicesStream = _createServicesStream(categoryKey);
+        _servicesShuffleSeed = DateTime.now().microsecondsSinceEpoch;
+        _servicesStream = _createServicesStream();
       });
     } catch (_) {
       if (!mounted) return;
@@ -79,7 +71,6 @@ class _MainWidgetState extends State<MainWidget> {
     );
     safeSetState(() {
       _visibleServicesCount = _servicesPageSize;
-      _servicesStream = _createServicesStream(categoryKey);
     });
   }
 
@@ -103,6 +94,15 @@ class _MainWidgetState extends State<MainWidget> {
     }
 
     return false;
+  }
+
+  int _compareServicesRandomly(ServiceRecord first, ServiceRecord second) {
+    final firstRank = Object.hash(_servicesShuffleSeed, first.reference.id);
+    final secondRank = Object.hash(_servicesShuffleSeed, second.reference.id);
+    final rankComparison = firstRank.compareTo(secondRank);
+    return rankComparison != 0
+        ? rankComparison
+        : first.reference.id.compareTo(second.reference.id);
   }
 
   Widget _buildCategoryChip({
@@ -257,14 +257,18 @@ class _MainWidgetState extends State<MainWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => MainModel());
-    _servicesStream = _createServicesStream(FFAppState().globalFilter.catKey);
+    _servicesStream = _createServicesStream();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      initPushNotificationsForCurrentUser();
-      Future.delayed(
-        const Duration(milliseconds: 800),
-        showSharePromptIfEligible,
+      initPushNotificationsForCurrentUser(
+        requestPermission: !currentUserIsAnonymous,
       );
+      if (currentUserIsRegistered) {
+        Future.delayed(
+          const Duration(milliseconds: 800),
+          showSharePromptIfEligible,
+        );
+      }
     });
   }
 
@@ -300,9 +304,7 @@ class _MainWidgetState extends State<MainWidget> {
                     const SizedBox(height: 16.0),
                     FilledButton(
                       onPressed: () => safeSetState(() {
-                        _servicesStream = _createServicesStream(
-                          FFAppState().globalFilter.catKey,
-                        );
+                        _servicesStream = _createServicesStream();
                       }),
                       child: const Text('Повторить'),
                     ),
@@ -328,9 +330,19 @@ class _MainWidgetState extends State<MainWidget> {
             ),
           );
         }
-        final mainServiceRecordList = (snapshot.data ?? [])
-            .where((service) => service.status == ServiceStatus.show)
-            .where(_matchesSelectedCity)
+        final cityServiceRecordList =
+            (snapshot.data ?? [])
+                .where((service) => service.status == ServiceStatus.show)
+                .where(_matchesSelectedCity)
+                .toList()
+              ..sort(_compareServicesRandomly);
+        final selectedCategoryKey = FFAppState().globalFilter.catKey;
+        final mainServiceRecordList = cityServiceRecordList
+            .where(
+              (service) =>
+                  selectedCategoryKey.isEmpty ||
+                  service.categoryKey == selectedCategoryKey,
+            )
             .toList();
 
         return Scaffold(
@@ -347,298 +359,270 @@ class _MainWidgetState extends State<MainWidget> {
                     primary: false,
                     physics: const AlwaysScrollableScrollPhysics(),
                     child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          color: FlutterFlowTheme.of(context).primaryBackground,
-                        ),
-                        child: Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(
-                            16.0,
-                            24.0,
-                            16.0,
-                            24.0,
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          decoration: BoxDecoration(
+                            color: FlutterFlowTheme.of(
+                              context,
+                            ).primaryBackground,
                           ),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.max,
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Flexible(
-                                    child: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.start,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          FFLocalizations.of(
-                                            context,
-                                          ).getText('6ef5ecez' /* Сарафан */),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(
-                                            color: FlutterFlowTheme.of(
+                          child: Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                              16.0,
+                              24.0,
+                              16.0,
+                              8.0,
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.max,
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Flexible(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            FFLocalizations.of(
                                               context,
-                                            ).primary,
-                                            fontWeight: FontWeight.w800,
-                                            fontSize: 32.0,
-                                          ),
-                                        ),
-                                        Text(
-                                          FFLocalizations.of(context).getText(
-                                            '5za4bwk8' /* Recommendations you trust */,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: FlutterFlowTheme.of(context)
-                                              .labelMedium
-                                              .override(
-                                                font: GoogleFonts.inter(
-                                                  fontWeight: FontWeight.w600,
-                                                  fontStyle:
-                                                      FlutterFlowTheme.of(
-                                                        context,
-                                                      ).labelMedium.fontStyle,
-                                                ),
-                                                color: FlutterFlowTheme.of(
-                                                  context,
-                                                ).secondaryText,
-                                                fontSize: 12.0,
-                                                letterSpacing: 0.0,
-                                                fontWeight: FontWeight.w600,
-                                                fontStyle: FlutterFlowTheme.of(
-                                                  context,
-                                                ).labelMedium.fontStyle,
-                                                lineHeight: 1.3,
-                                              ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      FlutterFlowIconButton(
-                                        borderColor: FlutterFlowTheme.of(
-                                          context,
-                                        ).primaryText,
-                                        borderRadius: 12.0,
-                                        borderWidth: 1.0,
-                                        buttonSize: 40.0,
-                                        fillColor: FlutterFlowTheme.of(
-                                          context,
-                                        ).secondaryBackground,
-                                        icon: Icon(
-                                          Icons.favorite_border,
-                                          color: FlutterFlowTheme.of(
-                                            context,
-                                          ).primaryText,
-                                          size: 24.0,
-                                        ),
-                                        onPressed: () async {
-                                          context.pushNamed(
-                                            FavoritesWidget.routeName,
-                                          );
-                                        },
-                                      ),
-                                      FlutterFlowIconButton(
-                                        borderColor: FlutterFlowTheme.of(
-                                          context,
-                                        ).primaryText,
-                                        borderRadius: 12.0,
-                                        borderWidth: 1.0,
-                                        buttonSize: 40.0,
-                                        fillColor: FlutterFlowTheme.of(
-                                          context,
-                                        ).secondaryBackground,
-                                        icon: Icon(
-                                          Icons.location_on,
-                                          color: FlutterFlowTheme.of(
-                                            context,
-                                          ).primaryText,
-                                          size: 24.0,
-                                        ),
-                                        onPressed: () async {
-                                          context.pushNamed(
-                                            ChooseLocationCityWidget.routeName,
-                                            queryParameters: {
-                                              'edit': serializeParam(
-                                                false,
-                                                ParamType.bool,
-                                              ),
-                                            }.withoutNulls,
-                                          );
-                                        },
-                                      ),
-                                    ].divide(SizedBox(width: 8.0)),
-                                  ),
-                                ],
-                              ),
-                              InkWell(
-                                splashColor: Colors.transparent,
-                                focusColor: Colors.transparent,
-                                hoverColor: Colors.transparent,
-                                highlightColor: Colors.transparent,
-                                borderRadius: BorderRadius.circular(16.0),
-                                onTap: () async {
-                                  context.pushNamed(SearchWidget.routeName);
-                                },
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: FlutterFlowTheme.of(
-                                      context,
-                                    ).secondaryBackground,
-                                    borderRadius: BorderRadius.circular(16.0),
-                                    border: Border.all(
-                                      color: FlutterFlowTheme.of(
-                                        context,
-                                      ).tertiary,
-                                      width: 1.0,
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: EdgeInsetsDirectional.fromSTEB(
-                                      16.0,
-                                      12.0,
-                                      16.0,
-                                      12.0,
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.max,
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.start,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          Icons.search_rounded,
-                                          color: FlutterFlowTheme.of(
-                                            context,
-                                          ).secondaryText,
-                                          size: 22.0,
-                                        ),
-                                        Expanded(
-                                          flex: 1,
-                                          child: Text(
-                                            FFLocalizations.of(context).getText(
-                                              'bm0k963u' /* Поиск услуг... */,
-                                            ),
+                                            ).getText('6ef5ecez' /* Сарафан */),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
                                             style: TextStyle(
                                               color: FlutterFlowTheme.of(
                                                 context,
-                                              ).hint,
-                                              fontSize: 16.0,
+                                              ).primary,
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 32.0,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        FlutterFlowIconButton(
+                                          borderColor: FlutterFlowTheme.of(
+                                            context,
+                                          ).primaryText,
+                                          borderRadius: 12.0,
+                                          borderWidth: 1.0,
+                                          buttonSize: 40.0,
+                                          fillColor: FlutterFlowTheme.of(
+                                            context,
+                                          ).secondaryBackground,
+                                          icon: Icon(
+                                            Icons.favorite_border,
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).primaryText,
+                                            size: 24.0,
+                                          ),
+                                          onPressed: () async {
+                                            context.pushNamed(
+                                              FavoritesWidget.routeName,
+                                            );
+                                          },
+                                        ),
+                                        FlutterFlowIconButton(
+                                          borderColor: FlutterFlowTheme.of(
+                                            context,
+                                          ).primaryText,
+                                          borderRadius: 12.0,
+                                          borderWidth: 1.0,
+                                          buttonSize: 40.0,
+                                          fillColor: FlutterFlowTheme.of(
+                                            context,
+                                          ).secondaryBackground,
+                                          icon: Icon(
+                                            Icons.location_on,
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).primaryText,
+                                            size: 24.0,
+                                          ),
+                                          onPressed: () async {
+                                            context.pushNamed(
+                                              ChooseLocationCityWidget
+                                                  .routeName,
+                                              queryParameters: {
+                                                'edit': serializeParam(
+                                                  false,
+                                                  ParamType.bool,
+                                                ),
+                                              }.withoutNulls,
+                                            );
+                                          },
+                                        ),
+                                        FlutterFlowIconButton(
+                                          borderColor: FlutterFlowTheme.of(
+                                            context,
+                                          ).primaryText,
+                                          borderRadius: 12.0,
+                                          borderWidth: 1.0,
+                                          buttonSize: 40.0,
+                                          fillColor: FlutterFlowTheme.of(
+                                            context,
+                                          ).secondaryBackground,
+                                          icon: Icon(
+                                            Icons.search_rounded,
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).primaryText,
+                                            size: 24.0,
+                                          ),
+                                          onPressed: () async {
+                                            context.pushNamed(
+                                              SearchWidget.routeName,
+                                            );
+                                          },
+                                        ),
+                                        FlutterFlowIconButton(
+                                          borderColor: FlutterFlowTheme.of(
+                                            context,
+                                          ).primaryText,
+                                          borderRadius: 12.0,
+                                          borderWidth: 1.0,
+                                          buttonSize: 40.0,
+                                          fillColor: FlutterFlowTheme.of(
+                                            context,
+                                          ).secondaryBackground,
+                                          icon: Icon(
+                                            Icons.map_outlined,
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).primaryText,
+                                            size: 24.0,
+                                          ),
+                                          onPressed: () async {
+                                            context.pushNamed(
+                                              SearchResultWidget.routeName,
+                                              queryParameters: {
+                                                'listResult': serializeParam(
+                                                  cityServiceRecordList,
+                                                  ParamType.Document,
+                                                  isList: true,
+                                                ),
+                                                'showCategories':
+                                                    serializeParam(
+                                                      true,
+                                                      ParamType.bool,
+                                                    ),
+                                              }.withoutNulls,
+                                              extra: <String, dynamic>{
+                                                'listResult':
+                                                    cityServiceRecordList,
+                                              },
+                                            );
+                                          },
+                                        ),
+                                      ].divide(SizedBox(width: 8.0)),
+                                    ),
+                                  ],
+                                ),
+                              ].divide(SizedBox(height: 12.0)),
+                            ),
+                          ),
+                        ),
+                        _buildCategoryMenu(context),
+                        Container(
+                          child: Padding(
+                            padding: EdgeInsetsDirectional.fromSTEB(
+                              12.0,
+                              0.0,
+                              12.0,
+                              0.0,
+                            ),
+                            child: Builder(
+                              builder: (context) {
+                                final mainVar = mainServiceRecordList
+                                    .take(_visibleServicesCount)
+                                    .toList();
+                                final hasMore =
+                                    mainVar.length <
+                                    mainServiceRecordList.length;
+
+                                return Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    MasonryGridView.builder(
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      gridDelegate:
+                                          SliverSimpleGridDelegateWithFixedCrossAxisCount(
+                                            crossAxisCount: 2,
+                                          ),
+                                      crossAxisSpacing: 10.0,
+                                      mainAxisSpacing: 10.0,
+                                      itemCount: mainVar.length,
+                                      shrinkWrap: true,
+                                      itemBuilder: (context, mainVarIndex) {
+                                        final mainVarItem =
+                                            mainVar[mainVarIndex];
+                                        return ServiceCardClientWidget(
+                                          key: Key(
+                                            'Key55p_${mainVarIndex}_of_${mainVar.length}',
+                                          ),
+                                          servicedoc: mainVarItem,
+                                        );
+                                      },
+                                    ),
+                                    if (hasMore)
+                                      Padding(
+                                        padding: const EdgeInsets.only(
+                                          top: 16.0,
+                                        ),
+                                        child: FFButtonWidget(
+                                          onPressed: () => safeSetState(() {
+                                            _visibleServicesCount +=
+                                                _servicesPageSize;
+                                          }),
+                                          text: 'Показать ещё',
+                                          options: FFButtonOptions(
+                                            height: 44.0,
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 24.0,
+                                            ),
+                                            color: FlutterFlowTheme.of(
+                                              context,
+                                            ).primary,
+                                            textStyle:
+                                                FlutterFlowTheme.of(
+                                                  context,
+                                                ).titleSmall.override(
+                                                  color: FlutterFlowTheme.of(
+                                                    context,
+                                                  ).info,
+                                                  letterSpacing: 0.0,
+                                                ),
+                                            elevation: 0.0,
+                                            borderRadius: BorderRadius.circular(
+                                              22.0,
                                             ),
                                           ),
                                         ),
-                                        Icon(
-                                          Icons.tune_rounded,
-                                          color: FlutterFlowTheme.of(
-                                            context,
-                                          ).primary,
-                                          size: 20.0,
-                                        ),
-                                      ].divide(SizedBox(width: 12.0)),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ].divide(SizedBox(height: 12.0)),
-                          ),
-                        ),
-                      ),
-                      _buildCategoryMenu(context),
-                      Container(
-                        child: Padding(
-                          padding: EdgeInsetsDirectional.fromSTEB(
-                            12.0,
-                            0.0,
-                            12.0,
-                            0.0,
-                          ),
-                          child: Builder(
-                            builder: (context) {
-                              final mainVar = mainServiceRecordList
-                                  .take(_visibleServicesCount)
-                                  .toList();
-                              final hasMore =
-                                  mainVar.length < mainServiceRecordList.length;
-
-                              return Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  MasonryGridView.builder(
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    gridDelegate:
-                                        SliverSimpleGridDelegateWithFixedCrossAxisCount(
-                                          crossAxisCount: 2,
-                                        ),
-                                    crossAxisSpacing: 10.0,
-                                    mainAxisSpacing: 10.0,
-                                    itemCount: mainVar.length,
-                                    shrinkWrap: true,
-                                    itemBuilder: (context, mainVarIndex) {
-                                      final mainVarItem = mainVar[mainVarIndex];
-                                      return ServiceCardClientWidget(
-                                        key: Key(
-                                          'Key55p_${mainVarIndex}_of_${mainVar.length}',
-                                        ),
-                                        servicedoc: mainVarItem,
-                                      );
-                                    },
-                                  ),
-                                  if (hasMore)
-                                    Padding(
-                                      padding: const EdgeInsets.only(top: 16.0),
-                                      child: FFButtonWidget(
-                                        onPressed: () => safeSetState(() {
-                                          _visibleServicesCount +=
-                                              _servicesPageSize;
-                                        }),
-                                        text: 'Показать ещё',
-                                        options: FFButtonOptions(
-                                          height: 44.0,
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 24.0,
-                                          ),
-                                          color: FlutterFlowTheme.of(
-                                            context,
-                                          ).primary,
-                                          textStyle:
-                                              FlutterFlowTheme.of(
-                                                context,
-                                              ).titleSmall.override(
-                                                color: FlutterFlowTheme.of(
-                                                  context,
-                                                ).info,
-                                                letterSpacing: 0.0,
-                                              ),
-                                          elevation: 0.0,
-                                          borderRadius: BorderRadius.circular(
-                                            22.0,
-                                          ),
-                                        ),
                                       ),
-                                    ),
-                                ],
-                              );
-                            },
+                                  ],
+                                );
+                              },
+                            ),
                           ),
                         ),
-                      ),
-                    ].divide(SizedBox(height: 0.0)).addToEnd(SizedBox(height: 120.0)),
+                      ].divide(SizedBox(height: 0.0)).addToEnd(SizedBox(height: 120.0)),
                     ),
                   ),
                 ),

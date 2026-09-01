@@ -61,6 +61,7 @@ Future initFirebase() async {
         storageBucket: 'trusty-kzh1sb.firebasestorage.app',
         messagingSenderId: '592998402745',
         appId: '1:592998402745:web:740f02638732221f03a968',
+        measurementId: 'G-3XCN1L0X4N',
       ),
     );
     await _keepFirestoreWarm(FirebaseAuth.instance.currentUser);

@@ -3,6 +3,7 @@ import '/backend/backend.dart';
 import '/backend/schema/enums/enums.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/global_comp/app_page_header/app_page_header.dart';
 import '/global_comp/menu/menu_widget.dart';
 import '/index.dart';
 import 'package:flutter/material.dart';
@@ -80,7 +81,7 @@ class _CabinetWidgetState extends State<CabinetWidget> {
               child: Padding(
                 padding: EdgeInsetsDirectional.fromSTEB(
                   16.0,
-                  24.0,
+                  16.0,
                   16.0,
                   120.0,
                 ),
@@ -88,17 +89,78 @@ class _CabinetWidgetState extends State<CabinetWidget> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Кабинет',
-                      style: FlutterFlowTheme.of(context).headlineMedium
-                          .override(
-                            font: GoogleFonts.interTight(
-                              fontWeight: FontWeight.w700,
-                            ),
-                            color: FlutterFlowTheme.of(context).primaryText,
-                            letterSpacing: 0.0,
-                            fontWeight: FontWeight.w700,
+                    const AppPageHeader(
+                      title: 'Кабинет',
+                      padding: EdgeInsets.zero,
+                    ),
+                    InkWell(
+                      borderRadius: BorderRadius.circular(12.0),
+                      onTap: () {
+                        context.pushNamed(VisitHistoryWidget.routeName);
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(16.0),
+                        decoration: BoxDecoration(
+                          color: FlutterFlowTheme.of(
+                            context,
+                          ).secondaryBackground,
+                          borderRadius: BorderRadius.circular(12.0),
+                          border: Border.all(
+                            color: FlutterFlowTheme.of(context).divider,
                           ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.history_rounded,
+                              color: FlutterFlowTheme.of(context).primary,
+                              size: 24.0,
+                            ),
+                            const SizedBox(width: 12.0),
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'История посещений',
+                                    style: FlutterFlowTheme.of(context)
+                                        .bodyLarge
+                                        .override(
+                                          font: GoogleFonts.inter(
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                          color: FlutterFlowTheme.of(
+                                            context,
+                                          ).primaryText,
+                                          letterSpacing: 0.0,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                  ),
+                                  Text(
+                                    'Завершённые визиты и рекомендации',
+                                    style: FlutterFlowTheme.of(context)
+                                        .bodySmall
+                                        .override(
+                                          font: GoogleFonts.inter(),
+                                          color: FlutterFlowTheme.of(
+                                            context,
+                                          ).secondaryText,
+                                          letterSpacing: 0.0,
+                                        ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8.0),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              color: FlutterFlowTheme.of(context).secondaryText,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                     Text(
                       'Мои записи',

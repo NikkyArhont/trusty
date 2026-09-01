@@ -1,6 +1,7 @@
 import '/auth/firebase_auth/auth_util.dart';
 import '/backend/backend.dart';
 import '/backend/schema/enums/enums.dart';
+import '/backend/referral/your_master_highlight.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -32,25 +33,18 @@ class _ServiceCardClientWidgetState extends State<ServiceCardClientWidget> {
 
   late ServiceCardClientModel _model;
 
-  Set<String> get _serviceRecommenderPhones {
-    final phones = <String>{};
+  Set<String> get _serviceRecommenderHashes {
     final service = widget.servicedoc;
-    if (service == null) return phones;
-    for (final phone in service.recommenderPhones) {
-      final normalized = normalizePhone(phone);
-      if (normalized.isNotEmpty) phones.add(normalized);
-    }
-    for (final recommendation in service.recommendations) {
-      final normalized = normalizePhone(recommendation.phone);
-      if (normalized.isNotEmpty) phones.add(normalized);
-    }
-    return phones;
+    return service == null
+        ? <String>{}
+        : recommendationPhoneHashesForService(service);
   }
 
-  int get _serviceRecommendationsCount => _serviceRecommenderPhones.length;
+  int get _serviceRecommendationsCount => _serviceRecommenderHashes.length;
 
-  int get _contactRecommendationsCount =>
-      _serviceRecommenderPhones.where(globalContactsMap.containsKey).length;
+  int get _contactRecommendationsCount => _serviceRecommenderHashes
+      .where((hash) => contactNameForPhoneHash(hash) != null)
+      .length;
 
   @override
   void setState(VoidCallback callback) {
@@ -83,7 +77,7 @@ class _ServiceCardClientWidgetState extends State<ServiceCardClientWidget> {
         .clamp(320, 800)
         .toInt();
 
-    return InkWell(
+    final card = InkWell(
       splashColor: Colors.transparent,
       focusColor: Colors.transparent,
       hoverColor: Colors.transparent,
@@ -278,12 +272,7 @@ class _ServiceCardClientWidgetState extends State<ServiceCardClientWidget> {
                                 ),
                                 Text(
                                   valueOrDefault<String>(
-                                    formatNumber(
-                                      widget!.servicedoc?.price,
-                                      formatType: FormatType.decimal,
-                                      decimalType: DecimalType.automatic,
-                                      currency: '₽',
-                                    ),
+                                    formatPrice(widget!.servicedoc?.price),
                                     'Цена не указана',
                                   ),
                                   maxLines: 1,
@@ -523,6 +512,11 @@ class _ServiceCardClientWidgetState extends State<ServiceCardClientWidget> {
           ),
         ),
       ),
+    );
+    return YourMasterServiceFrame(
+      service: widget.servicedoc!,
+      borderRadius: 12.0,
+      child: card,
     );
   }
 }

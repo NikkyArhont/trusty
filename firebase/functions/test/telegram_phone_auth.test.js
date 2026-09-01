@@ -5,7 +5,10 @@ const {
   TelegramPhoneAuthService,
 } = require("../telegram_phone_auth");
 
-function fixture(status = {status: "pending"}) {
+function fixture(
+  status = {status: "pending"},
+  migrateGuest = async () => false,
+) {
   const saved = [];
   const store = {
     createChallenge: async (challenge) => saved.push(challenge),
@@ -23,6 +26,7 @@ function fixture(status = {status: "pending"}) {
       now: () => 1_700_000_000_000,
       challengeIdFactory: () => "a".repeat(43),
       logger: {info: () => {}},
+      migrateGuest,
     }),
   };
 }
@@ -52,4 +56,19 @@ test("returns a custom token only after Telegram confirmation", async () => {
     status: "confirmed",
     token: "phone_79181234567:true",
   });
+});
+
+test("moves the anonymous guest profile before issuing a Telegram token", async () => {
+  const migrations = [];
+  const {service} = fixture(
+    {status: "confirmed", phone: "+79181234567"},
+    async (migration) => migrations.push(migration),
+  );
+
+  await service.status("a".repeat(43), "anonymous-user");
+
+  assert.deepEqual(migrations, [{
+    guestUid: "anonymous-user",
+    targetUid: "phone_79181234567",
+  }]);
 });

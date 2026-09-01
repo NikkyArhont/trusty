@@ -3,6 +3,10 @@
 const crypto = require("crypto");
 const {normalizeRussianPhone, PhoneAuthError, maskPhone} =
   require("./sms_phone_auth");
+const {
+  authenticatedAnonymousUid,
+  migrateGuestProfile,
+} = require("./guest_profile");
 
 const TELEGRAM_CHALLENGE_TTL_MS = 5 * 60 * 1000;
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -107,12 +111,14 @@ class TelegramPhoneAuthService {
     now = () => Date.now(),
     challengeIdFactory = () => crypto.randomBytes(32).toString("base64url"),
     logger = console,
+    migrateGuest = async () => false,
   }) {
     this.store = store;
     this.authClient = authClient;
     this.now = now;
     this.challengeIdFactory = challengeIdFactory;
     this.logger = logger;
+    this.migrateGuest = migrateGuest;
   }
 
   async create(rawPhone) {
@@ -136,7 +142,7 @@ class TelegramPhoneAuthService {
     };
   }
 
-  async status(challengeId) {
+  async status(challengeId, guestUid) {
     if (typeof challengeId !== "string" ||
         !/^[A-Za-z0-9_-]{40,64}$/.test(challengeId)) {
       throw new PhoneAuthError("invalid_challenge", 400);
@@ -148,6 +154,9 @@ class TelegramPhoneAuthService {
     if (result.status !== "confirmed") return {status: result.status};
 
     const userRecord = await getOrCreateAuthUser(this.authClient, result.phone);
+    if (guestUid && guestUid !== userRecord.uid) {
+      await this.migrateGuest({guestUid, targetUid: userRecord.uid});
+    }
     const token = await this.authClient.createCustomToken(userRecord.uid, {
       phoneAuth: true,
       telegramAuth: true,
@@ -168,33 +177,45 @@ function createTelegramPhoneAuthHandlers({admin}) {
   const createService = () => new TelegramPhoneAuthService({
     store,
     authClient: admin.auth(),
+    migrateGuest: ({guestUid, targetUid}) => migrateGuestProfile({
+      admin,
+      guestUid,
+      targetUid,
+    }),
   });
 
   const cors = (response) => {
     response.set("Access-Control-Allow-Origin", "*");
-    response.set("Access-Control-Allow-Headers", "Content-Type");
+    response.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
     response.set("Access-Control-Allow-Methods", "POST, OPTIONS");
   };
-  const run = (handler) => async (request, response) => {
+  const run = (handler, {includeGuest = false} = {}) =>
+    async (request, response) => {
     cors(response);
     if (request.method === "OPTIONS") return response.status(204).send("");
     if (request.method !== "POST") {
       return response.status(405).json({error: "method_not_allowed"});
     }
     try {
-      response.json(await handler(createService(), request.body || {}));
+      const guestUid = includeGuest ?
+        await authenticatedAnonymousUid({admin, request}) : null;
+      response.json(await handler(
+        createService(),
+        request.body || {},
+        guestUid,
+      ));
     } catch (error) {
       const known = error instanceof PhoneAuthError;
       response.status(known ? error.status : 500).json({
         error: known ? error.code : "server_unavailable",
       });
     }
-  };
+    };
 
   return {
     createTelegramPhoneAuth: run((service, body) => service.create(body.phone)),
-    checkTelegramPhoneAuth: run((service, body) =>
-      service.status(body.challengeId)),
+    checkTelegramPhoneAuth: run((service, body, guestUid) =>
+      service.status(body.challengeId, guestUid), {includeGuest: true}),
   };
 }
 

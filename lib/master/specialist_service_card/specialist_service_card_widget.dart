@@ -6,6 +6,7 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/master/del_serv/del_serv_widget.dart';
+import '/master/service_invite_share/service_invite_share_dialog.dart';
 import 'dart:ui';
 import '/index.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -138,23 +139,31 @@ class _SpecialistServiceCardWidgetState
     final int clientsCount = uniqueClients.length;
 
     final Set<String> filteredRecommenders = {};
-    final Set<String> structPhones = {};
+    final Set<String> structHashes = {};
     if (widget.servDoc != null) {
       for (var rec in widget.servDoc!.recommendations) {
-        if (rec.phone.isNotEmpty) {
-          structPhones.add(rec.phone);
+        final normalized = normalizePhone(rec.phone);
+        final identity = rec.phoneHash.trim().isNotEmpty
+            ? rec.phoneHash.trim().toLowerCase()
+            : normalized.isEmpty
+            ? ''
+            : phoneHash(normalized);
+        if (identity.isNotEmpty) {
+          structHashes.add(identity);
           if (widget.filterStartDate != null && rec.date != null) {
             if (rec.date!.isAfter(widget.filterStartDate!)) {
-              filteredRecommenders.add(rec.phone);
+              filteredRecommenders.add(identity);
             }
           } else {
-            filteredRecommenders.add(rec.phone);
+            filteredRecommenders.add(identity);
           }
         }
       }
-      for (var phone in widget.servDoc!.recommenderPhones) {
-        if (phone.isNotEmpty && !structPhones.contains(phone)) {
-          filteredRecommenders.add(phone);
+      for (final identity in recommendationPhoneHashesForService(
+        widget.servDoc!,
+      )) {
+        if (!structHashes.contains(identity)) {
+          filteredRecommenders.add(identity);
         }
       }
     }
@@ -364,12 +373,8 @@ class _SpecialistServiceCardWidgetState
                                           ),
                                           Text(
                                             valueOrDefault<String>(
-                                              formatNumber(
+                                              formatPrice(
                                                 widget!.servDoc?.price,
-                                                formatType: FormatType.decimal,
-                                                decimalType:
-                                                    DecimalType.automatic,
-                                                currency: '₽',
                                               ),
                                               '0',
                                             ),
@@ -712,6 +717,41 @@ class _SpecialistServiceCardWidgetState
                       ),
                     ),
                   ].divide(SizedBox(width: 8.0)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: 2.0),
+                  child: FFButtonWidget(
+                    onPressed: widget.servDoc == null
+                        ? null
+                        : () => showServiceInviteShareDialog(
+                            context,
+                            service: widget.servDoc!,
+                          ),
+                    text: 'Пригласить клиентов в Сарафан',
+                    icon: const Icon(Icons.group_add_rounded, size: 18.0),
+                    options: FFButtonOptions(
+                      width: double.infinity,
+                      height: 46.0,
+                      padding: const EdgeInsets.symmetric(horizontal: 14.0),
+                      iconPadding: const EdgeInsets.only(right: 6.0),
+                      iconColor: FlutterFlowTheme.of(context).primary,
+                      color: FlutterFlowTheme.of(
+                        context,
+                      ).primary.withValues(alpha: 0.08),
+                      textStyle: TextStyle(
+                        color: FlutterFlowTheme.of(context).primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14.0,
+                      ),
+                      elevation: 0.0,
+                      borderSide: BorderSide(
+                        color: FlutterFlowTheme.of(
+                          context,
+                        ).primary.withValues(alpha: 0.35),
+                      ),
+                      borderRadius: BorderRadius.circular(18.0),
+                    ),
+                  ),
                 ),
               ].divide(SizedBox(height: 4.0)),
             ),

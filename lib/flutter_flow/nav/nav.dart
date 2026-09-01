@@ -9,6 +9,8 @@ import 'package:provider/provider.dart';
 import '/backend/backend.dart';
 import '/backend/schema/structs/index.dart';
 import '/backend/schema/enums/enums.dart';
+import '/backend/analytics/analytics_service.dart';
+import '/backend/guest/guest_access.dart';
 
 import '/auth/base_auth_user_provider.dart';
 
@@ -48,6 +50,8 @@ class AppStateNotifier extends ChangeNotifier {
 
   bool get loading => user == null || showSplashImage;
   bool get loggedIn => user?.loggedIn ?? false;
+  bool get isAnonymous => user?.isAnonymous ?? false;
+  bool get registered => loggedIn && !isAnonymous;
   bool get initiallyLoggedIn => initialUser?.loggedIn ?? false;
   bool get shouldRedirect => loggedIn && _redirectLocation != null;
 
@@ -86,17 +90,15 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
   debugLogDiagnostics: true,
   refreshListenable: appStateNotifier,
   navigatorKey: appNavigatorKey,
+  observers: [AnalyticsService.instance.navigationObserver],
   errorBuilder: (context, state) =>
       appStateNotifier.loggedIn ? MainWidget() : LoginWidget(),
   routes: [
     FFRoute(
       name: '_initialize',
       path: '/',
-      builder: (context, _) => FFAppState().firstTime
-          ? AppOnboardingWidget()
-          : appStateNotifier.loggedIn
-          ? InitpageWidget()
-          : LoginWidget(),
+      builder: (context, _) =>
+          FFAppState().firstTime ? AppOnboardingWidget() : InitpageWidget(),
     ),
     FFRoute(
       name: AppOnboardingWidget.routeName,
@@ -110,6 +112,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       name: ClientProfileSetupWidget.routeName,
       path: ClientProfileSetupWidget.routePath,
       builder: (context, params) => ClientProfileSetupWidget(),
+      requireRegistered: true,
     ),
     FFRoute(
       name: LoginWidget.routeName,
@@ -135,22 +138,32 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       name: FavoritesWidget.routeName,
       path: FavoritesWidget.routePath,
       builder: (context, params) => FavoritesWidget(),
+      requireRegistered: true,
+      guestReason: 'Чтобы сохранять услуги, подтвердите номер телефона.',
     ),
     FFRoute(
       name: CabinetWidget.routeName,
       path: CabinetWidget.routePath,
       builder: (context, params) => CabinetWidget(),
+      requireRegistered: true,
+      guestReason: 'Кабинет и история записей доступны после регистрации.',
     ),
     FFRoute(
       name: ChatsWidget.routeName,
       path: ChatsWidget.routePath,
       builder: (context, params) => ChatsWidget(),
+      requireRegistered: true,
+      guestReason:
+          'Чтобы переписываться с мастерами, подтвердите номер телефона.',
     ),
     FFRoute(
       name: ChatWidget.routeName,
       path: ChatWidget.routePath,
       builder: (context, params) =>
           ChatWidget(chatId: params.getParam('chatId', ParamType.String)),
+      requireRegistered: true,
+      guestReason:
+          'Чтобы переписываться с мастерами, подтвердите номер телефона.',
     ),
     FFRoute(
       name: VisitHistoryWidget.routeName,
@@ -158,6 +171,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       builder: (context, params) => VisitHistoryWidget(
         chatId: params.getParam('chatId', ParamType.String),
       ),
+      requireRegistered: true,
     ),
     FFRoute(
       name: ServiceDetailWidget.routeName,
@@ -173,11 +187,15 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       name: UserProfileWidget.routeName,
       path: UserProfileWidget.routePath,
       builder: (context, params) => UserProfileWidget(),
+      requireRegistered: true,
+      guestReason:
+          'Создайте профиль, чтобы сохранять данные и пользоваться всеми возможностями Сарафана.',
     ),
     FFRoute(
       name: SpecialistDashboardWidget.routeName,
       path: SpecialistDashboardWidget.routePath,
       builder: (context, params) => SpecialistDashboardWidget(),
+      requireRegistered: true,
     ),
     FFRoute(
       name: RecordPageClientWidget.routeName,
@@ -190,6 +208,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         serviceDoc: params.getParam('serviceDoc', ParamType.Document),
         recordDoc: params.getParam('recordDoc', ParamType.Document),
       ),
+      requireRegistered: true,
     ),
     FFRoute(
       name: EditServiceWidget.routeName,
@@ -200,6 +219,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       builder: (context, params) => EditServiceWidget(
         servDoc: params.getParam('servDoc', ParamType.Document),
       ),
+      requireRegistered: true,
     ),
     FFRoute(
       name: SmsWidget.routeName,
@@ -213,11 +233,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       name: RecordsWidget.routeName,
       path: RecordsWidget.routePath,
       builder: (context, params) => RecordsWidget(),
+      requireRegistered: true,
     ),
     FFRoute(
       name: MasterChatsWidget.routeName,
       path: MasterChatsWidget.routePath,
       builder: (context, params) => MasterChatsWidget(),
+      requireRegistered: true,
     ),
     FFRoute(
       name: MasterOnboardingWidget.routeName,
@@ -226,6 +248,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
         returnToProfile:
             params.getParam('returnToProfile', ParamType.bool) ?? false,
       ),
+      requireRegistered: true,
     ),
     FFRoute(
       name: ChooseLocationCityWidget.routeName,
@@ -244,6 +267,56 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       name: EditProfileWidget.routeName,
       path: EditProfileWidget.routePath,
       builder: (context, params) => EditProfileWidget(),
+      requireRegistered: true,
+    ),
+    FFRoute(
+      name: AdminStatsWidget.routeName,
+      path: AdminStatsWidget.routePath,
+      builder: (context, params) => const AdminStatsWidget(),
+      requireAuth: true,
+      requireRegistered: true,
+    ),
+    FFRoute(
+      name: AdminSupportChatsWidget.routeName,
+      path: AdminSupportChatsWidget.routePath,
+      builder: (context, params) => const AdminSupportChatsWidget(),
+      requireAuth: true,
+      requireRegistered: true,
+    ),
+    FFRoute(
+      name: AdminUsersWidget.routeName,
+      path: AdminUsersWidget.routePath,
+      builder: (context, params) => const AdminUsersWidget(),
+      requireAuth: true,
+      requireRegistered: true,
+    ),
+    FFRoute(
+      name: AdminUserDetailWidget.routeName,
+      path: AdminUserDetailWidget.routePath,
+      builder: (context, params) => AdminUserDetailWidget(
+        userId: params.getParam('userId', ParamType.String) ?? '',
+        initialView:
+            params.getParam('initialView', ParamType.String) ?? 'client',
+      ),
+      requireAuth: true,
+      requireRegistered: true,
+    ),
+    FFRoute(
+      name: AdminMemeBuilderWidget.routeName,
+      path: AdminMemeBuilderWidget.routePath,
+      builder: (context, params) => const AdminMemeBuilderWidget(),
+      requireAuth: true,
+      requireRegistered: true,
+    ),
+    FFRoute(
+      name: ReferralOnboardingWidget.routeName,
+      path: ReferralOnboardingWidget.routePath,
+      builder: (context, params) => ReferralOnboardingWidget(
+        previewMode: params.getParam('previewMode', ParamType.bool) ?? false,
+        profileMode: params.getParam('profileMode', ParamType.bool) ?? false,
+      ),
+      requireAuth: true,
+      requireRegistered: true,
     ),
     FFRoute(
       name: InitpageWidget.routeName,
@@ -262,6 +335,8 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           ParamType.Document,
           isList: true,
         ),
+        showCategories:
+            params.getParam('showCategories', ParamType.bool) ?? false,
       ),
     ),
     FFRoute(
@@ -270,6 +345,7 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       builder: (context, params) => EditProfileMasterWidget(
         setupMode: params.getParam('setupMode', ParamType.bool) ?? false,
       ),
+      requireRegistered: true,
     ),
     FFRoute(
       name: MasterPageWidget.routeName,
@@ -294,11 +370,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       builder: (context, params) => RecordPageMasterWidget(
         recordDoc: params.getParam('recordDoc', ParamType.Document),
       ),
+      requireRegistered: true,
     ),
     FFRoute(
       name: MasterNotificationsWidget.routeName,
       path: MasterNotificationsWidget.routePath,
       builder: (context, params) => MasterNotificationsWidget(),
+      requireRegistered: true,
     ),
   ].map((r) => r.toRoute(appStateNotifier)).toList(),
 );
@@ -443,6 +521,8 @@ class FFRoute {
     required this.path,
     required this.builder,
     this.requireAuth = false,
+    this.requireRegistered = false,
+    this.guestReason = 'Чтобы продолжить, подтвердите номер телефона.',
     this.asyncParams = const {},
     this.routes = const [],
   });
@@ -450,6 +530,8 @@ class FFRoute {
   final String name;
   final String path;
   final bool requireAuth;
+  final bool requireRegistered;
+  final String guestReason;
   final Map<String, Future<dynamic> Function(String)> asyncParams;
   final Widget Function(BuildContext, FFParameters) builder;
   final List<GoRoute> routes;
@@ -464,7 +546,7 @@ class FFRoute {
         return redirectLocation;
       }
 
-      if (requireAuth && !appStateNotifier.loggedIn) {
+      if ((requireAuth || requireRegistered) && !appStateNotifier.loggedIn) {
         appStateNotifier.setRedirectLocationIfUnset(state.uri.toString());
         return '/login';
       }
@@ -473,7 +555,9 @@ class FFRoute {
     pageBuilder: (context, state) {
       fixStatusBarOniOS16AndBelow(context);
       final ffParams = FFParameters(state, asyncParams);
-      final page = ffParams.hasFutures
+      final page = requireRegistered && appStateNotifier.isAnonymous
+          ? GuestRegistrationPage(reason: guestReason)
+          : ffParams.hasFutures
           ? FutureBuilder(
               future: ffParams.completeFutures(),
               builder: (context, _) => builder(context, ffParams),

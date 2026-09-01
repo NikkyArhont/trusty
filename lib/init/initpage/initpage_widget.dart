@@ -1,5 +1,7 @@
 import '/auth/base_auth_user_provider.dart';
 import '/auth/firebase_auth/auth_util.dart';
+import '/backend/backend.dart';
+import '/backend/guest/guest_session_service.dart';
 import '/backend/schema/structs/index.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -30,6 +32,7 @@ class _InitpageWidgetState extends State<InitpageWidget> {
   late InitpageModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
+  String? _profileLoadError;
 
   bool _masterProfileCompleted(MasterDataStruct? masterData) {
     if (masterData == null) {
@@ -53,67 +56,136 @@ class _InitpageWidgetState extends State<InitpageWidget> {
     );
   }
 
+  Future<UserRecord?> _loadCurrentUserDocument() async {
+    final reference = currentUserReference;
+    if (reference == null) return null;
+
+    final cachedDocument = currentUserDocument;
+    if (cachedDocument?.reference.id == reference.id) {
+      return cachedDocument;
+    }
+
+    Object? lastError;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      try {
+        final document = await UserRecord.getDocumentOnce(
+          reference,
+        ).timeout(const Duration(seconds: 10));
+        currentUserDocument = document;
+        return document;
+      } catch (error) {
+        lastError = error;
+        if (attempt < 2) {
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+        }
+      }
+    }
+
+    if (mounted) {
+      setState(() {
+        _profileLoadError =
+            'Не удалось загрузить профиль. Проверьте соединение и повторите.';
+      });
+      FlutterNativeSplash.remove();
+    }
+    debugPrint('Failed to load current user document: $lastError');
+    return null;
+  }
+
+  Future<void> _initializeAndRoute() async {
+    if (mounted && _profileLoadError != null) {
+      setState(() => _profileLoadError = null);
+    }
+
+    if (FFAppState().listRUCities.isEmpty) {
+      FFAppState().listRUCities = functions
+          .createCityList(FFAppState().listCityVocab)!
+          .toList()
+          .cast<PlaceStruct>();
+      if (mounted) safeSetState(() {});
+    }
+    if (!loggedIn) {
+      final guestReady = await ensureGuestSession(context);
+      if (!mounted) return;
+      if (!guestReady) {
+        setState(() {
+          _profileLoadError =
+              'Не удалось открыть гостевой режим. Проверьте соединение и повторите.';
+        });
+        FlutterNativeSplash.remove();
+        return;
+      }
+    }
+
+    if (currentUserIsAnonymous) {
+      FFAppState().specialistMode = false;
+      _goNamedAndRemoveSplash(MainWidget.routeName);
+      return;
+    }
+
+    final userDocument = await _loadCurrentUserDocument();
+    if (!mounted || userDocument == null) return;
+
+    FFAppState().specialistMode = userDocument.masterMode;
+    safeSetState(() {});
+
+    if (!userDocument.clientProfileCompleted &&
+        userDocument.displayName.trim().isEmpty) {
+      _goNamedAndRemoveSplash(ClientProfileSetupWidget.routeName);
+      return;
+    }
+    if (userDocument.mainLoc.title.trim().isEmpty) {
+      final masterCity = userDocument.masterData.mainAdres;
+      if (masterCity.title.trim().isNotEmpty) {
+        await userDocument.reference.update(
+          createUserRecordData(mainLoc: masterCity),
+        );
+        FFAppState().updateGlobalFilterStruct((e) => e..place = masterCity);
+      } else {
+        _goNamedAndRemoveSplash(
+          ChooseLocationCityWidget.routeName,
+          queryParameters: {
+            'edit': serializeParam(false, ParamType.bool),
+          }.withoutNulls,
+        );
+        return;
+      }
+    } else {
+      FFAppState().updateGlobalFilterStruct(
+        (e) => e..place = userDocument.mainLoc,
+      );
+    }
+    if (userDocument.referralOnboardingRequired &&
+        !userDocument.referralOnboardingCompleted) {
+      _goNamedAndRemoveSplash(ReferralOnboardingWidget.routeName);
+      return;
+    }
+    if (FFAppState().specialistMode) {
+      if (_masterProfileCompleted(userDocument.masterData)) {
+        _goNamedAndRemoveSplash(SpecialistDashboardWidget.routeName);
+      } else if (userDocument.masterData.onboardingCompleted) {
+        _goNamedAndRemoveSplash(
+          EditProfileMasterWidget.routeName,
+          queryParameters: {
+            'setupMode': serializeParam(true, ParamType.bool),
+          }.withoutNulls,
+        );
+      } else {
+        _goNamedAndRemoveSplash(MasterOnboardingWidget.routeName);
+      }
+    } else {
+      _goNamedAndRemoveSplash(MainWidget.routeName);
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _model = createModel(context, () => InitpageModel());
 
-    // On page load action.
-    SchedulerBinding.instance.addPostFrameCallback((_) async {
-      if (FFAppState().listRUCities.isEmpty) {
-        FFAppState().listRUCities = functions
-            .createCityList(FFAppState().listCityVocab)!
-            .toList()
-            .cast<PlaceStruct>();
-        safeSetState(() {});
-      }
-      if (loggedIn) {
-        if (currentUserDocument == null) {
-          await authenticatedUserStream
-              .firstWhere((user) => user != null)
-              .timeout(
-                const Duration(milliseconds: 2500),
-                onTimeout: () => null,
-              );
-        }
-        if (!mounted) {
-          return;
-        }
-        if (currentUserDocument != null) {
-          FFAppState().specialistMode = valueOrDefault<bool>(
-            currentUserDocument?.masterMode,
-            FFAppState().specialistMode,
-          );
-          safeSetState(() {});
-        }
-        final userDocument = currentUserDocument;
-        if (userDocument != null &&
-            !userDocument.clientProfileCompleted &&
-            userDocument.displayName.trim().isEmpty) {
-          _goNamedAndRemoveSplash(ClientProfileSetupWidget.routeName);
-          return;
-        }
-        if (FFAppState().specialistMode) {
-          if (_masterProfileCompleted(currentUserDocument?.masterData)) {
-            _goNamedAndRemoveSplash(SpecialistDashboardWidget.routeName);
-          } else if (currentUserDocument?.masterData.onboardingCompleted ??
-              false) {
-            _goNamedAndRemoveSplash(
-              EditProfileMasterWidget.routeName,
-              queryParameters: {
-                'setupMode': serializeParam(true, ParamType.bool),
-              }.withoutNulls,
-            );
-          } else {
-            _goNamedAndRemoveSplash(MasterOnboardingWidget.routeName);
-          }
-        } else {
-          _goNamedAndRemoveSplash(MainWidget.routeName);
-        }
-      } else {
-        _goNamedAndRemoveSplash(LoginWidget.routeName);
-      }
-    });
+    SchedulerBinding.instance.addPostFrameCallback(
+      (_) => _initializeAndRoute(),
+    );
 
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
@@ -132,7 +204,28 @@ class _InitpageWidgetState extends State<InitpageWidget> {
     return Scaffold(
       key: scaffoldKey,
       backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-      body: const SizedBox.expand(),
+      body: Center(
+        child: _profileLoadError == null
+            ? const CircularProgressIndicator()
+            : Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      _profileLoadError!,
+                      textAlign: TextAlign.center,
+                      style: FlutterFlowTheme.of(context).bodyLarge,
+                    ),
+                    const SizedBox(height: 16.0),
+                    FilledButton(
+                      onPressed: _initializeAndRoute,
+                      child: const Text('Повторить'),
+                    ),
+                  ],
+                ),
+              ),
+      ),
     );
   }
 }

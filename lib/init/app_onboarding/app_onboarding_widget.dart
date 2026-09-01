@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '/auth/firebase_auth/auth_util.dart';
+import '/backend/guest/guest_session_service.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
@@ -20,6 +21,7 @@ class AppOnboardingWidget extends StatefulWidget {
 class _AppOnboardingWidgetState extends State<AppOnboardingWidget> {
   final _controller = PageController();
   int _page = 0;
+  bool _finishing = false;
 
   static const _slides = [
     'assets/images/onboarding1.png',
@@ -28,18 +30,30 @@ class _AppOnboardingWidgetState extends State<AppOnboardingWidget> {
     'assets/images/onboarding4.png',
   ];
 
-  void _finish() {
-    FFAppState().firstTime = false;
+  Future<void> _finish() async {
+    if (_finishing) return;
+    setState(() => _finishing = true);
     if (widget.returnToProfile) {
+      FFAppState().firstTime = false;
       context.goNamed(UserProfileWidget.routeName);
       return;
     }
 
-    if (loggedIn) {
-      context.goNamed(InitpageWidget.routeName);
-    } else {
-      context.goNamed(LoginWidget.routeName);
+    final ready = loggedIn || await ensureGuestSession(context);
+    if (!mounted) return;
+    if (!ready) {
+      setState(() => _finishing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Не удалось начать гостевой просмотр. Проверьте интернет.',
+          ),
+        ),
+      );
+      return;
     }
+    FFAppState().firstTime = false;
+    context.goNamed(InitpageWidget.routeName);
   }
 
   @override
@@ -423,7 +437,7 @@ class _AppOnboardingWidgetState extends State<AppOnboardingWidget> {
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
-                      onPressed: _finish,
+                      onPressed: _finishing ? null : _finish,
                       style: TextButton.styleFrom(
                         foregroundColor: Colors.white,
                       ),
@@ -455,16 +469,18 @@ class _AppOnboardingWidgetState extends State<AppOnboardingWidget> {
                     child: SizedBox(
                       width: double.infinity,
                       child: FilledButton(
-                        onPressed: () {
-                          if (_page == _slides.length - 1) {
-                            _finish();
-                          } else {
-                            _controller.nextPage(
-                              duration: const Duration(milliseconds: 250),
-                              curve: Curves.easeOut,
-                            );
-                          }
-                        },
+                        onPressed: _finishing
+                            ? null
+                            : () {
+                                if (_page == _slides.length - 1) {
+                                  _finish();
+                                } else {
+                                  _controller.nextPage(
+                                    duration: const Duration(milliseconds: 250),
+                                    curve: Curves.easeOut,
+                                  );
+                                }
+                              },
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.white,
                           foregroundColor: theme.primary,
@@ -477,13 +493,23 @@ class _AppOnboardingWidgetState extends State<AppOnboardingWidget> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                         ),
-                        child: Text(
-                          _page == _slides.length - 1 ? 'Начать' : 'Далее',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
+                        child: _finishing && _page == _slides.length - 1
+                            ? const SizedBox(
+                                width: 22,
+                                height: 22,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : Text(
+                                _page == _slides.length - 1
+                                    ? 'Смотреть услуги'
+                                    : 'Далее',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                       ),
                     ),
                   ),

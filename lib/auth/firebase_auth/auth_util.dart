@@ -38,6 +38,17 @@ String get currentJwtToken => _currentJwtToken ?? '';
 
 bool get currentUserEmailVerified => currentUser?.emailVerified ?? false;
 
+/// Firebase anonymous authentication is used for people who have completed
+/// onboarding but have not confirmed a phone number yet.
+bool get currentUserIsAnonymous =>
+    FirebaseAuth.instance.currentUser?.isAnonymous ??
+    currentUser?.isAnonymous ??
+    false;
+
+bool get currentUserIsRegistered =>
+    (FirebaseAuth.instance.currentUser != null || loggedIn) &&
+    !currentUserIsAnonymous;
+
 /// Create a Stream that listens to the current user's JWT Token, since Firebase
 /// generates a new token every hour.
 String? _currentJwtToken;
@@ -52,7 +63,13 @@ DocumentReference? get currentUserReference =>
 UserRecord? currentUserDocument;
 final authenticatedUserStream = FirebaseAuth.instance
     .authStateChanges()
-    .map<String>((user) => user?.uid ?? '')
+    .map<String>((user) {
+      final uid = user?.uid ?? '';
+      if (currentUserDocument?.reference.id != uid) {
+        currentUserDocument = null;
+      }
+      return uid;
+    })
     .switchMap(
       (uid) => uid.isEmpty
           ? Stream.value(null)

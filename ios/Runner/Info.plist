@@ -58,6 +58,8 @@
 	<string>Камера нужна, чтобы сделать и добавить фотографию профиля, услуги или отправить снимок в чате. Например, мастер может сфотографировать результат работы и добавить его в карточку услуги.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Доступ к фотогалерее нужен, чтобы выбрать и добавить фотографию профиля, услуги или отправить изображение в чате. Например, мастер может выбрать фото своей работы для карточки услуги.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Доступ нужен, чтобы сохранить подготовленный креатив Сарафана в вашу фотогалерею.</string>
 		<key>NSContactsUsageDescription</key>
 		<string>In order to show which of your contacts recommend services, this app requires access to your contacts.</string>
 		<key>UILaunchStoryboardName</key>

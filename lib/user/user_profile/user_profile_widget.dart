@@ -1,19 +1,25 @@
 import '/auth/firebase_auth/auth_util.dart';
 import '/admin/system_communications_preview_dialog.dart';
 import '/backend/backend.dart';
+import '/backend/app_update/app_update_announcement_service.dart';
 import '/backend/schema/enums/enums.dart';
 import '/backend/share_prompt/share_prompt_service.dart';
+import '/backend/support/support_chat_service.dart';
 import '/flutter_flow/flutter_flow_animations.dart';
 import '/flutter_flow/flutter_flow_icon_button.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
+import '/global_comp/app_page_header/app_page_header.dart';
 import '/global_comp/menu/menu_widget.dart';
 import '/global_comp/togle_mode/togle_mode_widget.dart';
+import '/global_comp/push_notification_setting/push_notification_setting_widget.dart';
 import 'dart:math';
 import 'dart:ui';
 import '/index.dart';
 import '/init/sync_contacts.dart';
+import '/master/client_invite_guide_dialog.dart';
+import 'contacts_guide_dialog.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -49,6 +55,8 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
   bool _contactsStatusLoading = true;
   bool _contactsSyncing = false;
   bool _modeSwitching = false;
+  bool _openingSupportChat = false;
+  bool _announcingAppUpdate = false;
   late final Future<PackageInfo> _packageInfo;
   late final AnimationController _contactsSyncController;
 
@@ -116,11 +124,12 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
   @override
   void dispose() {
     // On page dispose action.
-    () async {
-      await currentUserReference!.update(
+    final userReference = currentUserReference;
+    if (userReference != null) {
+      userReference.update(
         createUserRecordData(masterMode: FFAppState().specialistMode),
       );
-    }();
+    }
 
     _model.dispose();
     _contactsSyncController.dispose();
@@ -181,6 +190,32 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
       debugPrint('Failed to persist selected mode: $error');
     } finally {
       _modeSwitching = false;
+    }
+  }
+
+  Future<void> _openCurrentUserSupportChat() async {
+    if (_openingSupportChat) return;
+    safeSetState(() => _openingSupportChat = true);
+    try {
+      final chatId = await ensureCurrentUserSupportChat();
+      if (!mounted) return;
+      context.pushNamed(
+        ChatWidget.routeName,
+        queryParameters: {
+          'chatId': serializeParam(chatId, ParamType.String),
+        }.withoutNulls,
+      );
+    } catch (error) {
+      debugPrint('Support chat failed to open: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Не удалось открыть поддержку. Попробуйте ещё раз.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) safeSetState(() => _openingSupportChat = false);
     }
   }
 
@@ -361,6 +396,8 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
               ].divide(SizedBox(width: 16.0)),
             ),
             Divider(color: FlutterFlowTheme.of(context).divider),
+            const PushNotificationSettingWidget(compact: true),
+            Divider(color: FlutterFlowTheme.of(context).divider),
             Row(
               mainAxisSize: MainAxisSize.max,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -480,6 +517,32 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
               ].divide(SizedBox(width: 16.0)),
             ),
             _buildContactsSyncStatus(context),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () => showContactsGuideDialog(context),
+                icon: const Icon(Icons.help_outline_rounded, size: 20.0),
+                label: const Text(
+                  'Как Сарафан работает с вашей телефонной книгой',
+                  textAlign: TextAlign.center,
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: FlutterFlowTheme.of(context).primary,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14.0,
+                    vertical: 12.0,
+                  ),
+                  side: BorderSide(
+                    color: FlutterFlowTheme.of(
+                      context,
+                    ).primary.withValues(alpha: 0.4),
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12.0),
+                  ),
+                ),
+              ),
+            ),
           ].divide(SizedBox(height: 16.0)),
         ),
       ),
@@ -538,6 +601,126 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
                 Icons.chevron_right_rounded,
                 color: FlutterFlowTheme.of(context).secondaryText,
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContactSupportCard(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    return Material(
+      color: theme.secondaryBackground,
+      borderRadius: BorderRadius.circular(16.0),
+      child: InkWell(
+        onTap: _openingSupportChat ? null : _openCurrentUserSupportChat,
+        borderRadius: BorderRadius.circular(16.0),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                width: 44.0,
+                height: 44.0,
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.support_agent_rounded,
+                  color: theme.primary,
+                  size: 24.0,
+                ),
+              ),
+              const SizedBox(width: 16.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Написать в поддержку',
+                      style: theme.titleSmall.override(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3.0),
+                    Text(
+                      'Ответим на вопросы и поможем разобраться',
+                      style: theme.bodySmall.override(
+                        color: theme.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8.0),
+              if (_openingSupportChat)
+                SizedBox(
+                  width: 20.0,
+                  height: 20.0,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.0,
+                    color: theme.primary,
+                  ),
+                )
+              else
+                Icon(Icons.chevron_right_rounded, color: theme.secondaryText),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClientInviteGuideCard(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    return Material(
+      color: theme.secondaryBackground,
+      borderRadius: BorderRadius.circular(16.0),
+      child: InkWell(
+        onTap: () => showClientInviteGuideDialog(context),
+        borderRadius: BorderRadius.circular(16.0),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                width: 44.0,
+                height: 44.0,
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.school_rounded,
+                  color: theme.primary,
+                  size: 22.0,
+                ),
+              ),
+              const SizedBox(width: 16.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Как пригласить клиентов в Сарафан',
+                      style: theme.titleSmall.override(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3.0),
+                    Text(
+                      'Получите первые рекомендации',
+                      style: theme.bodySmall.override(
+                        color: theme.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8.0),
+              Icon(Icons.chevron_right_rounded, color: theme.secondaryText),
             ],
           ),
         ),
@@ -606,6 +789,455 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
     );
   }
 
+  Future<void> _confirmAppUpdateAnnouncement() async {
+    if (_announcingAppUpdate) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        icon: const Icon(Icons.system_update_rounded),
+        title: const Text('Сообщить о новой версии?'),
+        content: const Text(
+          'Push «Доступна новая версия» получат все пользователи, у которых включены уведомления. Отправляйте его только после появления версии в магазинах.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Отмена'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Отправить'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    safeSetState(() => _announcingAppUpdate = true);
+    try {
+      final result = await announceAppUpdate();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Push отправлен: ${result.successCount} из ${result.recipientCount}',
+          ),
+        ),
+      );
+    } catch (error) {
+      debugPrint('App update announcement failed: $error');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Не удалось отправить push')),
+        );
+      }
+    } finally {
+      if (mounted) safeSetState(() => _announcingAppUpdate = false);
+    }
+  }
+
+  Widget _buildAdminUpdateAnnouncementCard(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    return Material(
+      color: theme.secondaryBackground,
+      borderRadius: BorderRadius.circular(16.0),
+      child: InkWell(
+        onTap: _announcingAppUpdate ? null : _confirmAppUpdateAnnouncement,
+        borderRadius: BorderRadius.circular(16.0),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                width: 44.0,
+                height: 44.0,
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.system_update_rounded,
+                  color: theme.primary,
+                  size: 24.0,
+                ),
+              ),
+              const SizedBox(width: 16.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Оповестить об обновлении',
+                      style: theme.titleSmall.override(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3.0),
+                    Text(
+                      'Отправить push после публикации версии',
+                      style: theme.bodySmall.override(
+                        color: theme.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8.0),
+              if (_announcingAppUpdate)
+                SizedBox(
+                  width: 20.0,
+                  height: 20.0,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.0,
+                    color: theme.primary,
+                  ),
+                )
+              else
+                Icon(Icons.chevron_right_rounded, color: theme.secondaryText),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReferralMasterCard(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    return Material(
+      color: theme.secondaryBackground,
+      borderRadius: BorderRadius.circular(16.0),
+      child: InkWell(
+        onTap: () async {
+          await context.pushNamed(
+            ReferralOnboardingWidget.routeName,
+            queryParameters: {
+              'profileMode': serializeParam(true, ParamType.bool),
+            }.withoutNulls,
+          );
+          if (mounted) safeSetState(() {});
+        },
+        borderRadius: BorderRadius.circular(16.0),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                width: 44.0,
+                height: 44.0,
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.person_add_alt_1_rounded,
+                  color: theme.primary,
+                  size: 22.0,
+                ),
+              ),
+              const SizedBox(width: 16.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Указать пригласившего мастера',
+                      style: theme.titleSmall.override(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3.0),
+                    Text(
+                      'Если вас пригласил мастер из Сарафана',
+                      style: theme.bodySmall.override(
+                        color: theme.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: theme.secondaryText),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminStatsCard(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    return Material(
+      color: theme.secondaryBackground,
+      borderRadius: BorderRadius.circular(16.0),
+      child: InkWell(
+        onTap: () => context.pushNamed(AdminStatsWidget.routeName),
+        borderRadius: BorderRadius.circular(16.0),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                width: 44.0,
+                height: 44.0,
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.bar_chart_rounded,
+                  color: theme.primary,
+                  size: 24.0,
+                ),
+              ),
+              const SizedBox(width: 16.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Статистика',
+                      style: theme.titleSmall.override(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3.0),
+                    Text(
+                      'Пользователи, мастера и услуги по городам',
+                      style: theme.bodySmall.override(
+                        color: theme.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: theme.secondaryText),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminSupportCard(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    return Material(
+      color: theme.secondaryBackground,
+      borderRadius: BorderRadius.circular(16.0),
+      child: InkWell(
+        onTap: () => context.pushNamed(AdminSupportChatsWidget.routeName),
+        borderRadius: BorderRadius.circular(16.0),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                width: 44.0,
+                height: 44.0,
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.support_agent_rounded,
+                  color: theme.primary,
+                  size: 24.0,
+                ),
+              ),
+              const SizedBox(width: 16.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Поддержка',
+                      style: theme.titleSmall.override(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3.0),
+                    Text(
+                      'Обращения пользователей в службу заботы',
+                      style: theme.bodySmall.override(
+                        color: theme.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: theme.secondaryText),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminUsersCard(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    return Material(
+      color: theme.secondaryBackground,
+      borderRadius: BorderRadius.circular(16.0),
+      child: InkWell(
+        onTap: () => context.pushNamed(AdminUsersWidget.routeName),
+        borderRadius: BorderRadius.circular(16.0),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                width: 44.0,
+                height: 44.0,
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.people_alt_rounded,
+                  color: theme.primary,
+                  size: 24.0,
+                ),
+              ),
+              const SizedBox(width: 16.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Пользователи',
+                      style: theme.titleSmall.override(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3.0),
+                    Text(
+                      'Клиенты, мастера и этапы заполнения',
+                      style: theme.bodySmall.override(
+                        color: theme.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: theme.secondaryText),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminMemeBuilderCard(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    return Material(
+      color: theme.secondaryBackground,
+      borderRadius: BorderRadius.circular(16.0),
+      child: InkWell(
+        onTap: () => context.pushNamed(AdminMemeBuilderWidget.routeName),
+        borderRadius: BorderRadius.circular(16.0),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                width: 44.0,
+                height: 44.0,
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.auto_awesome_rounded,
+                  color: theme.primary,
+                  size: 24.0,
+                ),
+              ),
+              const SizedBox(width: 16.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Конструктор мемов',
+                      style: theme.titleSmall.override(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3.0),
+                    Text(
+                      'Создание картинок услуг для публикаций',
+                      style: theme.bodySmall.override(
+                        color: theme.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: theme.secondaryText),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAdminReferralPreviewCard(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    return Material(
+      color: theme.secondaryBackground,
+      borderRadius: BorderRadius.circular(16.0),
+      child: InkWell(
+        onTap: () => context.pushNamed(
+          ReferralOnboardingWidget.routeName,
+          queryParameters: {
+            'previewMode': serializeParam(true, ParamType.bool),
+          }.withoutNulls,
+        ),
+        borderRadius: BorderRadius.circular(16.0),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Row(
+            children: [
+              Container(
+                width: 44.0,
+                height: 44.0,
+                decoration: BoxDecoration(
+                  color: theme.primary.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.group_add_rounded,
+                  color: theme.primary,
+                  size: 23.0,
+                ),
+              ),
+              const SizedBox(width: 16.0),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Реферальный экран',
+                      style: theme.titleSmall.override(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 3.0),
+                    Text(
+                      'Предпросмотр шага после регистрации',
+                      style: theme.bodySmall.override(
+                        color: theme.secondaryText,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded, color: theme.secondaryText),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
@@ -634,9 +1266,9 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
                       ),
                       child: Padding(
                         padding: EdgeInsetsDirectional.fromSTEB(
-                          24.0,
-                          32.0,
-                          24.0,
+                          16.0,
+                          16.0,
+                          16.0,
                           24.0,
                         ),
                         child: Column(
@@ -644,92 +1276,59 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
                           mainAxisAlignment: MainAxisAlignment.start,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Row(
-                              mainAxisSize: MainAxisSize.max,
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    FFAppState().specialistMode
-                                        ? 'Профиль мастера'
-                                        : 'Профиль клиента',
-                                    style: FlutterFlowTheme.of(context)
-                                        .headlineMedium
-                                        .override(
-                                          font: GoogleFonts.interTight(
-                                            fontWeight: FlutterFlowTheme.of(
-                                              context,
-                                            ).headlineMedium.fontWeight,
-                                            fontStyle: FlutterFlowTheme.of(
-                                              context,
-                                            ).headlineMedium.fontStyle,
-                                          ),
-                                          color: FlutterFlowTheme.of(
-                                            context,
-                                          ).primaryText,
-                                          letterSpacing: 0.0,
-                                          fontWeight: FlutterFlowTheme.of(
-                                            context,
-                                          ).headlineMedium.fontWeight,
-                                          fontStyle: FlutterFlowTheme.of(
-                                            context,
-                                          ).headlineMedium.fontStyle,
-                                        ),
+                            AppPageHeader(
+                              title: FFAppState().specialistMode
+                                  ? 'Профиль мастера'
+                                  : 'Профиль клиента',
+                              padding: EdgeInsets.zero,
+                              backgroundColor: Colors.transparent,
+                              actions: [
+                                FlutterFlowIconButton(
+                                  buttonSize: 40.0,
+                                  icon: Icon(
+                                    Icons.help_outline_rounded,
+                                    color: FlutterFlowTheme.of(
+                                      context,
+                                    ).primaryText,
+                                    size: 24.0,
                                   ),
+                                  onPressed: () async {
+                                    context.pushNamed(
+                                      FFAppState().specialistMode
+                                          ? MasterOnboardingWidget.routeName
+                                          : AppOnboardingWidget.routeName,
+                                      queryParameters: {
+                                        'returnToProfile': serializeParam(
+                                          true,
+                                          ParamType.bool,
+                                        ),
+                                      }.withoutNulls,
+                                    );
+                                  },
                                 ),
-                                const SizedBox(width: 8.0),
-                                Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    FlutterFlowIconButton(
-                                      buttonSize: 40.0,
-                                      icon: Icon(
-                                        Icons.help_outline_rounded,
-                                        color: FlutterFlowTheme.of(
-                                          context,
-                                        ).primaryText,
-                                        size: 24.0,
-                                      ),
-                                      onPressed: () async {
-                                        context.pushNamed(
-                                          FFAppState().specialistMode
-                                              ? MasterOnboardingWidget.routeName
-                                              : AppOnboardingWidget.routeName,
-                                          queryParameters: {
-                                            'returnToProfile': serializeParam(
-                                              true,
-                                              ParamType.bool,
-                                            ),
-                                          }.withoutNulls,
-                                        );
-                                      },
-                                    ),
-                                    FlutterFlowIconButton(
-                                      buttonSize: 40.0,
-                                      icon: FaIcon(
-                                        FontAwesomeIcons.pen,
-                                        color: FlutterFlowTheme.of(
-                                          context,
-                                        ).primaryText,
-                                        size: 24.0,
-                                      ),
-                                      onPressed: () async {
-                                        if (FFAppState().specialistMode &&
-                                            _masterProfileCompleted(
-                                              currentUserDocument?.masterData,
-                                            )) {
-                                          context.pushNamed(
-                                            EditProfileMasterWidget.routeName,
-                                          );
-                                        } else {
-                                          context.pushNamed(
-                                            EditProfileWidget.routeName,
-                                          );
-                                        }
-                                      },
-                                    ),
-                                  ].divide(SizedBox(width: 4.0)),
+                                FlutterFlowIconButton(
+                                  buttonSize: 40.0,
+                                  icon: FaIcon(
+                                    FontAwesomeIcons.pen,
+                                    color: FlutterFlowTheme.of(
+                                      context,
+                                    ).primaryText,
+                                    size: 24.0,
+                                  ),
+                                  onPressed: () async {
+                                    if (FFAppState().specialistMode &&
+                                        _masterProfileCompleted(
+                                          currentUserDocument?.masterData,
+                                        )) {
+                                      context.pushNamed(
+                                        EditProfileMasterWidget.routeName,
+                                      );
+                                    } else {
+                                      context.pushNamed(
+                                        EditProfileWidget.routeName,
+                                      );
+                                    }
+                                  },
                                 ),
                               ],
                             ),
@@ -1059,6 +1658,14 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
                           ),
                         ),
                       ),
+                    if (_masterProfileCompleted(
+                          currentUserDocument?.masterData,
+                        ) &&
+                        FFAppState().specialistMode)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 12),
+                        child: _buildClientInviteGuideCard(context),
+                      ),
                     Padding(
                       padding: EdgeInsets.fromLTRB(
                         24.0,
@@ -1070,10 +1677,50 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
                       ),
                       child: _buildProjectSupportCard(context),
                     ),
+                    if (!_isAdminAccount)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                        child: _buildContactSupportCard(context),
+                      ),
+                    if (!(currentUserDocument?.hasInvitedBy() ?? false))
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                        child: _buildReferralMasterCard(context),
+                      ),
                     if (_isAdminAccount)
                       Padding(
                         padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
                         child: _buildAdminDialogsCard(context),
+                      ),
+                    if (_isAdminAccount)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                        child: _buildAdminUpdateAnnouncementCard(context),
+                      ),
+                    if (_isAdminAccount)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                        child: _buildAdminStatsCard(context),
+                      ),
+                    if (_isAdminAccount)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                        child: _buildAdminSupportCard(context),
+                      ),
+                    if (_isAdminAccount)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                        child: _buildAdminUsersCard(context),
+                      ),
+                    if (_isAdminAccount)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                        child: _buildAdminMemeBuilderCard(context),
+                      ),
+                    if (_isAdminAccount)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 0),
+                        child: _buildAdminReferralPreviewCard(context),
                       ),
                     Padding(
                       padding: EdgeInsetsDirectional.fromSTEB(
@@ -1384,7 +2031,7 @@ class _UserProfileWidgetState extends State<UserProfileWidget>
                                 final packageInfo = snapshot.data;
                                 return Text(
                                   packageInfo == null
-                                      ? 'Версия 1.4.1, сборка 19'
+                                      ? 'Версия 1.5.0, сборка 22'
                                       : 'Версия ${packageInfo.version}, сборка ${packageInfo.buildNumber}',
                                   textAlign: TextAlign.center,
                                   style: FlutterFlowTheme.of(context).bodySmall

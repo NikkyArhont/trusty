@@ -28,6 +28,10 @@ test("repeats after four days but never while another prompt is pending", () => 
   assert.equal(shouldPlanSharePrompt(eligible, now), true);
   assert.equal(shouldPlanSharePrompt({
     ...eligible,
+    pushNotificationsEnabled: false,
+  }, now), false);
+  assert.equal(shouldPlanSharePrompt({
+    ...eligible,
     sharePromptPushSentAt: new Date(now - FOUR_DAYS_MS),
   }, now), true);
   assert.equal(shouldPlanSharePrompt({
@@ -36,6 +40,15 @@ test("repeats after four days but never while another prompt is pending", () => 
   }, now), false);
   assert.equal(shouldPlanSharePrompt({...eligible, sharePromptDueAt: new Date()}, now), false);
   assert.equal(shouldPlanSharePrompt({created_time: eligible.created_time}, now), false);
+});
+
+test("never schedules project-sharing prompts for guests", () => {
+  const now = Date.UTC(2026, 7, 13, 12);
+  assert.equal(shouldPlanSharePrompt({
+    isGuest: true,
+    fcmTokens: ["token"],
+    created_time: new Date(now - FOUR_DAYS_MS),
+  }, now), false);
 });
 
 test("does not plan a share prompt on an engagement push day in Moscow", () => {

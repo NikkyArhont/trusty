@@ -2,12 +2,20 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /user/{document} {
-      allow create: if request.auth.uid == document;
-      allow read: if request.auth.uid == document;
+      allow create: if request.auth != null
+        && request.auth.uid == document
+        && (
+          (isAnonymousAuth() && request.resource.data.get('isGuest', false) == true)
+          || (!isAnonymousAuth() && request.resource.data.get('isGuest', false) != true)
+        );
+      allow read: if request.auth != null && request.auth.uid == document;
       allow update: if request.auth.uid == document
         && resource.data.get('isBlocked', false) != true
         && !request.resource.data.diff(resource.data).affectedKeys().hasAny([
-          'isBlocked', 'blockedAt', 'blockedReason', 'blockedReport'
+          'isBlocked', 'blockedAt', 'blockedReason', 'blockedReport',
+          'invitedBy', 'invitedByUid', 'referralAcceptedAt',
+          'referralSkippedAt', 'isGuest', 'registeredAt', 'migratedToUid',
+          'guestMigratedAt'
         ]);
       allow delete: if request.auth.uid == document
         && resource.data.get('isBlocked', false) != true;
@@ -19,11 +27,11 @@ service cloud.firestore {
     }
 
     match /service/{document} {
-      allow create: if isActiveUser()
+      allow create: if isRegisteredUser()
         && request.resource.data.owner == signedInUserRef()
         && request.resource.data.status == 'onModerate';
       allow read: if true;
-      allow update: if isActiveUser() && (
+      allow update: if isRegisteredUser() && (
         (
           resource.data.owner == signedInUserRef()
           && request.resource.data.owner == resource.data.owner
@@ -33,9 +41,11 @@ service cloud.firestore {
             'location', 'masterTitle', 'masterPhoto', 'image', 'status'
           ])
         )
-        || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recommenderPhones', 'recommendations'])
+        || request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'recommenderPhones', 'recommenderPhoneHashes', 'recommendations'
+        ])
       );
-      allow delete: if isActiveUser()
+      allow delete: if isRegisteredUser()
         && resource.data.owner == signedInUserRef();
     }
 
@@ -47,9 +57,9 @@ service cloud.firestore {
     }
 
     match /records/{document} {
-      allow create: if isActiveUser();
+      allow create: if isRegisteredUser();
       allow read: if true;
-      allow update: if isActiveUser();
+      allow update: if isRegisteredUser();
       allow delete: if false;
     }
 
@@ -60,6 +70,20 @@ service cloud.firestore {
     function isActiveUser() {
       return request.auth != null
         && get(signedInUserRef()).data.get('isBlocked', false) != true;
+    }
+
+    function isAnonymousAuth() {
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == 'anonymous';
+    }
+
+    function isRegisteredUser() {
+      return isActiveUser() && !isAnonymousAuth();
+    }
+
+    function isSupportAdmin() {
+      return request.auth != null
+        && request.auth.token.phone_number == '+79183633636';
     }
 
     function isChatParticipant(chatData) {
@@ -92,25 +116,25 @@ service cloud.firestore {
     }
 
     match /chats/{document} {
-      allow create: if isActiveUser()
+      allow create: if isRegisteredUser()
         && isChatParticipant(request.resource.data);
       // Chat lists query one of these required role fields directly. This also
       // keeps older chats visible when they predate participantIds.
-      allow list: if isActiveUser()
-        && (
+      allow list: if isRegisteredUser()
+        && (isSupportAdmin() || (
           resource.data.client == signedInUserRef()
           || resource.data.master == signedInUserRef()
-        );
-      allow get: if isActiveUser()
+        ));
+      allow get: if isRegisteredUser()
         && isChatParticipant(resource.data);
-      allow update: if isActiveUser()
+      allow update: if isRegisteredUser()
         && isChatParticipant(resource.data)
         && request.resource.data.get('blockedByIds', [])
           .hasAll(resource.data.get('blockedByIds', []));
       allow delete: if false;
 
       match /messages/{message} {
-        allow create: if isActiveUser()
+        allow create: if isRegisteredUser()
           && isChatParticipant(
             get(/databases/$(database)/documents/chats/$(document)).data
           )
@@ -118,11 +142,11 @@ service cloud.firestore {
             get(/databases/$(database)/documents/chats/$(document)).data
           )
           && request.resource.data.sender == signedInUserRef();
-        allow read: if isActiveUser()
+        allow read: if isRegisteredUser()
           && isChatParticipant(
           get(/databases/$(database)/documents/chats/$(document)).data
         );
-        allow update: if isActiveUser()
+        allow update: if isRegisteredUser()
           && isChatParticipant(
             get(/databases/$(database)/documents/chats/$(document)).data
           )
@@ -135,14 +159,14 @@ service cloud.firestore {
     }
 
     match /notifications/{document} {
-      allow create: if isActiveUser();
-      allow read, update: if isActiveUser()
+      allow create: if isRegisteredUser();
+      allow read, update: if isRegisteredUser()
         && resource.data.user == signedInUserRef();
       allow delete: if false;
     }
 
     match /reports/{document} {
-      allow create: if isActiveUser()
+      allow create: if isRegisteredUser()
         && request.resource.data.reporter == signedInUserRef()
         && request.resource.data.reportedUser != signedInUserRef()
         && request.resource.data.status == 'pending'

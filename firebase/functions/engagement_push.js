@@ -30,6 +30,13 @@ function isMasterProfileCompleted(user) {
 }
 
 function engagementMessage({user, hasServices = false}) {
+  if (user.isGuest === true) {
+    return {
+      kind: "guest",
+      title: "Новые рекомендации в Сарафане",
+      body: "Загляните в каталог — возможно, появились новые услуги от знакомых вам людей.",
+    };
+  }
   if (!isMasterUser(user)) {
     return {
       kind: "client",
@@ -62,6 +69,7 @@ function engagementMessage({user, hasServices = false}) {
 }
 
 function validTokens(user) {
+  if (user.pushNotificationsEnabled === false) return [];
   if (!Array.isArray(user.fcmTokens)) {
     return [];
   }
@@ -77,7 +85,9 @@ function timestampMillis(value) {
 }
 
 function isDueForPlanning(user, nowMillis) {
-  if (validTokens(user).length === 0 || user.engagementPushDueAt) {
+  if (user.migratedToUid ||
+      validTokens(user).length === 0 ||
+      user.engagementPushDueAt) {
     return false;
   }
   const lastSentMillis = timestampMillis(user.engagementPushLastSentAt);

@@ -34,6 +34,19 @@ const {
   planSharePrompts,
 } = require("./share_prompt");
 const {dispatchChatMessagePush} = require("./chat_message_push");
+const {createReferralOnboardingHandler} = require("./referral_onboarding");
+const {
+  createEnsureAdminSupportChatHandler,
+  createEnsureSupportChatHandler,
+} = require("./support_chat");
+const {createGetAdminUsersHandler} = require("./admin_users");
+const {
+  createAnnounceAppUpdateHandler,
+} = require("./app_update_push");
+const {
+  createRepairUserIdentitiesHandler,
+  ensureAuthUserProfile,
+} = require("./user_identity_sync");
 const {
   buildPublicMasterProfile,
   isMasterProfile,
@@ -41,7 +54,38 @@ const {
 } = require("./public_master_profile");
 admin.initializeApp();
 
+exports.ensureSupportChat = functions
+  .runWith({timeoutSeconds: 20})
+  .https.onRequest(createEnsureSupportChatHandler({admin}));
+
+exports.ensureAdminSupportChat = functions
+  .runWith({timeoutSeconds: 20})
+  .https.onRequest(createEnsureAdminSupportChatHandler({admin}));
+
+exports.getAdminUsers = functions
+  .runWith({timeoutSeconds: 30, memory: "512MB"})
+  .https.onRequest(createGetAdminUsersHandler({admin}));
+
+exports.announceAppUpdate = functions
+  .runWith({timeoutSeconds: 120, memory: "512MB"})
+  .https.onRequest(createAnnounceAppUpdateHandler({admin}));
+
+exports.repairUserIdentities = functions
+  .runWith({timeoutSeconds: 120, memory: "512MB"})
+  .https.onRequest(createRepairUserIdentitiesHandler({admin}));
+
+exports.onAuthUserCreatedEnsureProfile = functions.auth.user()
+  .onCreate((user) => ensureAuthUserProfile({admin, user}));
+
 const telegramPhoneAuthHandlers = createTelegramPhoneAuthHandlers({admin});
+const referralOnboardingHandler = createReferralOnboardingHandler({
+  admin,
+  normalizePhone: normalizeRussianPhone,
+});
+
+exports.referralOnboarding = functions
+  .runWith({timeoutSeconds: 20})
+  .https.onRequest(referralOnboardingHandler);
 
 exports.createTelegramPhoneAuth = functions
   .runWith({timeoutSeconds: 20})
@@ -390,20 +434,107 @@ exports.getAdminStats = functions.https.onRequest(async (request, response) => {
     }
 
     const firestore = admin.firestore();
-    const [usersSnapshot, servicesCountSnapshot] = await Promise.all([
+    const [usersSnapshot, servicesSnapshot] = await Promise.all([
       firestore.collection("user").get(),
-      firestore.collection("service").count().get(),
+      firestore.collection("service").get(),
     ]);
 
     const onlineUsers = usersSnapshot.docs.filter((doc) => {
-      const tokens = doc.data().fcmTokens;
-      return Array.isArray(tokens) && tokens.some((token) => token);
+      const user = doc.data();
+      const tokens = user.fcmTokens;
+      return user.pushNotificationsEnabled !== false &&
+        Array.isArray(tokens) && tokens.some((token) => token);
     }).length;
+
+    const cityName = (value) => {
+      const title = value && typeof value.title === "string"
+        ? value.title.trim()
+        : "";
+      return title || "Город не указан";
+    };
+    const cityRows = new Map();
+    const rowFor = (name) => {
+      if (!cityRows.has(name)) {
+        cityRows.set(name, {
+          city: name,
+          users: 0,
+          masters: 0,
+          services: 0,
+          incompleteProfiles: 0,
+          completedProfilesWithoutCity: 0,
+          activeUsersWithoutCity: 0,
+        });
+      }
+      return cityRows.get(name);
+    };
+
+    const masterCitiesByUserId = new Map();
+    let mastersTotal = 0;
+    for (const document of usersSnapshot.docs) {
+      const user = document.data();
+      const masterData = user.masterData || {};
+      const isMaster = masterData.profileCompleted === true ||
+        masterData.onboardingCompleted === true ||
+        (typeof masterData.title === "string" && masterData.title.trim()) ||
+        (typeof masterData.mainPhoto === "string" && masterData.mainPhoto.trim());
+      const masterCity = cityName(masterData.mainAdres);
+      const userCity = cityName(user.mainLoc);
+      const effectiveUserCity = userCity === "Город не указан"
+        ? masterCity
+        : userCity;
+
+      // Older registrations did not persist mainLoc. For masters, their
+      // profile city is the safest city-level fallback for the same person.
+      rowFor(effectiveUserCity).users += 1;
+      if (effectiveUserCity === "Город не указан") {
+        const displayName = typeof user.display_name === "string"
+          ? user.display_name.trim()
+          : "";
+        const profileCompleted = user.clientProfileCompleted === true ||
+          displayName.length > 0;
+        if (profileCompleted) {
+          rowFor(effectiveUserCity).completedProfilesWithoutCity += 1;
+        } else {
+          rowFor(effectiveUserCity).incompleteProfiles += 1;
+        }
+        const tokens = user.fcmTokens;
+        if (user.pushNotificationsEnabled !== false &&
+            Array.isArray(tokens) && tokens.some((token) => token)) {
+          rowFor(effectiveUserCity).activeUsersWithoutCity += 1;
+        }
+      }
+      if (isMaster) {
+        mastersTotal += 1;
+        masterCitiesByUserId.set(document.id, masterCity);
+        rowFor(masterCity).masters += 1;
+      }
+    }
+
+    for (const document of servicesSnapshot.docs) {
+      const service = document.data();
+      const ownerId = service.owner && typeof service.owner.id === "string"
+        ? service.owner.id
+        : "";
+      // service.place may contain a street/address. Statistics are grouped
+      // strictly by the city selected in the owner's master profile.
+      const serviceCity = masterCitiesByUserId.get(ownerId) ||
+        "Город не указан";
+      rowFor(serviceCity).services += 1;
+    }
+
+    const cities = Array.from(cityRows.values()).sort((left, right) => {
+      const leftTotal = left.users + left.masters + left.services;
+      const rightTotal = right.users + right.masters + right.services;
+      if (leftTotal !== rightTotal) return rightTotal - leftTotal;
+      return left.city.localeCompare(right.city, "ru");
+    });
 
     response.json({
       usersTotal: usersSnapshot.size,
+      mastersTotal,
       usersOnline: onlineUsers,
-      servicesTotal: servicesCountSnapshot.data().count || 0,
+      servicesTotal: servicesSnapshot.size,
+      cities,
     });
   } catch (error) {
     console.error("getAdminStats failed", error);
@@ -514,6 +645,10 @@ exports.onNotificationCreated = functions.firestore
     }
 
     const user = userSnapshot.data() || {};
+    if (user.pushNotificationsEnabled === false) {
+      console.log("Notification skipped: user disabled push notifications");
+      return null;
+    }
     const tokens = Array.isArray(user.fcmTokens)
       ? user.fcmTokens.filter((token) => typeof token === "string" && token)
       : [];

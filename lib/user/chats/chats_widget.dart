@@ -2,8 +2,11 @@ import '/auth/firebase_auth/auth_util.dart';
 import '/backend/backend.dart';
 import '/backend/schema/enums/enums.dart';
 import '/backend/chat/chat_profile_sync.dart';
+import '/backend/support/support_chat_service.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/global_comp/app_page_header/app_page_header.dart';
+import '/global_comp/chat_message_status_indicator/chat_message_status_indicator.dart';
 import '/global_comp/menu/menu_widget.dart';
 import '/user/chat/chat_widget.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -118,26 +121,14 @@ class _ChatsWidgetState extends State<ChatsWidget> {
         child: Stack(
           children: [
             Padding(
-              padding: EdgeInsetsDirectional.fromSTEB(16.0, 24.0, 16.0, 120.0),
+              padding: EdgeInsetsDirectional.fromSTEB(16.0, 16.0, 16.0, 120.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'Чаты',
-                          style: FlutterFlowTheme.of(context).headlineMedium
-                              .override(
-                                font: GoogleFonts.interTight(
-                                  fontWeight: FontWeight.w700,
-                                ),
-                                color: FlutterFlowTheme.of(context).primaryText,
-                                letterSpacing: 0.0,
-                                fontWeight: FontWeight.w700,
-                              ),
-                        ),
-                      ),
+                  AppPageHeader(
+                    title: 'Чаты',
+                    padding: EdgeInsets.zero,
+                    actions: [
                       if (_selectionMode) ...[
                         TextButton.icon(
                           onPressed: _selectedChatIds.isEmpty
@@ -264,6 +255,10 @@ class _ChatListState extends State<_ChatList> {
             );
           }
 
+          final supportChats = snapshot.data!.docs
+              .where((chat) => chat.data()['context'] == 'support')
+              .toList();
+          final supportChat = supportChats.firstOrNull;
           final chats =
               snapshot.data!.docs.where((chat) {
                 final data = chat.data();
@@ -282,7 +277,8 @@ class _ChatListState extends State<_ChatList> {
                     !isHidden &&
                     (otherUser == null ||
                         !(currentUserDocument?.blockedUserIds ?? const [])
-                            .contains(otherUser.id));
+                            .contains(otherUser.id)) &&
+                    data['context'] != 'support';
               }).toList()..sort((a, b) {
                 final aTime = a.data()['updated_time'];
                 final bTime = b.data()['updated_time'];
@@ -290,17 +286,21 @@ class _ChatListState extends State<_ChatList> {
                 final bMillis = _chatTimeMillis(bTime);
                 return bMillis.compareTo(aMillis);
               });
-          if (chats.isEmpty) {
+          final showSupport = !isCurrentSupportAdmin && !widget.selectionMode;
+          if (chats.isEmpty && !showSupport) {
             return const _ChatListStatus(child: _EmptyChats());
           }
 
           return ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: EdgeInsetsDirectional.fromSTEB(0.0, 8.0, 0.0, 0.0),
-            itemCount: chats.length,
+            itemCount: chats.length + (showSupport ? 1 : 0),
             separatorBuilder: (_, __) => SizedBox(height: 10.0),
             itemBuilder: (context, index) {
-              final chat = chats[index];
+              if (showSupport && index == 0) {
+                return _SupportChatCard(chat: supportChat);
+              }
+              final chat = chats[index - (showSupport ? 1 : 0)];
               return _ChatListTile(
                 chat: chat,
                 selectionMode: widget.selectionMode,
@@ -310,6 +310,144 @@ class _ChatListState extends State<_ChatList> {
             },
           );
         },
+      ),
+    );
+  }
+}
+
+class _SupportChatCard extends StatefulWidget {
+  const _SupportChatCard({this.chat});
+
+  final QueryDocumentSnapshot<Map<String, dynamic>>? chat;
+
+  @override
+  State<_SupportChatCard> createState() => _SupportChatCardState();
+}
+
+class _SupportChatCardState extends State<_SupportChatCard> {
+  bool _opening = false;
+
+  Future<void> _openSupport() async {
+    if (_opening) return;
+    setState(() => _opening = true);
+    try {
+      final chatId = widget.chat?.id ?? await ensureCurrentUserSupportChat();
+      if (!mounted) return;
+      context.pushNamed(
+        ChatWidget.routeName,
+        queryParameters: {
+          'chatId': serializeParam(chatId, ParamType.String),
+        }.withoutNulls,
+      );
+    } catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Не удалось открыть поддержку. Попробуйте ещё раз.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _opening = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = FlutterFlowTheme.of(context);
+    final data = widget.chat?.data();
+    final lastMessage = (data?['last_message'] as String? ?? '').trim();
+    final subtitle = lastMessage.isNotEmpty
+        ? lastMessage
+        : 'Напишите нам — мы рядом';
+    final messageStatus = outgoingLastMessageStatus(
+      data ?? const <String, dynamic>{},
+      currentUserReference,
+    );
+    final timestamp = _formatChatTimestamp(context, data?['updated_time']);
+
+    return InkWell(
+      onTap: _openSupport,
+      borderRadius: BorderRadius.circular(14.0),
+      child: Container(
+        padding: const EdgeInsets.all(12.0),
+        decoration: BoxDecoration(
+          color: theme.secondaryBackground,
+          borderRadius: BorderRadius.circular(14.0),
+          border: Border.all(color: theme.primary.withValues(alpha: 0.35)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 52.0,
+              height: 52.0,
+              padding: const EdgeInsets.all(5.0),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+                border: Border.all(color: theme.divider),
+              ),
+              child: ClipOval(
+                child: Image.asset(supportLogoAsset, fit: BoxFit.cover),
+              ),
+            ),
+            const SizedBox(width: 12.0),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    supportAccountName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.bodyLarge.override(
+                      font: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      if (messageStatus != null)
+                        ChatMessageStatusIndicator(status: messageStatus),
+                      Expanded(
+                        child: Text(
+                          subtitle,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.bodyMedium.override(
+                            font: GoogleFonts.inter(),
+                            color: theme.secondaryText,
+                          ),
+                        ),
+                      ),
+                    ].divide(const SizedBox(width: 4.0)),
+                  ),
+                  if (timestamp.isNotEmpty)
+                    Text(
+                      timestamp,
+                      style: theme.labelSmall.override(
+                        font: GoogleFonts.inter(),
+                        color: theme.secondaryText,
+                        fontSize: 11.0,
+                      ),
+                    ),
+                ].divide(const SizedBox(height: 4.0)),
+              ),
+            ),
+            if (_opening)
+              SizedBox(
+                width: 22.0,
+                height: 22.0,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.0,
+                  color: theme.primary,
+                ),
+              )
+            else
+              Icon(Icons.chevron_right_rounded, color: theme.secondaryText),
+          ],
+        ),
       ),
     );
   }
@@ -361,6 +499,7 @@ class _ChatListTile extends StatelessWidget {
         : ((data['last_message_type'] as String?) == 'image'
               ? 'Фото'
               : 'Нет сообщений');
+    final messageStatus = outgoingLastMessageStatus(data, currentRef);
     final updatedTimeLabel = _formatChatTimestamp(
       context,
       data['updated_time'],
@@ -443,15 +582,26 @@ class _ChatListTile extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    Text(
-                      lastMessageLabel,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: FlutterFlowTheme.of(context).bodyMedium.override(
-                        font: GoogleFonts.inter(),
-                        color: FlutterFlowTheme.of(context).secondaryText,
-                        letterSpacing: 0.0,
-                      ),
+                    Row(
+                      children: [
+                        if (messageStatus != null)
+                          ChatMessageStatusIndicator(status: messageStatus),
+                        Expanded(
+                          child: Text(
+                            lastMessageLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: FlutterFlowTheme.of(context).bodyMedium
+                                .override(
+                                  font: GoogleFonts.inter(),
+                                  color: FlutterFlowTheme.of(
+                                    context,
+                                  ).secondaryText,
+                                  letterSpacing: 0.0,
+                                ),
+                          ),
+                        ),
+                      ].divide(const SizedBox(width: 4.0)),
                     ),
                     if (updatedTimeLabel.isNotEmpty)
                       Text(

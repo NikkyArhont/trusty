@@ -9,6 +9,7 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/flutter_flow/upload_data.dart';
 import '/global_comp/nav_back/nav_back_widget.dart';
+import '/global_comp/push_notification_setting/push_notification_setting_widget.dart';
 import '/global_comp/upload_media/upload_media_widget.dart';
 import 'dart:ui';
 import '/index.dart';
@@ -244,6 +245,8 @@ class _EditProfileMasterWidgetState extends State<EditProfileMasterWidget> {
                       ],
                     ),
                   ),
+                  if (!widget.setupMode)
+                    const PushNotificationSettingWidget(compact: true),
                   Container(
                     width: 120.0,
                     height: 120.0,

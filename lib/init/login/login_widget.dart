@@ -1,13 +1,12 @@
 import '/auth/firebase_auth/auth_util.dart';
 import '/auth/temporary_phone_auth.dart';
-import '/backend/backend.dart';
+import '/backend/analytics/analytics_service.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
 import '/index.dart';
 import 'dart:async';
 import 'package:easy_debounce/easy_debounce.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
@@ -269,15 +268,15 @@ class _LoginWidgetState extends State<LoginWidget> with WidgetsBindingObserver {
 
   Future<void> _completeTelegramLogin(String customToken) async {
     GoRouter.of(context).prepareAuthEvent();
-    dynamic verifiedUser;
-    final signedInUser = FirebaseAuth.instance.currentUser;
-    if (signedInUser != null) {
-      await maybeCreateUser(signedInUser);
-      verifiedUser = currentUser;
-    } else {
-      verifiedUser = await authManager.signInWithJwtToken(context, customToken);
-    }
+    // Always apply the token returned for the confirmed phone number. Reusing
+    // an existing Firebase session can otherwise open a different account and
+    // make the app ask for that account's missing profile data.
+    final verifiedUser = await authManager.signInWithJwtToken(
+      context,
+      customToken,
+    );
     if (!mounted || verifiedUser == null) return;
+    AnalyticsService.instance.logLogin('telegram');
     final userDocument = currentUserDocument;
     if (userDocument != null &&
         !userDocument.clientProfileCompleted &&
@@ -394,6 +393,15 @@ class _LoginWidgetState extends State<LoginWidget> with WidgetsBindingObserver {
                       mainAxisAlignment: MainAxisAlignment.start,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        if (currentUserIsAnonymous)
+                          IconButton(
+                            tooltip: 'Продолжить без регистрации',
+                            onPressed: () =>
+                                context.goNamed(MainWidget.routeName),
+                            padding: EdgeInsets.zero,
+                            alignment: Alignment.centerLeft,
+                            icon: const Icon(Icons.arrow_back_rounded),
+                          ),
                         ClipRRect(
                           borderRadius: BorderRadius.circular(8.0),
                           child: Image.asset(

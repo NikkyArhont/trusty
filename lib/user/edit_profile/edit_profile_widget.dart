@@ -47,12 +47,9 @@ class _EditProfileWidgetState extends State<EditProfileWidget>
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   final animationsMap = <String, AnimationInfo>{};
-  Future<Map<String, dynamic>>? _adminStatsFuture;
   bool _isSaving = false;
   bool _isDeletingAccount = false;
   bool _isSigningOut = false;
-
-  bool get _canViewAdminStats => currentPhoneNumber == '+79183633636';
 
   Future<NavigatorState> _showBlockingProgress({
     required String title,
@@ -166,29 +163,6 @@ class _EditProfileWidgetState extends State<EditProfileWidget>
     context.goNamedAuth(LoginWidget.routeName, mounted);
   }
 
-  Future<Map<String, dynamic>> _loadAdminStats() async {
-    final token = await FirebaseAuth.instance.currentUser?.getIdToken();
-    if (token == null || token.isEmpty) {
-      throw Exception('Нет токена авторизации');
-    }
-
-    final response = await http
-        .get(
-          Uri.parse(
-            'https://us-central1-trusty-kzh1sb.cloudfunctions.net/getAdminStats',
-          ),
-          headers: {'Authorization': 'Bearer $token'},
-        )
-        .timeout(const Duration(seconds: 15));
-
-    final data = jsonDecode(response.body) as Map<String, dynamic>;
-    if (response.statusCode != 200) {
-      throw Exception(data['details'] ?? data['error'] ?? 'Ошибка статистики');
-    }
-
-    return data;
-  }
-
   Future<void> _saveProfile() async {
     final name = normalizeUserText(_model.nameTextController.text);
     if (name.isEmpty || _isSaving) return;
@@ -290,10 +264,6 @@ class _EditProfileWidgetState extends State<EditProfileWidget>
     );
     _model.bioFocusNode ??= FocusNode();
 
-    if (_canViewAdminStats) {
-      _adminStatsFuture = _loadAdminStats();
-    }
-
     animationsMap.addAll({});
     setupAnimations(
       animationsMap.values.where(
@@ -314,96 +284,10 @@ class _EditProfileWidgetState extends State<EditProfileWidget>
     super.dispose();
   }
 
-  Widget _buildAdminStatsCard() {
-    if (!_canViewAdminStats || _adminStatsFuture == null) {
-      return const SizedBox.shrink();
-    }
-
-    return FutureBuilder<Map<String, dynamic>>(
-      future: _adminStatsFuture,
-      builder: (context, snapshot) {
-        String usersTotal = '...';
-        String usersOnline = '...';
-        String servicesTotal = '...';
-
-        if (snapshot.hasData) {
-          usersTotal = '${snapshot.data?['usersTotal'] ?? 0}';
-          usersOnline = '${snapshot.data?['usersOnline'] ?? 0}';
-          servicesTotal = '${snapshot.data?['servicesTotal'] ?? 0}';
-        }
-
-        return Container(
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: FlutterFlowTheme.of(context).secondaryBackground,
-            borderRadius: BorderRadius.circular(16.0),
-            border: Border.all(
-              color: FlutterFlowTheme.of(context).divider,
-              width: 1.0,
-            ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Статистика',
-                  style: FlutterFlowTheme.of(context).bodyLarge.override(
-                    font: GoogleFonts.jetBrainsMono(
-                      fontWeight: FontWeight.w700,
-                    ),
-                    color: FlutterFlowTheme.of(context).primaryText,
-                    letterSpacing: 0.0,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                if (snapshot.hasError)
-                  Text(
-                    'Не удалось загрузить статистику',
-                    style: FlutterFlowTheme.of(context).bodyMedium.override(
-                      font: GoogleFonts.jetBrainsMono(),
-                      color: FlutterFlowTheme.of(context).error,
-                      letterSpacing: 0.0,
-                    ),
-                  )
-                else ...[
-                  Text(
-                    'Всего пользователей: $usersTotal',
-                    style: FlutterFlowTheme.of(context).bodyMedium.override(
-                      font: GoogleFonts.jetBrainsMono(),
-                      color: FlutterFlowTheme.of(context).primaryText,
-                      letterSpacing: 0.0,
-                    ),
-                  ),
-                  Text(
-                    'Онлайн сейчас: $usersOnline',
-                    style: FlutterFlowTheme.of(context).bodyMedium.override(
-                      font: GoogleFonts.jetBrainsMono(),
-                      color: FlutterFlowTheme.of(context).primaryText,
-                      letterSpacing: 0.0,
-                    ),
-                  ),
-                  Text(
-                    'Всего объявлений: $servicesTotal',
-                    style: FlutterFlowTheme.of(context).bodyMedium.override(
-                      font: GoogleFonts.jetBrainsMono(),
-                      color: FlutterFlowTheme.of(context).primaryText,
-                      letterSpacing: 0.0,
-                    ),
-                  ),
-                ],
-              ].divide(SizedBox(height: 8.0)),
-            ),
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
+    context.watch<FFAppState>();
+
     return Scaffold(
       key: scaffoldKey,
       backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
@@ -955,6 +839,78 @@ class _EditProfileWidgetState extends State<EditProfileWidget>
                       ),
                     ),
                   ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 400.0),
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(8.0),
+                      onTap: () async {
+                        await context.pushNamed(
+                          ChooseLocationCityWidget.routeName,
+                          queryParameters: {
+                            'edit': serializeParam(true, ParamType.bool),
+                          }.withoutNulls,
+                        );
+                        if (mounted) safeSetState(() {});
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12.0,
+                          vertical: 11.0,
+                        ),
+                        decoration: BoxDecoration(
+                          color: FlutterFlowTheme.of(
+                            context,
+                          ).secondaryBackground,
+                          borderRadius: BorderRadius.circular(8.0),
+                          border: Border.all(
+                            color: FlutterFlowTheme.of(context).secondary,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              Icons.location_on_outlined,
+                              color: FlutterFlowTheme.of(context).primaryText,
+                            ),
+                            const SizedBox(width: 12.0),
+                            Expanded(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Город',
+                                    style: FlutterFlowTheme.of(
+                                      context,
+                                    ).labelMedium,
+                                  ),
+                                  const SizedBox(height: 2.0),
+                                  Text(
+                                    FFAppState().globalFilter.place.title
+                                            .trim()
+                                            .isNotEmpty
+                                        ? FFAppState().globalFilter.place.title
+                                        : 'Выберите город',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: FlutterFlowTheme.of(
+                                      context,
+                                    ).bodyMedium,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 8.0),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              color: FlutterFlowTheme.of(context).secondaryText,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
                   Column(
                     mainAxisSize: MainAxisSize.min,
                     mainAxisAlignment: MainAxisAlignment.start,
@@ -992,86 +948,6 @@ class _EditProfileWidgetState extends State<EditProfileWidget>
                                   context,
                                 ).labelLarge.fontStyle,
                               ),
-                        ),
-                      ),
-                      Padding(
-                        padding: EdgeInsetsDirectional.fromSTEB(
-                          0.0,
-                          0.0,
-                          0.0,
-                          8.0,
-                        ),
-                        child: InkWell(
-                          borderRadius: BorderRadius.circular(16.0),
-                          onTap: () {
-                            context.pushNamed(VisitHistoryWidget.routeName);
-                          },
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: FlutterFlowTheme.of(
-                                context,
-                              ).secondaryBackground,
-                              borderRadius: BorderRadius.circular(16.0),
-                              border: Border.all(
-                                color: FlutterFlowTheme.of(context).divider,
-                                width: 1.0,
-                              ),
-                            ),
-                            child: Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.max,
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.history_rounded,
-                                    color: FlutterFlowTheme.of(
-                                      context,
-                                    ).primaryText,
-                                    size: 22.0,
-                                  ),
-                                  Expanded(
-                                    flex: 1,
-                                    child: Text(
-                                      FFLocalizations.of(
-                                        context,
-                                      ).getText('z5v9zc0a' /* Visit History */),
-                                      style: FlutterFlowTheme.of(context)
-                                          .bodyLarge
-                                          .override(
-                                            font: GoogleFonts.jetBrainsMono(
-                                              fontWeight: FlutterFlowTheme.of(
-                                                context,
-                                              ).bodyLarge.fontWeight,
-                                              fontStyle: FlutterFlowTheme.of(
-                                                context,
-                                              ).bodyLarge.fontStyle,
-                                            ),
-                                            color: FlutterFlowTheme.of(
-                                              context,
-                                            ).primaryText,
-                                            letterSpacing: 0.0,
-                                            fontWeight: FlutterFlowTheme.of(
-                                              context,
-                                            ).bodyLarge.fontWeight,
-                                            fontStyle: FlutterFlowTheme.of(
-                                              context,
-                                            ).bodyLarge.fontStyle,
-                                          ),
-                                    ),
-                                  ),
-                                  Icon(
-                                    Icons.chevron_right_rounded,
-                                    color: FlutterFlowTheme.of(
-                                      context,
-                                    ).secondaryText,
-                                    size: 20.0,
-                                  ),
-                                ].divide(SizedBox(width: 16.0)),
-                              ),
-                            ),
-                          ),
                         ),
                       ),
                       Padding(
@@ -1380,8 +1256,6 @@ class _EditProfileWidgetState extends State<EditProfileWidget>
                         ),
                       ),
                       Container(height: 24.0),
-                      _buildAdminStatsCard(),
-                      if (_canViewAdminStats) Container(height: 24.0),
                       InkWell(
                         onTap: _isDeletingAccount ? null : _deleteAccount,
                         borderRadius: BorderRadius.circular(16.0),

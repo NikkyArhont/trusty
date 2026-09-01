@@ -1,4 +1,5 @@
 import '/backend/backend.dart';
+import '/backend/guest/guest_access.dart';
 import '/backend/public_master_profile.dart';
 import '/backend/schema/enums/enums.dart';
 import '/auth/firebase_auth/auth_util.dart';
@@ -10,6 +11,7 @@ import '/global_comp/recommendation_metrics/recommendation_metrics_widget.dart';
 import '/init/sync_contacts.dart';
 import '/user/chat/chat_widget.dart';
 import '/user/service_card_client/service_card_client_widget.dart';
+import '/master/client_invite_guide_dialog.dart';
 import 'dart:async';
 import 'dart:ui';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -78,22 +80,12 @@ class _MasterPageWidgetState extends State<MasterPageWidget> {
     return 'контактов';
   }
 
-  Set<String> _recommendationPhones(List<ServiceRecord> services) => services
-      .expand(
-        (service) => <String>[
-          ...service.recommenderPhones,
-          ...service.recommendations.map(
-            (recommendation) => recommendation.phone,
-          ),
-        ],
-      )
-      .map(normalizePhone)
-      .where((phone) => phone.isNotEmpty)
-      .toSet();
+  Set<String> _recommendationHashes(List<ServiceRecord> services) =>
+      services.expand(recommendationPhoneHashesForService).toSet();
 
-  List<String> _contactRecommenderNames(Set<String> phones) {
-    final names = phones
-        .map((phone) => globalContactsMap[phone]?.trim() ?? '')
+  List<String> _contactRecommenderNames(Set<String> hashes) {
+    final names = hashes
+        .map((hash) => contactNameForPhoneHash(hash)?.trim() ?? '')
         .where((name) => name.isNotEmpty)
         .toSet()
         .toList();
@@ -197,6 +189,12 @@ class _MasterPageWidgetState extends State<MasterPageWidget> {
   }
 
   Future<void> _openOrCreateChat() async {
+    if (!await requireRegisteredUser(
+      context,
+      reason: 'Чтобы написать мастеру, подтвердите номер телефона.',
+    )) {
+      return;
+    }
     final currentUserRef = currentUserReference;
     final masterRef = _masterDoc?.reference;
     if (currentUserRef == null || masterRef == null) {
@@ -489,13 +487,16 @@ class _MasterPageWidgetState extends State<MasterPageWidget> {
                                           service.status == ServiceStatus.show,
                                     )
                                     .toList();
-                                final recommendationPhones =
-                                    _recommendationPhones(visibleServices);
+                                final recommendationHashes =
+                                    _recommendationHashes(visibleServices);
                                 final names = _contactRecommenderNames(
-                                  recommendationPhones,
+                                  recommendationHashes,
                                 );
-                                final contactsCount = recommendationPhones
-                                    .where(globalContactsMap.containsKey)
+                                final contactsCount = recommendationHashes
+                                    .where(
+                                      (hash) =>
+                                          contactNameForPhoneHash(hash) != null,
+                                    )
                                     .length;
 
                                 final theme = FlutterFlowTheme.of(context);
@@ -508,7 +509,7 @@ class _MasterPageWidgetState extends State<MasterPageWidget> {
                                       CrossAxisAlignment.stretch,
                                   children: [
                                     RecommendationMetricsWidget(
-                                      totalCount: recommendationPhones.length,
+                                      totalCount: recommendationHashes.length,
                                       contactsCount: contactsCount,
                                       scopeDescription: 'услуги этого мастера',
                                     ),
@@ -615,6 +616,33 @@ class _MasterPageWidgetState extends State<MasterPageWidget> {
                         ),
                       ),
                     ),
+                    if (isOwnProfile)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
+                        child: OutlinedButton.icon(
+                          onPressed: () => showClientInviteGuideDialog(context),
+                          style: OutlinedButton.styleFrom(
+                            minimumSize: const Size.fromHeight(54),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            side: BorderSide(
+                              color: FlutterFlowTheme.of(
+                                context,
+                              ).primary.withValues(alpha: 0.45),
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          icon: const Icon(Icons.school_rounded),
+                          label: const Text(
+                            'Как пригласить клиентов в Сарафан для первых рекомендаций',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
                     Container(
                       child: Padding(
                         padding: EdgeInsetsDirectional.fromSTEB(

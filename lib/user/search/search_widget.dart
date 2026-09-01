@@ -4,7 +4,7 @@ import '/backend/schema/structs/index.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/flutter_flow/flutter_flow_widgets.dart';
-import '/global_comp/menu/menu_widget.dart';
+import '/global_comp/app_page_header/app_page_header.dart';
 import '/user/service_card_client/service_card_client_widget.dart';
 import 'dart:ui';
 import '/index.dart';
@@ -251,10 +251,11 @@ class _SearchWidgetState extends State<SearchWidget> {
                   child: Column(
                     mainAxisSize: MainAxisSize.max,
                     children: [
+                      const AppPageHeader(title: 'Поиск', showBack: true),
                       Padding(
                         padding: EdgeInsetsDirectional.fromSTEB(
                           16.0,
-                          24.0,
+                          0.0,
                           16.0,
                           0.0,
                         ),
@@ -867,7 +868,7 @@ class _SearchWidgetState extends State<SearchWidget> {
                             },
                           ),
                         ),
-                    ].divide(SizedBox(height: 12.0)).addToEnd(SizedBox(height: 100.0)),
+                    ].divide(SizedBox(height: 12.0)).addToEnd(SizedBox(height: 72.0)),
                   ),
                 ),
                 Align(
@@ -936,14 +937,6 @@ class _SearchWidgetState extends State<SearchWidget> {
                             borderRadius: BorderRadius.circular(8.0),
                           ),
                         ),
-                      Align(
-                        alignment: AlignmentDirectional(0.0, 1.0),
-                        child: wrapWithModel(
-                          model: _model.menuModel,
-                          updateCallback: () => safeSetState(() {}),
-                          child: MenuWidget(currentPage: Menu.search),
-                        ),
-                      ),
                     ].divide(SizedBox(height: 12.0)),
                   ),
                 ),

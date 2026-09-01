@@ -61,8 +61,9 @@ Future<void> syncCurrentUserChatProfile({
 
       final updates = <String, dynamic>{};
       if (data['client'] == userRef) {
-        if (data['clientName'] != clientName)
+        if (data['clientName'] != clientName) {
           updates['clientName'] = clientName;
+        }
         if (data['clientPhoto'] != clientPhoto) {
           updates['clientPhoto'] = clientPhoto;
         }
@@ -70,7 +71,7 @@ Future<void> syncCurrentUserChatProfile({
           updates['clientPhone'] = user.phoneNumber;
         }
       }
-      if (data['master'] == userRef) {
+      if (data['master'] == userRef && data['context'] != 'support') {
         if (data['masterName'] != resolvedMasterName) {
           updates['masterName'] = resolvedMasterName;
         }

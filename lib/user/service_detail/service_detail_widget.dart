@@ -1,6 +1,9 @@
 import '/auth/firebase_auth/auth_util.dart';
 import '/backend/backend.dart';
+import '/backend/analytics/analytics_service.dart';
+import '/backend/guest/guest_access.dart';
 import '/backend/public_master_profile.dart';
+import '/backend/referral/your_master_highlight.dart';
 import '/backend/schema/enums/enums.dart';
 import '/components/contact_recommendation_widget.dart';
 import '/flutter_flow/flutter_flow_expanded_image_view.dart';
@@ -13,6 +16,7 @@ import '/global_comp/contacts_sync_prompt/contacts_sync_prompt_widget.dart';
 import '/global_comp/master_contact_badge/master_contact_badge_widget.dart';
 import '/global_comp/recommendation_metrics/recommendation_metrics_widget.dart';
 import 'dart:async';
+import 'dart:math' as math;
 import 'dart:ui';
 import '/index.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart'
@@ -23,6 +27,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '/init/sync_contacts.dart';
 import '/user/recommend_dialog/recommend_dialog_widget.dart';
 import 'service_detail_model.dart';
@@ -48,15 +53,59 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
   final scaffoldKey = GlobalKey<ScaffoldState>();
   bool _hasCompletedService = false;
   bool _isOpeningMasterPage = false;
+  final math.Random _random = math.Random();
+  int? _randomRecommendationIndex;
 
-  Set<String> _recommendationPhones(ServiceRecord? service) {
+  String _legacyPhoneHash(String rawPhone) {
+    final normalized = normalizePhone(rawPhone);
+    return normalized.isEmpty ? '' : phoneHash(normalized);
+  }
+
+  String _recommendationHash(RecommendationStruct recommendation) {
+    final savedHash = recommendation.phoneHash.trim().toLowerCase();
+    return savedHash.isNotEmpty
+        ? savedHash
+        : _legacyPhoneHash(recommendation.phone);
+  }
+
+  Set<String> _recommendationHashes(ServiceRecord? service) {
     if (service == null) return <String>{};
     return <String>{
-      ...service.recommenderPhones.map(normalizePhone),
-      ...service.recommendations.map(
-        (recommendation) => normalizePhone(recommendation.phone),
+      ...service.recommenderPhoneHashes.map(
+        (hash) => hash.trim().toLowerCase(),
       ),
-    }..removeWhere((phone) => phone.isEmpty);
+      ...service.recommenderPhones.map(_legacyPhoneHash),
+      ...service.recommendations.map(_recommendationHash),
+    }..removeWhere((hash) => hash.isEmpty);
+  }
+
+  List<RecommendationStruct> _textRecommendations(ServiceRecord? service) =>
+      service?.recommendations
+          .where((recommendation) => recommendation.comment.trim().isNotEmpty)
+          .toList() ??
+      const <RecommendationStruct>[];
+
+  int? _initialRandomRecommendationIndex(ServiceRecord? service) {
+    final recommendations = _textRecommendations(service);
+    return recommendations.isEmpty
+        ? null
+        : _random.nextInt(recommendations.length);
+  }
+
+  void _refreshRandomRecommendation() {
+    final recommendations = _textRecommendations(_currentServiceDoc);
+    if (recommendations.isEmpty) return;
+    final current = _randomRecommendationIndex;
+    if (recommendations.length == 1) {
+      safeSetState(() => _randomRecommendationIndex = 0);
+      return;
+    }
+
+    var next = _random.nextInt(recommendations.length - 1);
+    if (current != null && current >= 0 && current < recommendations.length) {
+      if (next >= current) next += 1;
+    }
+    safeSetState(() => _randomRecommendationIndex = next);
   }
 
   Future<void> _checkCompletedService() async {
@@ -109,7 +158,50 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
     }
   }
 
+  Future<void> _callRecommender(String recommenderHash) async {
+    final normalizedPhone = contactPhoneForPhoneHash(recommenderHash);
+    if (normalizedPhone == null || normalizedPhone.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Номер не найден в контактах')),
+        );
+      }
+      return;
+    }
+    final phone =
+        normalizedPhone.length == 11 && normalizedPhone.startsWith('7')
+        ? '+$normalizedPhone'
+        : normalizedPhone;
+    try {
+      final opened = await launchUrl(
+        Uri(scheme: 'tel', path: phone),
+        mode: LaunchMode.externalApplication,
+      );
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Не удалось открыть приложение телефона'),
+          ),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Не удалось открыть приложение телефона'),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> _openOrCreateChat() async {
+    if (!await requireRegisteredUser(
+      context,
+      reason: 'Чтобы написать мастеру, подтвердите номер телефона.',
+    )) {
+      return;
+    }
     final currentUserRef = currentUserReference;
     final masterRef = widget.serviceDoc?.owner;
     if (currentUserRef == null || masterRef == null) {
@@ -150,6 +242,15 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
         'service': widget.serviceDoc?.reference,
       }, SetOptions(merge: true));
 
+      final service = widget.serviceDoc;
+      if (service != null) {
+        AnalyticsService.instance.logMasterContact(
+          serviceId: service.reference.id,
+          category: service.categoryKey,
+          price: service.price,
+        );
+      }
+
       if (!mounted) {
         return;
       }
@@ -174,6 +275,19 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
     super.initState();
     _model = createModel(context, () => ServiceDetailModel());
     _currentServiceDoc = widget.serviceDoc;
+    _randomRecommendationIndex = _initialRandomRecommendationIndex(
+      _currentServiceDoc,
+    );
+
+    final service = widget.serviceDoc;
+    if (service != null) {
+      AnalyticsService.instance.logServiceView(
+        serviceId: service.reference.id,
+        title: service.title,
+        category: service.categoryKey,
+        price: service.price,
+      );
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await syncContacts();
@@ -203,15 +317,27 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
   Widget build(BuildContext context) {
     context.watch<FFAppState>();
 
-    final recommendationPhones = _recommendationPhones(_currentServiceDoc);
-    final recommenderNames = recommendationPhones
-        .map((phone) => globalContactsMap[phone]?.trim())
-        .whereType<String>()
-        .where((name) => name.isNotEmpty)
-        .toSet()
-        .toList();
-    final contactRecommendationsCount = recommendationPhones
-        .where(globalContactsMap.containsKey)
+    final recommendationHashes = _recommendationHashes(_currentServiceDoc);
+    final recommenderContacts =
+        recommendationHashes
+            .map((hash) {
+              final name = contactNameForPhoneHash(hash)?.trim();
+              return name == null || name.isEmpty
+                  ? null
+                  : MapEntry<String, String>(hash, name);
+            })
+            .whereType<MapEntry<String, String>>()
+            .toList()
+          ..sort((first, second) => first.value.compareTo(second.value));
+    final userRecommendations = _textRecommendations(_currentServiceDoc);
+    final selectedRecommendation = userRecommendations.isEmpty
+        ? null
+        : userRecommendations[(_randomRecommendationIndex ?? 0).clamp(
+            0,
+            userRecommendations.length - 1,
+          )];
+    final contactRecommendationsCount = recommendationHashes
+        .where((hash) => contactNameForPhoneHash(hash) != null)
         .length;
 
     final isOwnService =
@@ -222,10 +348,12 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
         ? currentPhoneNumber
         : (currentUserDocument?.phoneNumber ?? '');
     final normalizedUserPhone = normalizePhone(rawUserPhone);
+    final normalizedUserPhoneHash = normalizedUserPhone.isEmpty
+        ? ''
+        : phoneHash(normalizedUserPhone);
     final hasAlreadyRecommended =
-        normalizedUserPhone.isNotEmpty &&
-        (_currentServiceDoc?.recommenderPhones.contains(normalizedUserPhone) ??
-            false);
+        normalizedUserPhoneHash.isNotEmpty &&
+        recommendationHashes.contains(normalizedUserPhoneHash);
     final masterContactName = contactNameForPhoneHash(
       _publicMasterProfile?.contactPhoneHash ?? '',
     );
@@ -566,12 +694,21 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                   ),
                                   showLoadingIndicator: true,
                                   onPressed: () async {
-                                    if ((currentUserDocument?.favoriteServices
-                                                ?.toList() ??
-                                            [])
-                                        .contains(
-                                          widget!.serviceDoc?.reference,
-                                        )) {
+                                    if (!await requireRegisteredUser(
+                                      context,
+                                      reason:
+                                          'Чтобы сохранять услуги в избранное, подтвердите номер телефона.',
+                                    )) {
+                                      return;
+                                    }
+                                    final wasFavorite =
+                                        (currentUserDocument?.favoriteServices
+                                                    ?.toList() ??
+                                                [])
+                                            .contains(
+                                              widget!.serviceDoc?.reference,
+                                            );
+                                    if (wasFavorite) {
                                       await currentUserReference!.update({
                                         ...mapToFirestore({
                                           'favoriteServices':
@@ -589,6 +726,17 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                               ]),
                                         }),
                                       });
+
+                                      final service = widget.serviceDoc;
+                                      if (service != null) {
+                                        AnalyticsService.instance
+                                            .logFavoriteAdded(
+                                              serviceId: service.reference.id,
+                                              title: service.title,
+                                              category: service.categoryKey,
+                                              price: service.price,
+                                            );
+                                      }
                                     }
 
                                     safeSetState(() {});
@@ -663,6 +811,8 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                             ],
                           ),
                         ),
+                      if (_currentServiceDoc != null)
+                        YourMasterServiceBadge(service: _currentServiceDoc!),
                       Column(
                         mainAxisSize: MainAxisSize.min,
                         mainAxisAlignment: MainAxisAlignment.start,
@@ -737,12 +887,7 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                   ),
                                   Text(
                                     valueOrDefault<String>(
-                                      formatNumber(
-                                        widget!.serviceDoc?.price,
-                                        formatType: FormatType.decimal,
-                                        decimalType: DecimalType.automatic,
-                                        currency: '₽',
-                                      ),
+                                      formatPrice(widget!.serviceDoc?.price),
                                       '0',
                                     ),
                                     maxLines: 1,
@@ -879,11 +1024,11 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                       if (!isOwnService && masterContactName != null)
                         const MasterContactBadgeWidget(),
                       RecommendationMetricsWidget(
-                        totalCount: recommendationPhones.length,
+                        totalCount: recommendationHashes.length,
                         contactsCount: contactRecommendationsCount,
                         scopeDescription: 'эту услугу',
                       ),
-                      if (recommenderNames.isNotEmpty)
+                      if (recommenderContacts.isNotEmpty)
                         Container(
                           margin: EdgeInsets.only(top: 8.0),
                           padding: EdgeInsets.all(16.0),
@@ -919,16 +1064,108 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                 ],
                               ),
                               SizedBox(height: 8.0),
-                              ...recommenderNames.map(
-                                (name) => Padding(
+                              ...recommenderContacts.map(
+                                (contact) => Padding(
                                   padding: EdgeInsets.symmetric(vertical: 4.0),
-                                  child: Text(
-                                    '• $name',
-                                    style: FlutterFlowTheme.of(
-                                      context,
-                                    ).bodyMedium,
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          '• ${contact.value}',
+                                          style: FlutterFlowTheme.of(
+                                            context,
+                                          ).bodyMedium,
+                                        ),
+                                      ),
+                                      TextButton.icon(
+                                        onPressed: () =>
+                                            _callRecommender(contact.key),
+                                        icon: const Icon(
+                                          Icons.phone_outlined,
+                                          size: 18.0,
+                                        ),
+                                        label: const Text('Позвонить'),
+                                      ),
+                                    ],
                                   ),
                                 ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (selectedRecommendation != null)
+                        Container(
+                          margin: const EdgeInsets.only(top: 12.0),
+                          padding: const EdgeInsets.fromLTRB(
+                            16.0,
+                            12.0,
+                            16.0,
+                            0.0,
+                          ),
+                          decoration: BoxDecoration(
+                            color: FlutterFlowTheme.of(
+                              context,
+                            ).secondaryBackground,
+                            borderRadius: BorderRadius.circular(12.0),
+                            border: Border.all(
+                              color: FlutterFlowTheme.of(context).divider,
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      'Рекомендация пользователя',
+                                      style: FlutterFlowTheme.of(context)
+                                          .titleSmall
+                                          .override(
+                                            font: GoogleFonts.inter(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                    ),
+                                  ),
+                                  TextButton.icon(
+                                    onPressed: _refreshRandomRecommendation,
+                                    icon: const Icon(
+                                      Icons.refresh_rounded,
+                                      size: 18.0,
+                                    ),
+                                    label: const Text('Обновить'),
+                                  ),
+                                ],
+                              ),
+                              Builder(
+                                builder: (context) {
+                                  final selectedHash = _recommendationHash(
+                                    selectedRecommendation,
+                                  );
+                                  final contactName = contactNameForPhoneHash(
+                                    selectedHash,
+                                  )?.trim();
+                                  final displayName =
+                                      contactName?.isNotEmpty == true
+                                      ? contactName!
+                                      : 'Пользователь Сарафана';
+                                  final initials = displayName
+                                      .split(' ')
+                                      .where((part) => part.isNotEmpty)
+                                      .map((part) => part[0])
+                                      .take(2)
+                                      .join()
+                                      .toUpperCase();
+                                  return ContactRecommendationWidget(
+                                    key: ValueKey(
+                                      '${selectedRecommendation.phone}_${selectedRecommendation.date}_$_randomRecommendationIndex',
+                                    ),
+                                    initials: initials,
+                                    name: displayName,
+                                    comment: selectedRecommendation.comment,
+                                  );
+                                },
                               ),
                             ],
                           ),
@@ -1206,7 +1443,7 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                             size: 16.0,
                                           ),
                                           Text(
-                                            'Рекомендуют ${_currentServiceDoc?.recommenderPhones.length ?? 0} ${_getPeopleNoun(_currentServiceDoc?.recommenderPhones.length ?? 0)}',
+                                            'Рекомендуют ${recommendationHashes.length} ${_getPeopleNoun(recommendationHashes.length)}',
                                             style: FlutterFlowTheme.of(context)
                                                 .labelMedium
                                                 .override(
@@ -1248,15 +1485,15 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                       ),
                                       child: Builder(
                                         builder: (context) {
-                                          final count =
-                                              _currentServiceDoc
-                                                  ?.recommenderPhones
-                                                  .where(
-                                                    (phone) => globalContactsMap
-                                                        .containsKey(phone),
-                                                  )
-                                                  .length ??
-                                              0;
+                                          final count = recommendationHashes
+                                              .where(
+                                                (hash) =>
+                                                    contactNameForPhoneHash(
+                                                      hash,
+                                                    ) !=
+                                                    null,
+                                              )
+                                              .length;
                                           return Text(
                                             '$count ${_getContactsNoun(count)}',
                                             style: FlutterFlowTheme.of(context)
@@ -1301,8 +1538,11 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                   final contactRecs =
                                       _currentServiceDoc?.recommendations
                                           .where(
-                                            (rec) => globalContactsMap
-                                                .containsKey(rec.phone),
+                                            (rec) =>
+                                                contactNameForPhoneHash(
+                                                  _recommendationHash(rec),
+                                                ) !=
+                                                null,
                                           )
                                           .toList() ??
                                       [];
@@ -1394,9 +1634,13 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                     physics: NeverScrollableScrollPhysics(),
                                     scrollDirection: Axis.vertical,
                                     children: contactRecs.map((rec) {
+                                      final recommendationHash =
+                                          _recommendationHash(rec);
                                       final localName =
-                                          globalContactsMap[rec.phone] ??
-                                          rec.phone;
+                                          contactNameForPhoneHash(
+                                            recommendationHash,
+                                          ) ??
+                                          'Пользователь Сарафана';
                                       final initials = localName.isNotEmpty
                                           ? localName
                                                 .split(' ')
@@ -1409,7 +1653,9 @@ class _ServiceDetailWidgetState extends State<ServiceDetailWidget> {
                                                 .toUpperCase()
                                           : '';
                                       return ContactRecommendationWidget(
-                                        key: ValueKey(rec.phone),
+                                        key: ValueKey(
+                                          '${recommendationHash}_${rec.date?.millisecondsSinceEpoch ?? 0}',
+                                        ),
                                         initials: initials,
                                         name: localName,
                                         comment: rec.comment,

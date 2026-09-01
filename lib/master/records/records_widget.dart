@@ -3,6 +3,7 @@ import '/backend/backend.dart';
 import '/backend/schema/enums/enums.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/global_comp/app_page_header/app_page_header.dart';
 import '/global_comp/menu/menu_widget.dart';
 import '/index.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -64,49 +65,7 @@ class _RecordsWidgetState extends State<RecordsWidget> {
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Container(
-                    child: Padding(
-                      padding: EdgeInsetsDirectional.fromSTEB(
-                        16.0,
-                        24.0,
-                        16.0,
-                        24.0,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Text(
-                            FFLocalizations.of(
-                              context,
-                            ).getText('jfsw63vl' /* Записи */),
-                            style: FlutterFlowTheme.of(context).headlineMedium
-                                .override(
-                                  font: GoogleFonts.interTight(
-                                    fontWeight: FlutterFlowTheme.of(
-                                      context,
-                                    ).headlineMedium.fontWeight,
-                                    fontStyle: FlutterFlowTheme.of(
-                                      context,
-                                    ).headlineMedium.fontStyle,
-                                  ),
-                                  color: FlutterFlowTheme.of(
-                                    context,
-                                  ).primaryText,
-                                  letterSpacing: 0.0,
-                                  fontWeight: FlutterFlowTheme.of(
-                                    context,
-                                  ).headlineMedium.fontWeight,
-                                  fontStyle: FlutterFlowTheme.of(
-                                    context,
-                                  ).headlineMedium.fontStyle,
-                                ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
+                  const AppPageHeader(title: 'Записи'),
                   Container(
                     decoration: BoxDecoration(
                       color: FlutterFlowTheme.of(context).primaryBackground,

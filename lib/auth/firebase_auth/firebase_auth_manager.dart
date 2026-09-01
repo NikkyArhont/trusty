@@ -79,8 +79,10 @@ class FirebaseAuthManager extends AuthManager
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(
-                  'С момента последнего входа прошло слишком много времени. Войдите снова перед удалением аккаунта.')),
+            content: Text(
+              'С момента последнего входа прошло слишком много времени. Войдите снова перед удалением аккаунта.',
+            ),
+          ),
         );
       }
     }
@@ -103,8 +105,10 @@ class FirebaseAuthManager extends AuthManager
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text(
-                  'С момента последнего входа прошло слишком много времени. Войдите снова перед изменением почты.')),
+            content: Text(
+              'С момента последнего входа прошло слишком много времени. Войдите снова перед изменением почты.',
+            ),
+          ),
         );
       }
     }
@@ -124,9 +128,9 @@ class FirebaseAuthManager extends AuthManager
     } on FirebaseAuthException catch (e) {
       if (e.code == 'requires-recent-login') {
         ScaffoldMessenger.of(context).hideCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Ошибка: ${e.message!}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: ${e.message!}')));
       }
     }
   }
@@ -140,9 +144,9 @@ class FirebaseAuthManager extends AuthManager
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
     } on FirebaseAuthException catch (e) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Ошибка: ${e.message!}')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: ${e.message!}')));
       return null;
     }
     ScaffoldMessenger.of(context).showSnackBar(
@@ -155,29 +159,25 @@ class FirebaseAuthManager extends AuthManager
     BuildContext context,
     String email,
     String password,
-  ) =>
-      _signInOrCreateAccount(
-        context,
-        () => emailSignInFunc(email, password),
-        'EMAIL',
-      );
+  ) => _signInOrCreateAccount(
+    context,
+    () => emailSignInFunc(email, password),
+    'EMAIL',
+  );
 
   @override
   Future<BaseAuthUser?> createAccountWithEmail(
     BuildContext context,
     String email,
     String password,
-  ) =>
-      _signInOrCreateAccount(
-        context,
-        () => emailCreateAccountFunc(email, password),
-        'EMAIL',
-      );
+  ) => _signInOrCreateAccount(
+    context,
+    () => emailCreateAccountFunc(email, password),
+    'EMAIL',
+  );
 
   @override
-  Future<BaseAuthUser?> signInAnonymously(
-    BuildContext context,
-  ) =>
+  Future<BaseAuthUser?> signInAnonymously(BuildContext context) =>
       _signInOrCreateAccount(context, anonymousSignInFunc, 'ANONYMOUS');
 
   @override
@@ -196,8 +196,7 @@ class FirebaseAuthManager extends AuthManager
   Future<BaseAuthUser?> signInWithJwtToken(
     BuildContext context,
     String jwtToken,
-  ) =>
-      _signInOrCreateAccount(context, () => jwtTokenSignIn(jwtToken), 'JWT');
+  ) => _signInOrCreateAccount(context, () => jwtTokenSignIn(jwtToken), 'JWT');
 
   void handlePhoneAuthStateChanges(BuildContext context) {
     phoneAuthManager.addListener(() {
@@ -207,13 +206,14 @@ class FirebaseAuthManager extends AuthManager
 
       if (phoneAuthManager.triggerOnCodeSent) {
         phoneAuthManager.onCodeSent(context);
-        phoneAuthManager
-            .update(() => phoneAuthManager.triggerOnCodeSent = false);
+        phoneAuthManager.update(
+          () => phoneAuthManager.triggerOnCodeSent = false,
+        );
       } else if (phoneAuthManager.phoneAuthError != null) {
         final e = phoneAuthManager.phoneAuthError!;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Ошибка: ${e.message!}'),
-        ));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Ошибка: ${e.message!}')));
         phoneAuthManager.update(() => phoneAuthManager.phoneAuthError = null);
       }
     });
@@ -227,8 +227,9 @@ class FirebaseAuthManager extends AuthManager
   }) async {
     phoneAuthManager.update(() => phoneAuthManager.onCodeSent = onCodeSent);
     if (kIsWeb) {
-      phoneAuthManager.webPhoneAuthConfirmationResult =
-          await FirebaseAuth.instance.signInWithPhoneNumber(phoneNumber);
+      phoneAuthManager.webPhoneAuthConfirmationResult = await FirebaseAuth
+          .instance
+          .signInWithPhoneNumber(phoneNumber);
       phoneAuthManager.update(() => phoneAuthManager.triggerOnCodeSent = true);
       return;
     }
@@ -240,8 +241,9 @@ class FirebaseAuthManager extends AuthManager
     // * Finally modify verificationCompleted below as instructed.
     await FirebaseAuth.instance.verifyPhoneNumber(
       phoneNumber: phoneNumber,
-      timeout:
-          Duration(seconds: 0), // Skips Android's default auto-verification
+      timeout: Duration(
+        seconds: 0,
+      ), // Skips Android's default auto-verification
       verificationCompleted: (phoneAuthCredential) async {
         await FirebaseAuth.instance.signInWithCredential(phoneAuthCredential);
         phoneAuthManager.update(() {
@@ -309,8 +311,13 @@ class FirebaseAuthManager extends AuthManager
     String authProvider,
   ) async {
     try {
+      final previousUserId = FirebaseAuth.instance.currentUser?.uid;
       final userCredential = await signInFunc();
       if (userCredential?.user != null) {
+        if (previousUserId != null &&
+            previousUserId != userCredential!.user!.uid) {
+          resetPushNotificationsState();
+        }
         await maybeCreateUser(userCredential!.user!);
       }
       return userCredential == null
@@ -325,9 +332,9 @@ class FirebaseAuthManager extends AuthManager
         _ => 'Ошибка: ${e.message!}',
       };
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(errorMsg)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(errorMsg)));
       return null;
     }
   }

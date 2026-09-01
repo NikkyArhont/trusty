@@ -180,12 +180,7 @@ class _ServiceCardBigWidgetState extends State<ServiceCardBigWidget> {
                             ),
                           ),
                           Text(
-                            formatNumber(
-                              widget!.servDoc!.price,
-                              formatType: FormatType.decimal,
-                              decimalType: DecimalType.automatic,
-                              currency: '₽',
-                            ),
+                            formatPrice(widget!.servDoc!.price),
                             style: FlutterFlowTheme.of(context).titleMedium
                                 .override(
                                   font: GoogleFonts.interTight(

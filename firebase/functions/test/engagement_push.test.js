@@ -19,6 +19,12 @@ const completedMasterData = {
   mainAdres: {title: "Москва"},
 };
 
+test("uses a privacy-safe message for an anonymous guest", () => {
+  const message = engagementMessage({user: {isGuest: true}});
+  assert.equal(message.kind, "guest");
+  assert.equal(message.body.includes("знакомых вам людей"), true);
+});
+
 test("recognizes a master even after switching back to client mode", () => {
   assert.equal(isMasterUser({masterMode: false, masterData: {title: "Анна"}}), true);
   assert.equal(isMasterUser({masterMode: false, masterData: {}}), false);
@@ -51,6 +57,10 @@ test("selects engagement text for every user state", () => {
 test("plans only token owners whose five-day interval elapsed", () => {
   const now = Date.UTC(2026, 7, 13, 12);
   assert.equal(isDueForPlanning(tokens, now), true);
+  assert.equal(isDueForPlanning({
+    ...tokens,
+    pushNotificationsEnabled: false,
+  }, now), false);
   assert.equal(isDueForPlanning({}, now), false);
   assert.equal(isDueForPlanning({
     ...tokens,

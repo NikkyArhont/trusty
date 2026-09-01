@@ -97,11 +97,18 @@ class _ClientProfileSetupWidgetState extends State<ClientProfileSetupWidget> {
             photoUrl: photoUrl,
             masterMode: false,
             clientProfileCompleted: true,
+            referralOnboardingRequired: true,
+            referralOnboardingCompleted: false,
           ),
         );
       } else if (currentUserReference != null) {
         await currentUserReference!.update(
-          createUserRecordData(masterMode: false, clientProfileCompleted: true),
+          createUserRecordData(
+            masterMode: false,
+            clientProfileCompleted: true,
+            referralOnboardingRequired: true,
+            referralOnboardingCompleted: false,
+          ),
         );
       }
 

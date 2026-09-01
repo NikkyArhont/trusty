@@ -1393,11 +1393,15 @@ class _RecordPageMasterWidgetState extends State<RecordPageMasterWidget> {
                                   final normalizedUserPhone = normalizePhone(
                                     rawUserPhone,
                                   );
+                                  final normalizedUserPhoneHash =
+                                      normalizedUserPhone.isEmpty
+                                      ? ''
+                                      : phoneHash(normalizedUserPhone);
                                   final hasAlreadyRecommended =
-                                      normalizedUserPhone.isNotEmpty &&
-                                      serviceDoc.recommenderPhones.contains(
-                                        normalizedUserPhone,
-                                      );
+                                      normalizedUserPhoneHash.isNotEmpty &&
+                                      recommendationPhoneHashesForService(
+                                        serviceDoc,
+                                      ).contains(normalizedUserPhoneHash);
 
                                   if (hasAlreadyRecommended) {
                                     return SizedBox.shrink();

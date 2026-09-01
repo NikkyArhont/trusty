@@ -5,7 +5,7 @@
       "description": "Глобальный выключатель проверки обновлений"
     },
     "android_latest_build": {
-      "defaultValue": {"value": "19"},
+      "defaultValue": {"value": "24"},
       "description": "Последняя доступная сборка Android"
     },
     "android_minimum_build": {
@@ -16,7 +16,7 @@
       "defaultValue": {"value": "https://play.google.com/store/apps/details?id=com.mycompany.trusty"}
     },
     "ios_latest_build": {
-      "defaultValue": {"value": "19"},
+      "defaultValue": {"value": "24"},
       "description": "Последняя доступная сборка iOS"
     },
     "ios_minimum_build": {

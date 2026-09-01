@@ -16,6 +16,7 @@ class AuthUserInfo {
 
 abstract class BaseAuthUser {
   bool get loggedIn;
+  bool get isAnonymous;
   bool get emailVerified;
 
   AuthUserInfo get authUserInfo;

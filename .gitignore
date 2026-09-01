@@ -29,6 +29,10 @@ android/*.keystore
 .firebase/
 firebase-debug.log
 firepit-log.txt
+firebase/json
+
+# Locally generated operational reports can contain user data.
+reports/
 
 # Platform-generated ephemeral files
 ios/Flutter/ephemeral/

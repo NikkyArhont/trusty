@@ -4,6 +4,8 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  chatNotificationTag,
+  isPushEnabled,
   messageBody,
   resolveRecipient,
 } = require("../chat_message_push");
@@ -45,4 +47,17 @@ test("builds a safe body for text and image messages", () => {
   assert.equal(messageBody({type: "image"}), "Фото");
   assert.equal(messageBody({type: "text", text: " Привет "}), "Привет");
   assert.equal(messageBody({type: "text", text: ""}), "Новое сообщение");
+});
+
+test("uses a stable Android notification tag for each chat", () => {
+  assert.equal(
+    chatNotificationTag("support_phone_79181209565"),
+    "trusty_chat_support_phone_79181209565",
+  );
+});
+
+test("honors the recipient push preference", () => {
+  assert.equal(isPushEnabled({}), true);
+  assert.equal(isPushEnabled({pushNotificationsEnabled: true}), true);
+  assert.equal(isPushEnabled({pushNotificationsEnabled: false}), false);
 });
