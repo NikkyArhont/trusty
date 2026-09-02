@@ -105,6 +105,22 @@ class _MainWidgetState extends State<MainWidget> {
         : first.reference.id.compareTo(second.reference.id);
   }
 
+  bool _hasRecommendations(ServiceRecord service) =>
+      service.recommendations.isNotEmpty ||
+      service.recommenderPhoneHashes.any((hash) => hash.trim().isNotEmpty) ||
+      service.recommenderPhones.any((phone) => phone.trim().isNotEmpty);
+
+  int _compareServicesForMain(ServiceRecord first, ServiceRecord second) {
+    if (!currentUserIsRegistered) {
+      final firstHasRecommendations = _hasRecommendations(first);
+      final secondHasRecommendations = _hasRecommendations(second);
+      if (firstHasRecommendations != secondHasRecommendations) {
+        return firstHasRecommendations ? -1 : 1;
+      }
+    }
+    return _compareServicesRandomly(first, second);
+  }
+
   Widget _buildCategoryChip({
     required BuildContext context,
     required String label,
@@ -335,7 +351,7 @@ class _MainWidgetState extends State<MainWidget> {
                 .where((service) => service.status == ServiceStatus.show)
                 .where(_matchesSelectedCity)
                 .toList()
-              ..sort(_compareServicesRandomly);
+              ..sort(_compareServicesForMain);
         final selectedCategoryKey = FFAppState().globalFilter.catKey;
         final mainServiceRecordList = cityServiceRecordList
             .where(
